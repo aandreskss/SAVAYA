@@ -575,7 +575,7 @@ body{padding-bottom:78px;}
 
     // Construir URL de WhatsApp de forma sincrónica (antes de cualquier async)
     const waText = encodeURIComponent(
-      `Hola, soy ${name} y deseo comprar al mayor calzado colegial SAVAYA. Ciudad: ${city}`
+      `Hola, soy ${name} y deseo comprar al mayor calzado colegial SAVAYA. Ciudad: ${city}. ID: S019`
     );
     const chosenNumber = WHATSAPP_NUMBERS[Math.floor(Math.random() * WHATSAPP_NUMBERS.length)];
     const waUrl = `https://wa.me/${chosenNumber}?text=${waText}`;
