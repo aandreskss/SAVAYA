@@ -1,0 +1,14 @@
+{
+  "crons": [
+    {
+      "path": "/api/cleanup/proofs",
+      "schedule": "0 4 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/imagenes/:path*",
+      "destination": "https://res.cloudinary.com/dckobjcbj/image/upload/:path*"
+    }
+  ]
+}

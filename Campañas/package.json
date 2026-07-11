@@ -1,0 +1,9 @@
+{
+  "name": "savaya-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing page de conversión para SAVAYA (calzado femenino venezolano) con Meta Pixel + Conversions API.",
+  "engines": {
+    "node": ">=18"
+  }
+}

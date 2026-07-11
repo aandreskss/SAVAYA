@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ── Savaya Brand Design Tokens ───────────────────────────────────────────── */
+
+@theme {
+  /* Colors — paleta dorada institucional Savaya */
+  --color-black:      #111111;
+  --color-white:      #ffffff;
+  --color-gray-bg:    #f5f5f5;
+  --color-gray-light: #e5e5e5;
+  --color-gray-text:  #888888;
+  --color-accent:     #1a1a1a;       /* fondo navbar/footer (casi negro) */
+  --color-gold:       #CA8C31;       /* dorado principal Savaya */
+  --color-gold-light: #E5BB5B;       /* dorado claro */
+  --color-gold-pale:  #FFEA84;       /* dorado pálido / badges suaves */
+  --color-gold-warm:  #E2A44F;       /* dorado cálido */
+  --color-gold-dark:  #AA6E0B;       /* dorado oscuro / hover */
+  --color-sale:       #c0392b;       /* rojo descuentos / urgencia */
+
+  /* Typography */
+  --font-display: var(--font-bebas);    /* Bebas Neue — títulos/tagline */
+  --font-heading: var(--font-rubik);    /* Rubik — headings UI */
+  --font-body:    var(--font-rubik);    /* Rubik — cuerpo de texto */
+
+  /* Border radius */
+  --radius-sm: 2px;
+  --radius:    4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+
+/* ── CSS custom properties ────────────────────────────────────────────────── */
+
+:root {
+  --color-black:      #111111;
+  --color-white:      #ffffff;
+  --color-gray-bg:    #f5f5f5;
+  --color-gray-light: #e5e5e5;
+  --color-gray-text:  #888888;
+  --color-accent:     #1a1a1a;
+  --color-gold:       #CA8C31;
+  --color-gold-light: #E5BB5B;
+  --color-gold-pale:  #FFEA84;
+  --color-gold-warm:  #E2A44F;
+  --color-gold-dark:  #AA6E0B;
+  --color-sale:       #c0392b;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-rubik), system-ui, sans-serif;
+  color: var(--color-black);
+  background-color: var(--color-white);
+}
+
+/* ── Typography helpers ──────────────────────────────────────────────────── */
+
+.font-display {
+  font-family: var(--font-bebas), Impact, sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-heading {
+  font-family: var(--font-rubik), system-ui, sans-serif;
+}
+
+/* ── Focus visible ───────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+
+@keyframes slideProgress {
+  from { width: 0% }
+  to   { width: 100% }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.animate-fade-in-up-delay {
+  animation: fadeInUp 0.6s ease 0.15s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-2 {
+  animation: fadeInUp 0.6s ease 0.3s forwards;
+  opacity: 0;
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────────── */
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
