@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/types'
 import DashboardShell from '@/components/dashboard/DashboardShell'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Admin — Savaya',
   robots: { index: false, follow: false },
