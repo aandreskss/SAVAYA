@@ -81,6 +81,17 @@ export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'price_desc', label: 'Precio: mayor a menor' },
 ]
 
+// ─── Shipping costs (USD) ─────────────────────────────────────────────────────
+
+export const SHIPPING_COST = 5
+export const EXPRESS_SHIPPING_COST = 10
+export const FREE_SHIPPING_THRESHOLD = 80
+export const CASH_ON_DELIVERY_COST = 0
+
+// ─── Sizes — Savaya solo maneja calzado, sin ropa ────────────────────────────
+
+export const CLOTHING_SIZES: readonly string[] = []
+
 // ─── Order statuses ───────────────────────────────────────────────────────────
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
@@ -101,6 +112,16 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   delivered:  'bg-green-100 text-green-800',
   cancelled:  'bg-red-100 text-red-800',
   returned:   'bg-gray-100 text-gray-800',
+}
+
+export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; color: string }> = {
+  pending:    { label: ORDER_STATUS_LABELS.pending,    color: ORDER_STATUS_COLORS.pending },
+  paid:       { label: ORDER_STATUS_LABELS.paid,       color: ORDER_STATUS_COLORS.paid },
+  processing: { label: ORDER_STATUS_LABELS.processing, color: ORDER_STATUS_COLORS.processing },
+  shipped:    { label: ORDER_STATUS_LABELS.shipped,    color: ORDER_STATUS_COLORS.shipped },
+  delivered:  { label: ORDER_STATUS_LABELS.delivered,  color: ORDER_STATUS_COLORS.delivered },
+  cancelled:  { label: ORDER_STATUS_LABELS.cancelled,  color: ORDER_STATUS_COLORS.cancelled },
+  returned:   { label: ORDER_STATUS_LABELS.returned,   color: ORDER_STATUS_COLORS.returned },
 }
 
 // ─── Venezuela — ciudades con cobertura Savaya ────────────────────────────────
