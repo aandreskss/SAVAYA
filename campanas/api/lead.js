@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 
+// Meta exige: trim + lowercase antes de hashear
 function sha256(value) {
-  return crypto.createHash('sha256').update(String(value)).digest('hex');
+  return crypto.createHash('sha256').update(String(value).trim().toLowerCase()).digest('hex');
 }
 
 function normalizePhone(raw) {
@@ -18,7 +19,11 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { name, email, city, whatsapp, eventId, fbp, fbc, eventSourceUrl, campaign, utm, testEventCode } = req.body || {};
+  const {
+    name, email, city, whatsapp,
+    eventId, fbp, fbc, eventSourceUrl,
+    campaign, utm, testEventCode,
+  } = req.body || {};
 
   if (!name || !email || !city || !whatsapp) {
     res.status(400).json({ error: 'Faltan campos requeridos' });
@@ -28,6 +33,7 @@ module.exports = async (req, res) => {
   const phone = normalizePhone(whatsapp);
   const PIXEL_ID = process.env.FB_PIXEL_ID;
   const ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
+  const eventTime = Math.floor(Date.now() / 1000);
 
   const tasks = [];
 
@@ -35,33 +41,58 @@ module.exports = async (req, res) => {
     const forwarded = req.headers['x-forwarded-for'];
     const clientIp = forwarded ? forwarded.split(',')[0].trim() : req.socket?.remoteAddress;
 
-    const eventPayload = {
-      event_name: 'Lead',
-      event_time: Math.floor(Date.now() / 1000),
-      event_id: eventId,
-      event_source_url: eventSourceUrl,
-      action_source: 'website',
-      user_data: {
-        em: [sha256(email.trim().toLowerCase())],
-        ph: [sha256(phone)],
-        client_ip_address: clientIp,
-        client_user_agent: req.headers['user-agent'],
-      },
-      custom_data: {
-        content_name: 'Savaya Landing - Formulario de contacto',
-        city,
-        campaign: campaign || 'sin_campana',
-        ...(utm || {}),
-      },
-    };
-    if (fbp) eventPayload.user_data.fbp = fbp;
-    if (fbc) eventPayload.user_data.fbc = fbc;
+    const firstName = name.trim().split(/\s+/)[0];
 
-    const fbBody = { data: [eventPayload] };
+    // user_data completo → mejor match rate en Meta
+    const userData = {
+      em:      [sha256(email)],
+      ph:      [sha256(phone)],
+      fn:      [sha256(firstName)],
+      ct:      [sha256(city)],
+      country: [sha256('ve')],
+      client_ip_address: clientIp,
+      client_user_agent: req.headers['user-agent'],
+    };
+    if (fbp) userData.fbp = fbp;
+    if (fbc) userData.fbc = fbc;
+
+    // content_name debe coincidir exactamente con el del browser para deduplicar Lead
+    const CONTENT_NAME = 'Savaya Catálogo Mayorista Escolar - Formulario';
+
+    const customData = {
+      content_name: CONTENT_NAME,
+      city,
+      campaign: campaign || 'sin_campana',
+      ...(utm || {}),
+    };
+
+    // Lead — deduplica con el browser via eventId
+    const leadEvent = {
+      event_name:       'Lead',
+      event_time:       eventTime,
+      event_id:         eventId,
+      event_source_url: eventSourceUrl,
+      action_source:    'website',
+      user_data:        userData,
+      custom_data:      customData,
+    };
+
+    // Contact — deduplica con el browser via `${eventId}_c`
+    const contactEvent = {
+      event_name:       'Contact',
+      event_time:       eventTime,
+      event_id:         `${eventId}_c`,
+      event_source_url: eventSourceUrl,
+      action_source:    'website',
+      user_data:        userData,
+      custom_data:      customData,
+    };
+
+    const fbBody = { data: [leadEvent, contactEvent] };
     if (testEventCode) fbBody.test_event_code = testEventCode;
 
     tasks.push(
-      fetch(`https://graph.facebook.com/v20.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
+      fetch(`https://graph.facebook.com/v21.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fbBody),
@@ -72,7 +103,7 @@ module.exports = async (req, res) => {
         .catch((err) => console.error('Error llamando a Facebook CAPI:', err))
     );
   } else {
-    console.warn('FB_PIXEL_ID / FB_ACCESS_TOKEN no configurados: se omite el envío a Conversions API.');
+    console.warn('FB_PIXEL_ID o FB_ACCESS_TOKEN no configurados — se omite Conversions API.');
   }
 
   if (process.env.LEAD_WEBHOOK_URL) {
@@ -87,7 +118,7 @@ module.exports = async (req, res) => {
           city,
           whatsapp: phone,
           campaign: campaign || 'sin_campana',
-          source: campaign || 'sin_campana',
+          source:   campaign || 'sin_campana',
           utm,
         }),
       }).catch((err) => console.error('Error enviando a LEAD_WEBHOOK_URL:', err))

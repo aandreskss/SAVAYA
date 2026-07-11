@@ -580,9 +580,9 @@ body{padding-bottom:78px;}
     const chosenNumber = WHATSAPP_NUMBERS[Math.floor(Math.random() * WHATSAPP_NUMBERS.length)];
     const waUrl = `https://wa.me/${chosenNumber}?text=${waText}`;
 
-    // Pixel — sincrónico, mismo event_id para deduplicar con el servidor
-    fbq('track', 'Lead', { content_name: 'Savaya Catálogo Mayorista Escolar - Formulario', city }, { eventID: eventId });
-    fbq('track', 'Contact');
+    // Pixel — event_id idéntico al CAPI para deduplicar correctamente
+    fbq('track', 'Lead',    { content_name: 'Savaya Catálogo Mayorista Escolar - Formulario', city }, { eventID: eventId });
+    fbq('track', 'Contact', { content_name: 'Savaya Catálogo Mayorista Escolar - Formulario', city }, { eventID: `${eventId}_c` });
 
     // Abrir WhatsApp de inmediato — estamos en el call stack del gesto del usuario, sin await,
     // así el navegador no lo bloquea como popup
