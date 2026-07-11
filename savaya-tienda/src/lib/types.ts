@@ -66,7 +66,7 @@ export interface NavCollection {
 }
 
 export interface NavGenderEntry {
-  key: 'mujer' | 'hombre' | 'ninos'
+  key: 'mujer'
   label: string
   href: string
   subcategories: NavSubcategory[]
