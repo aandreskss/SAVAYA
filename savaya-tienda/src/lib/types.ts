@@ -269,8 +269,6 @@ export interface CustomSectionData {
 
 export interface NavBanners {
   mujer: BannerConfig | null
-  hombre: BannerConfig | null
-  ninos: BannerConfig | null
 }
 
 export interface NavBrands {
