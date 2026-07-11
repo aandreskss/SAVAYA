@@ -279,10 +279,10 @@ body{padding-bottom:78px;}
           </form>
 
           <div class="success-card" id="successCard">
-            <div class="icon">📦</div>
-            <h3>¡Listo! Ya casi tienes el catálogo</h3>
-            <p>Guardamos tus datos. Para terminar y recibir el catálogo mayorista de inmediato, escríbenos por WhatsApp — ya dejamos tu mensaje redactado.</p>
-            <a href="#" id="whatsappCta" class="btn whatsapp block" target="_blank" rel="noopener">Continuar por WhatsApp</a>
+            <div class="icon">✅</div>
+            <h3>¡Ya te abrimos WhatsApp!</h3>
+            <p>Tus datos quedaron registrados. Si WhatsApp no abrió automáticamente, toca el botón de abajo.</p>
+            <a href="#" id="whatsappCta" class="btn whatsapp block" target="_blank" rel="noopener">Abrir WhatsApp</a>
           </div>
         </div>
       </div>
@@ -559,57 +559,58 @@ body{padding-bottom:78px;}
     return ok;
   }
 
-  form.addEventListener('submit', async (e) => {
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Enviando…';
+    submitBtn.textContent = 'Abriendo WhatsApp…';
     formStatus.classList.remove('show');
 
     const name = form.name.value.trim();
     const email = form.email.value.trim();
     const city = form.city.value.trim();
     const whatsappRaw = form.whatsapp.value.trim();
-    const phone = normalizePhone(whatsappRaw);
     const eventId = uuid();
 
-    // Evento de navegador (Pixel) — mismo event_id que el server para deduplicar
-    fbq('track', 'Lead', { content_name: 'Savaya Catálogo Mayorista Escolar - Formulario', city }, { eventID: eventId });
-
-    try {
-      await fetch('/api/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name, email, city, whatsapp: whatsappRaw,
-          eventId,
-          fbp: getCookie('_fbp'),
-          fbc,
-          eventSourceUrl: window.location.href,
-          campaign: CAMPAIGN,
-          utm,
-        }),
-      });
-    } catch (err) {
-      console.error('Error enviando lead a /api/lead', err);
-    }
-
-    // Mensaje pre-armado para WhatsApp del negocio
+    // Construir URL de WhatsApp de forma sincrónica (antes de cualquier async)
     const waText = encodeURIComponent(
-      `Hola ${name}, deseo comprar al mayor colegial SAVAYA. ID: S019`
+      `Hola, soy ${name} y deseo comprar al mayor calzado colegial SAVAYA. Ciudad: ${city}`
     );
-    const whatsappCta = document.getElementById('whatsappCta');
     const chosenNumber = WHATSAPP_NUMBERS[Math.floor(Math.random() * WHATSAPP_NUMBERS.length)];
-    whatsappCta.href = `https://wa.me/${chosenNumber}?text=${waText}`;
-    whatsappCta.addEventListener('click', () => {
-      fbq('track', 'Contact');
-    }, { once: true });
+    const waUrl = `https://wa.me/${chosenNumber}?text=${waText}`;
 
+    // Pixel — sincrónico, mismo event_id para deduplicar con el servidor
+    fbq('track', 'Lead', { content_name: 'Savaya Catálogo Mayorista Escolar - Formulario', city }, { eventID: eventId });
+    fbq('track', 'Contact');
+
+    // Abrir WhatsApp de inmediato — estamos en el call stack del gesto del usuario, sin await,
+    // así el navegador no lo bloquea como popup
+    window.open(waUrl, '_blank');
+
+    // Botón fallback por si el navegador bloqueó el popup
+    document.getElementById('whatsappCta').href = waUrl;
+
+    // Mostrar confirmación en la página
     document.getElementById('leadForm').style.display = 'none';
     document.getElementById('successCard').classList.add('show');
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Quiero el catálogo mayorista';
+
+    // Enviar datos al servidor en background con keepalive: true
+    // → la petición se completa aunque el usuario ya esté en WhatsApp
+    fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, email, city, whatsapp: whatsappRaw,
+        eventId,
+        fbp: getCookie('_fbp'),
+        fbc,
+        eventSourceUrl: window.location.href,
+        campaign: CAMPAIGN,
+        utm,
+      }),
+      keepalive: true,
+    }).catch((err) => console.error('Error enviando lead a /api/lead', err));
   });
 </script>
 </body>
