@@ -13,14 +13,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   ```
   SAVAYA/
   ├── savaya-tienda/   ← este proyecto (tienda Next.js)
-  └── Campañas/        ← landings de conversión (HTML + serverless)
+  └── campanas/        ← landings de conversión (HTML + serverless)
   ```
 - **Rama principal:** `main`
 
 ### Vercel
 
-- **Estado:** pendiente de vincular. Correr una vez `vercel --prod` desde `savaya-tienda/` para crear el proyecto en Vercel.
-- **Dominio previsto:** `www.savayavzla.com` (actualmente apuntado al proyecto de Campañas — reasignar cuando la tienda esté lista).
+- **Proyecto:** `savaya-tienda` (ya creado y conectado al monorepo)
+- **Root Directory en Vercel:** `savaya-tienda`
+- **Estado del build:** ✅ TypeScript OK — pendiente configurar variables de entorno Supabase para que el build complete al 100%
+- **Dominio previsto:** `www.savayavzla.com` (actualmente apuntado al proyecto `campanas` — reasignar cuando la tienda esté lista con datos)
+- **`vercel.json`** ya incluye rewrites para proxear `/cp/*` y `/api/lead` a `savaya-landing.vercel.app`
 
 ---
 
@@ -135,6 +138,16 @@ RESEND_API_KEY=
 
 ---
 
+## Completado en sesión 2025-07-11
+
+- [x] Monorepo `github.com/aandreskss/SAVAYA` creado con `savaya-tienda/` y `campanas/`
+- [x] Carpeta `Campañas` renombrada a `campanas` (sin ñ — compatibilidad Vercel)
+- [x] `constants.ts`: agregados exports faltantes — `SHIPPING_COST` (5 USD), `EXPRESS_SHIPPING_COST` (10 USD), `FREE_SHIPPING_THRESHOLD` (80 USD), `CASH_ON_DELIVERY_COST` (0), `CLOTHING_SIZES` ([]), `ORDER_STATUS_CONFIG`, `on_hold` en labels/colors/config
+- [x] `types.ts`: `NavBanners` — eliminados `hombre` y `ninos`; `NavGenderEntry.key` — solo `'mujer'`
+- [x] `dashboard/layout.tsx`: `export const dynamic = 'force-dynamic'` para evitar prerender sin Supabase
+- [x] `vercel.json`: rewrites `/cp/*` y `/api/lead` → `savaya-landing.vercel.app`
+- [x] Proyecto `savaya-tienda` creado en Vercel con root directory `savaya-tienda/`
+
 ## Completado en sesiones anteriores
 
 - [x] Branding: Bebas Neue + Rubik, paleta dorada `#CA8C31`, logo/favicon copiados
@@ -188,13 +201,13 @@ Los zapatos (shoes) no tienen override de ruta en `TYPE_ROUTES` — usan su slug
 
 - [ ] **Supabase**: crear proyecto nuevo y ejecutar migraciones SQL (ver CLAUDE.md de Tuluoshop)
 - [ ] **Categorías DB**: insertar `casuales`, `deportivos`, `de-vestir` (`gender='women'`, `product_type='shoes'`)
-- [ ] **Vercel**: crear proyecto separado, configurar variables de entorno
+- [ ] **Variables de entorno en Vercel**: configurar Supabase URL/keys, Cloudinary, Resend, WhatsApp, Meta Pixel
 - [ ] **`PAYMENT_CONFIG`** en `PaymentForm.tsx`: completar con datos reales (Zelle email, Binance ID, banco VE, etc.)
 - [ ] **`og-default.jpg`** (1200×630): crear y subir a `/public/`
 - [ ] **Hero y banners**: reemplazar imágenes Unsplash placeholder con fotos reales de producto Savaya
 - [ ] **Cloudinary**: subir productos bajo `savaya/productos/` (600×800 px, relación 3:4)
-- [ ] **Google OAuth**: configurar en Supabase (opcional para launch)
-- [ ] **Dominio**: decidir Opción A o B (ver `SAVAYA_Plan_Tienda.md`) y ejecutar rewrites en Vercel
+- [ ] **Dominio**: mover `www.savayavzla.com` del proyecto `campanas` → `savaya-tienda` cuando la tienda esté con datos
 - [ ] **SQL pendiente de Tuluoshop**: migraciones G-22 (guía tallas), G-23 (marcas), G-24 (precio divisa)
 - [ ] **Dashboard admin**: verificar que `CategoriasForm.tsx` y `ProductForm.tsx` funcionen bien con solo shoes/women
-- [ ] **FilterSidebar.tsx**: actualizar quick-links de géneros si se muestra el filtro género
+- [ ] **FilterSidebar.tsx**: verificar que `showGenderFilter` esté en `false` (Savaya no filtra por género)
+- [ ] **Google OAuth**: configurar en Supabase (opcional para launch)
