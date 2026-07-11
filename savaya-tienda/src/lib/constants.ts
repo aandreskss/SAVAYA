@@ -102,6 +102,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   delivered:  'Entregado',
   cancelled:  'Cancelado',
   returned:   'Devuelto',
+  on_hold:    'En espera',
 }
 
 export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
@@ -112,6 +113,7 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   delivered:  'bg-green-100 text-green-800',
   cancelled:  'bg-red-100 text-red-800',
   returned:   'bg-gray-100 text-gray-800',
+  on_hold:    'bg-orange-100 text-orange-800',
 }
 
 export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; color: string }> = {
@@ -122,6 +124,7 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; color: st
   delivered:  { label: ORDER_STATUS_LABELS.delivered,  color: ORDER_STATUS_COLORS.delivered },
   cancelled:  { label: ORDER_STATUS_LABELS.cancelled,  color: ORDER_STATUS_COLORS.cancelled },
   returned:   { label: ORDER_STATUS_LABELS.returned,   color: ORDER_STATUS_COLORS.returned },
+  on_hold:    { label: ORDER_STATUS_LABELS.on_hold,    color: ORDER_STATUS_COLORS.on_hold },
 }
 
 // ─── Venezuela — ciudades con cobertura Savaya ────────────────────────────────
