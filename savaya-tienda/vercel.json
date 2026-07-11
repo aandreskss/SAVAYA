@@ -7,6 +7,14 @@
   ],
   "rewrites": [
     {
+      "source": "/cp/:path*",
+      "destination": "https://savaya-landing.vercel.app/cp/:path*"
+    },
+    {
+      "source": "/api/lead",
+      "destination": "https://savaya-landing.vercel.app/api/lead"
+    },
+    {
       "source": "/imagenes/:path*",
       "destination": "https://res.cloudinary.com/dckobjcbj/image/upload/:path*"
     }
