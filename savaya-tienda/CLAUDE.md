@@ -6,6 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Savaya Tienda** — tienda online de calzado femenino en Venezuela. Duplicada y adaptada desde **Tuluoshop** (mismo stack, misma arquitectura). Leer el CLAUDE.md de Tuluoshop para la arquitectura completa — este archivo solo documenta los **delta** respecto a Tuluoshop.
 
+### Repositorio
+
+- **GitHub:** `https://github.com/aandreskss/SAVAYA.git` (monorepo)
+- **Estructura del monorepo:**
+  ```
+  SAVAYA/
+  ├── savaya-tienda/   ← este proyecto (tienda Next.js)
+  └── Campañas/        ← landings de conversión (HTML + serverless)
+  ```
+- **Rama principal:** `main`
+
+### Vercel
+
+- **Estado:** pendiente de vincular. Correr una vez `vercel --prod` desde `savaya-tienda/` para crear el proyecto en Vercel.
+- **Dominio previsto:** `www.savayavzla.com` (actualmente apuntado al proyecto de Campañas — reasignar cuando la tienda esté lista).
+
 ---
 
 ## Comandos
