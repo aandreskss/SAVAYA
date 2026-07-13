@@ -7,17 +7,23 @@ Landings de conversión de SAVAYA. Proyecto Vercel separado de la tienda, expues
 ## Repositorio
 
 - **GitHub:** `https://github.com/aandreskss/SAVAYA.git` (monorepo)
-- **Carpeta en el monorepo:** `Campañas/`
+- **Carpeta en el monorepo:** `campanas/`
 - **Rama principal:** `main`
 
 ---
 
-## Comandos
+## Deploy
+
+El deploy se hace **pusheando a GitHub** — Vercel está conectado al repo y despliega automáticamente desde `main`.
 
 ```bash
-# Deploy a producción (desde esta carpeta)
-vercel --prod
+# Desde la raíz del monorepo (Savaya/)
+git add campanas/...
+git commit -m "mensaje"
+git push origin main
 ```
+
+No usar `vercel --prod` desde la carpeta `campanas/` — falla porque el proyecto tiene `rootDirectory: campanas` configurado en Vercel, lo que produce una ruta doble `campanas/campanas`.
 
 No hay build step — HTML/CSS/JS plano más una función Node en `api/lead.js`.
 
@@ -53,14 +59,53 @@ Las rutas `/cp/*` y `/api/*` de `www.savayavzla.com` son servidas por este proye
 
 ---
 
+## Arquitectura del flujo de leads
+
+Al hacer submit el formulario:
+
+1. **Client-side (browser):** dispara `fbq('track', 'Lead', ...)` y `fbq('track', 'Contact', ...)` con el mismo `eventID`
+2. **WhatsApp:** `window.open(waUrl, '_blank')` — inmediato, sin await, en el call stack del gesto del usuario para evitar bloqueo de popup
+3. **Server-side:** `fetch('/api/lead', { keepalive: true })` en background — llama a Meta Conversions API y al webhook de Google Sheets
+4. Deduplicación: browser + server usan el mismo `eventId` (Lead) y `${eventId}_c` (Contact)
+
+### Datos que se envían al evento Lead (Meta)
+
+| Campo | Valor |
+|---|---|
+| `content_name` | `Zapato Escolar Mayorista SAVAYA - Temporada Escolar 2026` |
+| `content_category` | `Calzado Escolar al Mayor` |
+| `content_type` | `product` |
+| `lead_name` | nombre que escribió el lead |
+| `city` | ciudad del lead |
+
+### Datos en Google Sheets
+
+Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Plataforma** · **Dispositivo**
+
+- **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`. Valores: `Facebook`, `Instagram`, `Meta (sin especificar)`, `Directo / Otro`
+- **Dispositivo:** detectado por `navigator.userAgent`. Valores: `Teléfono`, `PC`
+- Para que FB vs IG sea confiable en anuncios pagados, configurar en Meta Ads Manager: `utm_source={{site_source_name}}`
+
+---
+
+## Google Apps Script
+
+Archivo local: `google-apps-script.js`
+Crea automáticamente una pestaña por campaña. Si la pestaña ya existe y le faltan columnas, `ensureHeaders()` las agrega sola con el próximo lead.
+
+**Para actualizar el script en producción:**
+1. Extensions → Apps Script → reemplazar código → guardar
+2. Deploy → Manage deployments → editar → Nueva versión → Deploy
+
+---
+
 ## Cómo agregar una campaña nueva
 
 1. Duplicar `cp/colegiales/` → `cp/<nombre-nueva-campaña>/`
 2. Cambiar `const CAMPAIGN = 'colegiales'` por el nuevo nombre
 3. Cambiar `const WHATSAPP_NUMBERS` si aplica
-4. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas — ver README.md para el detalle del por qué)
-5. Ajustar textos e imágenes
-6. `vercel --prod`
+4. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas)
+5. Push a GitHub → Vercel despliega automáticamente
 
 ---
 
@@ -71,3 +116,5 @@ Las rutas `/cp/*` y `/api/*` de `www.savayavzla.com` son servidas por este proye
 - [x] Reparto de leads entre múltiples números de WhatsApp (aleatorio por submit)
 - [x] Dominio `www.savayavzla.com` apuntado a este proyecto
 - [x] Monorepo subido a `github.com/aandreskss/SAVAYA`
+- [x] Evento Lead enriquecido: `content_category`, `content_type`, `lead_name`
+- [x] Tracking de plataforma (Facebook/Instagram) y dispositivo (Teléfono/PC) en Google Sheets
