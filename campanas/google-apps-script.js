@@ -29,10 +29,18 @@
  * 5. La URL del webhook NO cambia, así que no hay que tocar nada en Vercel.
  */
 
+var HEADERS = [
+  'Fecha', 'Nombre', 'Email', 'Ciudad', 'WhatsApp',
+  'Origen', 'UTM Source', 'UTM Medium', 'UTM Campaign',
+  'Plataforma', 'Dispositivo'
+];
+
 function doPost(e) {
   var data = JSON.parse(e.postData.contents);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateCampaignSheet(ss, data.campaign);
+
+  ensureHeaders(sheet);
 
   sheet.appendRow([
     data.timestamp || new Date().toISOString(),
@@ -44,11 +52,24 @@ function doPost(e) {
     (data.utm && data.utm.utm_source) || '',
     (data.utm && data.utm.utm_medium) || '',
     (data.utm && data.utm.utm_campaign) || '',
+    data.platform || '',
+    data.device || '',
   ]);
 
   return ContentService
     .createTextOutput(JSON.stringify({ ok: true }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Agrega encabezados que faltan en hojas que ya existían antes de esta actualización
+function ensureHeaders(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < HEADERS.length) {
+    for (var i = lastCol; i < HEADERS.length; i++) {
+      sheet.getRange(1, i + 1).setValue(HEADERS[i]).setFontWeight('bold');
+    }
+    sheet.autoResizeColumns(lastCol + 1, HEADERS.length - lastCol);
+  }
 }
 
 function getOrCreateCampaignSheet(ss, campaignName) {
@@ -61,10 +82,10 @@ function getOrCreateCampaignSheet(ss, campaignName) {
     var sheet = ss.getSheetByName(name);
     if (!sheet) {
       sheet = ss.insertSheet(name);
-      sheet.appendRow(['Fecha', 'Nombre', 'Email', 'Ciudad', 'WhatsApp', 'Origen', 'UTM Source', 'UTM Medium', 'UTM Campaign']);
-      sheet.getRange(1, 1, 1, 9).setFontWeight('bold');
+      sheet.appendRow(HEADERS);
+      sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
       sheet.setFrozenRows(1);
-      sheet.autoResizeColumns(1, 9);
+      sheet.autoResizeColumns(1, HEADERS.length);
     }
     return sheet;
   } finally {

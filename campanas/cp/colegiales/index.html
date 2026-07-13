@@ -528,6 +528,29 @@ body{padding-bottom:78px;}
   let fbc = getCookie('_fbc');
   if (!fbc && fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
 
+  // Detectar red social de origen (Facebook vs Instagram)
+  // Funciona si los anuncios tienen utm_source={{site_source_name}} en Meta Ads Manager
+  function detectPlatform() {
+    const src = (params.get('utm_source') || '').toLowerCase();
+    if (src === 'ig' || src.includes('instagram')) return 'Instagram';
+    if (src === 'fb' || src.includes('facebook')) return 'Facebook';
+    const ref = (document.referrer || '').toLowerCase();
+    if (ref.includes('instagram.com')) return 'Instagram';
+    if (ref.includes('facebook.com') || ref.includes('fb.com')) return 'Facebook';
+    if (fbclid) return 'Meta (sin especificar)';
+    return 'Directo / Otro';
+  }
+
+  // Detectar tipo de dispositivo
+  function detectDevice() {
+    return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      ? 'Teléfono'
+      : 'PC';
+  }
+
+  const PLATFORM = detectPlatform();
+  const DEVICE   = detectDevice();
+
   // ---------- validación + envío del formulario ----------
   const form = document.getElementById('leadForm');
   const submitBtn = document.getElementById('submitBtn');
@@ -581,8 +604,15 @@ body{padding-bottom:78px;}
     const waUrl = `https://wa.me/${chosenNumber}?text=${waText}`;
 
     // Pixel — event_id idéntico al CAPI para deduplicar correctamente
-    fbq('track', 'Lead',    { content_name: 'Savaya Catálogo Mayorista Escolar - Formulario', city }, { eventID: eventId });
-    fbq('track', 'Contact', { content_name: 'Savaya Catálogo Mayorista Escolar - Formulario', city }, { eventID: `${eventId}_c` });
+    const leadCustomData = {
+      content_name:     'Zapato Escolar Mayorista SAVAYA - Temporada Escolar 2026',
+      content_category: 'Calzado Escolar al Mayor',
+      content_type:     'product',
+      lead_name:        name,
+      city,
+    };
+    fbq('track', 'Lead',    leadCustomData, { eventID: eventId });
+    fbq('track', 'Contact', leadCustomData, { eventID: `${eventId}_c` });
 
     // Abrir WhatsApp de inmediato — estamos en el call stack del gesto del usuario, sin await,
     // así el navegador no lo bloquea como popup
@@ -608,6 +638,8 @@ body{padding-bottom:78px;}
         eventSourceUrl: window.location.href,
         campaign: CAMPAIGN,
         utm,
+        platform: PLATFORM,
+        device:   DEVICE,
       }),
       keepalive: true,
     }).catch((err) => console.error('Error enviando lead a /api/lead', err));

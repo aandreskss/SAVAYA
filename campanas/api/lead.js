@@ -23,6 +23,7 @@ module.exports = async (req, res) => {
     name, email, city, whatsapp,
     eventId, fbp, fbc, eventSourceUrl,
     campaign, utm, testEventCode,
+    platform, device,
   } = req.body || {};
 
   if (!name || !email || !city || !whatsapp) {
@@ -57,10 +58,13 @@ module.exports = async (req, res) => {
     if (fbc) userData.fbc = fbc;
 
     // content_name debe coincidir exactamente con el del browser para deduplicar Lead
-    const CONTENT_NAME = 'Savaya Catálogo Mayorista Escolar - Formulario';
+    const CONTENT_NAME = 'Zapato Escolar Mayorista SAVAYA - Temporada Escolar 2026';
 
     const customData = {
-      content_name: CONTENT_NAME,
+      content_name:     CONTENT_NAME,
+      content_category: 'Calzado Escolar al Mayor',
+      content_type:     'product',
+      lead_name:        name,
       city,
       campaign: campaign || 'sin_campana',
       ...(utm || {}),
@@ -120,6 +124,8 @@ module.exports = async (req, res) => {
           campaign: campaign || 'sin_campana',
           source:   campaign || 'sin_campana',
           utm,
+          platform: platform || '',
+          device:   device   || '',
         }),
       }).catch((err) => console.error('Error enviando a LEAD_WEBHOOK_URL:', err))
     );
