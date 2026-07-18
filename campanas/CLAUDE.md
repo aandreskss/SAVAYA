@@ -80,10 +80,11 @@ Al hacer submit el formulario:
 
 ### Datos en Google Sheets
 
-Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Plataforma** · **Dispositivo**
+Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo**
 
 - **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`. Valores: `Facebook`, `Instagram`, `Meta (sin especificar)`, `Directo / Otro`
 - **Dispositivo:** detectado por `navigator.userAgent`. Valores: `Teléfono`, `PC`
+- **Anuncio:** valor de `utm_content`. Configurar en Meta Ads Manager: `utm_content={{ad.name}}` para que llegue el nombre exacto del anuncio
 - Para que FB vs IG sea confiable en anuncios pagados, configurar en Meta Ads Manager: `utm_source={{site_source_name}}`
 
 ---
@@ -118,3 +119,4 @@ Crea automáticamente una pestaña por campaña. Si la pestaña ya existe y le f
 - [x] Monorepo subido a `github.com/aandreskss/SAVAYA`
 - [x] Evento Lead enriquecido: `content_category`, `content_type`, `lead_name`
 - [x] Tracking de plataforma (Facebook/Instagram) y dispositivo (Teléfono/PC) en Google Sheets
+- [x] Columna **Anuncio** en Google Sheets via `utm_content` — configurar `utm_content={{ad.name}}` en Meta Ads Manager

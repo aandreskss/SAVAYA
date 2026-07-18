@@ -31,7 +31,7 @@
 
 var HEADERS = [
   'Fecha', 'Nombre', 'Email', 'Ciudad', 'WhatsApp',
-  'Origen', 'UTM Source', 'UTM Medium', 'UTM Campaign',
+  'Origen', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Anuncio',
   'Plataforma', 'Dispositivo'
 ];
 
@@ -52,6 +52,7 @@ function doPost(e) {
     (data.utm && data.utm.utm_source) || '',
     (data.utm && data.utm.utm_medium) || '',
     (data.utm && data.utm.utm_campaign) || '',
+    (data.utm && data.utm.utm_content) || '',
     data.platform || '',
     data.device || '',
   ]);
