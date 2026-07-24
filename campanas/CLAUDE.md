@@ -80,7 +80,7 @@ Al hacer submit el formulario:
 
 ### Datos en Google Sheets
 
-Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo** · **Venta** · **Monto USD** · **Fecha Venta** · **Estado Meta**
+Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo** · **Venta** · **Monto USD** · **Fecha Venta** · **Estado Meta** · **fbc** · **fbp**
 
 - **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`. Valores: `Facebook`, `Instagram`, `Meta (sin especificar)`, `Directo / Otro`
 - **Dispositivo:** detectado por `navigator.userAgent`. Valores: `Teléfono`, `PC`
@@ -129,8 +129,6 @@ Activadores → Agregar activador → función: `onVentaEdit` → evento: Al edi
 3. Cambiar `const WHATSAPP_NUMBERS` si aplica
 4. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas)
 5. Push a GitHub → Vercel despliega automáticamente
-
----
 
 ---
 
