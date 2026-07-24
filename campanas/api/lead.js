@@ -126,6 +126,8 @@ module.exports = async (req, res) => {
           utm,
           platform: platform || '',
           device:   device   || '',
+          fbc:      fbc      || '',
+          fbp:      fbp      || '',
         }),
       }).catch((err) => console.error('Error enviando a LEAD_WEBHOOK_URL:', err))
     );

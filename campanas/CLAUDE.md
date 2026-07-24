@@ -132,10 +132,6 @@ Activadores → Agregar activador → función: `onVentaEdit` → evento: Al edi
 
 ---
 
-## Pendiente
-
-- [ ] **Guardar `fbc` y `fbp` en Google Sheets** — agregarlos al payload del webhook en `api/lead.js` (líneas 118–130). Actualmente no se guardan, lo que limita el matching de ventas offline a ~50–70% (teléfono + email + nombre). Con `fbc` el matching sube a ~85%+. Cambio de 2 líneas.
-
 ---
 
 ## Completado
@@ -150,3 +146,4 @@ Activadores → Agregar activador → función: `onVentaEdit` → evento: Al edi
 - [x] Columna **Anuncio** en Google Sheets via `utm_content` — configurar `utm_content={{ad.name}}` en Meta Ads Manager
 - [x] Registro de ventas offline → Meta: columnas Venta/Monto/Fecha Venta/Estado Meta + trigger `onVentaEdit` en Apps Script
 - [x] Validación: bloquea envío de Purchase si Monto está vacío (muestra aviso en Estado Meta)
+- [x] `fbc` y `fbp` guardados en columnas Q y R del Sheet — `api/lead.js` los envía al webhook, Apps Script los incluye en `user_data` del evento Purchase para mejorar match quality (~85%+ vs ~55% sin ellos)

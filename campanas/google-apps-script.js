@@ -39,14 +39,16 @@ var HEADERS = [
   'Fecha', 'Nombre', 'Email', 'Ciudad', 'WhatsApp',
   'Origen', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Anuncio',
   'Plataforma', 'Dispositivo',
-  'Venta', 'Monto USD', 'Fecha Venta', 'Estado Meta'
+  'Venta', 'Monto USD', 'Fecha Venta', 'Estado Meta',
+  'fbc', 'fbp'
 ];
 
 var COL = {
   FECHA: 1, NOMBRE: 2, EMAIL: 3, CIUDAD: 4, WHATSAPP: 5,
   ORIGEN: 6, UTM_SOURCE: 7, UTM_MEDIUM: 8, UTM_CAMPAIGN: 9, ANUNCIO: 10,
   PLATAFORMA: 11, DISPOSITIVO: 12,
-  VENTA: 13, MONTO: 14, FECHA_VENTA: 15, ESTADO_META: 16
+  VENTA: 13, MONTO: 14, FECHA_VENTA: 15, ESTADO_META: 16,
+  FBC: 17, FBP: 18
 };
 
 // ── Recepción de leads ────────────────────────────────────────────────────────
@@ -71,10 +73,12 @@ function doPost(e) {
     (data.utm && data.utm.utm_content)  || '',
     data.platform  || '',
     data.device    || '',
-    false, // Venta — checkbox vacío por defecto
-    '',    // Monto USD
-    '',    // Fecha Venta
-    '',    // Estado Meta
+    false,         // Venta — checkbox vacío por defecto
+    '',            // Monto USD
+    '',            // Fecha Venta
+    '',            // Estado Meta
+    data.fbc || '', // fbc — fbclid para matching de ventas
+    data.fbp || '', // fbp — cookie de pixel
   ]);
 
   // Poner checkbox real en la columna Venta de la fila recién agregada
@@ -113,8 +117,10 @@ function onVentaEdit(e) {
   var email     = rowData[COL.EMAIL - 1];
   var city      = rowData[COL.CIUDAD - 1];
   var phone     = rowData[COL.WHATSAPP - 1];
-  var monto     = rowData[COL.MONTO - 1];
+  var monto      = rowData[COL.MONTO - 1];
   var fechaVenta = rowData[COL.FECHA_VENTA - 1];
+  var fbc        = rowData[COL.FBC - 1];
+  var fbp        = rowData[COL.FBP - 1];
 
   // Bloquear si no hay monto
   if (!monto || parseFloat(monto) <= 0) {
@@ -130,7 +136,7 @@ function onVentaEdit(e) {
 
   var result = sendPurchaseToMeta({
     name: name, email: email, city: city, phone: phone,
-    monto: monto, eventTime: eventTime
+    monto: monto, eventTime: eventTime, fbc: fbc, fbp: fbp
   });
 
   estadoCell.setValue(result);
@@ -157,6 +163,8 @@ function sendPurchaseToMeta(data) {
     ct:      [sha256(data.city)],
     country: [sha256('ve')]
   };
+  if (data.fbc) userData.fbc = data.fbc;
+  if (data.fbp) userData.fbp = data.fbp;
 
   var event = {
     event_name:   'Purchase',
