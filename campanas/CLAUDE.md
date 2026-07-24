@@ -110,6 +110,12 @@ Crea automáticamente una pestaña por campaña. Si la pestaña ya existe y le f
 
 ---
 
+## Pendiente
+
+- [ ] **Guardar `fbc` y `fbp` en Google Sheets** — agregarlos al payload del webhook en `api/lead.js` (líneas 118–130). Actualmente no se guardan, lo que limita el matching de ventas offline a ~50–70% (teléfono + email + nombre). Con `fbc` el matching sube a ~85%+. Cambio de 2 líneas.
+
+---
+
 ## Completado
 
 - [x] Campaña `colegiales`: landing mayorista calzado escolar, tallas 28-34 y 35-39
