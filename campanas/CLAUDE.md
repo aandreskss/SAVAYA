@@ -80,12 +80,25 @@ Al hacer submit el formulario:
 
 ### Datos en Google Sheets
 
-Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo**
+Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo** · **Venta** · **Monto USD** · **Fecha Venta** · **Estado Meta**
 
 - **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`. Valores: `Facebook`, `Instagram`, `Meta (sin especificar)`, `Directo / Otro`
 - **Dispositivo:** detectado por `navigator.userAgent`. Valores: `Teléfono`, `PC`
 - **Anuncio:** valor de `utm_content`. Configurar en Meta Ads Manager: `utm_content={{ad.name}}` para que llegue el nombre exacto del anuncio
 - Para que FB vs IG sea confiable en anuncios pagados, configurar en Meta Ads Manager: `utm_source={{site_source_name}}`
+- **Venta:** checkbox — marcar cuando el lead compra
+- **Monto USD:** monto de la venta en dólares (sin símbolo, ej: `120`)
+- **Fecha Venta:** fecha real de la venta (opcional — si se deja vacía usa la hora actual)
+- **Estado Meta:** resultado del envío a Meta (`✅` = éxito, `❌` = error, `⚠️` = faltó el monto)
+
+### Flujo de registro de ventas offline
+
+1. Llenar **Monto USD** primero
+2. Marcar checkbox **Venta** ✅ → Apps Script envía evento `Purchase` a Meta Conversions API (`action_source: "other"`)
+3. **Estado Meta** confirma el resultado
+4. Los eventos offline pueden tardar varias horas en aparecer en Events Manager (normal — son `action_source: other`, no `website`)
+
+Para leads que no pasaron por el formulario (contacto directo por WhatsApp): agregar fila manual con Nombre + WhatsApp mínimo, luego marcar como venta.
 
 ---
 
@@ -93,6 +106,15 @@ Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source
 
 Archivo local: `google-apps-script.js`
 Crea automáticamente una pestaña por campaña. Si la pestaña ya existe y le faltan columnas, `ensureHeaders()` las agrega sola con el próximo lead.
+
+**Script Properties requeridas (Configuración del proyecto → Propiedades del script):**
+| Propiedad | Valor |
+|---|---|
+| `FB_PIXEL_ID` | `27355395054120748` |
+| `FB_ACCESS_TOKEN` | Token de Conversions API de Meta |
+
+**Trigger de ventas (instalar una sola vez):**
+Activadores → Agregar activador → función: `onVentaEdit` → evento: Al editar
 
 **Para actualizar el script en producción:**
 1. Extensions → Apps Script → reemplazar código → guardar
@@ -126,3 +148,5 @@ Crea automáticamente una pestaña por campaña. Si la pestaña ya existe y le f
 - [x] Evento Lead enriquecido: `content_category`, `content_type`, `lead_name`
 - [x] Tracking de plataforma (Facebook/Instagram) y dispositivo (Teléfono/PC) en Google Sheets
 - [x] Columna **Anuncio** en Google Sheets via `utm_content` — configurar `utm_content={{ad.name}}` en Meta Ads Manager
+- [x] Registro de ventas offline → Meta: columnas Venta/Monto/Fecha Venta/Estado Meta + trigger `onVentaEdit` en Apps Script
+- [x] Validación: bloquea envío de Purchase si Monto está vacío (muestra aviso en Estado Meta)
