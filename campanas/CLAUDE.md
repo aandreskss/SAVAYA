@@ -53,6 +53,20 @@ Las rutas `/cp/*` y `/api/*` de `www.savayavzla.com` son servidas por este proye
 
 ---
 
+## WhatsApp del negocio
+
+Número activo: **+58 412-1211526** (`584121211526`)
+
+Usado en:
+- `WHATSAPP_NUMBERS` de la landing → redirección al submit del form
+- Footer de la landing
+- Email template de seguimiento (`email-colegiales.html`)
+- `VENDEDORAS` del Apps Script → asignación de leads
+
+Para cambiar el número: actualizar los 4 lugares anteriores.
+
+---
+
 ## Campañas activas
 
 | Carpeta | Estado | URL producción |
@@ -96,24 +110,64 @@ Al hacer submit el formulario:
 
 ### Datos en Google Sheets
 
-Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo** · **Venta** · **Monto USD** · **Fecha Venta** · **Estado Meta** · **fbc** · **fbp** · **IP** · **UserAgent**
+Columnas (22 en total):
 
-- **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`. Valores: `Facebook`, `Instagram`, `Meta (sin especificar)`, `Directo / Otro`
-- **Dispositivo:** detectado por `navigator.userAgent`. Valores: `Teléfono`, `PC`
-- **Anuncio:** valor de `utm_content`. Configurar en Meta Ads Manager: `utm_content={{ad.name}}` para que llegue el nombre exacto del anuncio
-- Para que FB vs IG sea confiable en anuncios pagados, configurar en Meta Ads Manager: `utm_source={{site_source_name}}`
-- **Venta:** checkbox — marcar cuando el lead compra
-- **Monto USD:** monto de la venta en dólares (sin símbolo, ej: `120`)
-- **Fecha Venta:** fecha real de la venta (opcional — si se deja vacía usa la hora actual)
-- **Estado Meta:** resultado del envío a Meta (`✅` = éxito, `❌` = error, `⚠️` = faltó el monto)
+| # | Columna | Descripción |
+|---|---|---|
+| 1 | Fecha | Timestamp ISO del submit |
+| 2 | Nombre | Nombre del lead |
+| 3 | Email | Email del lead |
+| 4 | Ciudad | Ciudad del lead |
+| 5 | WhatsApp | Teléfono normalizado (58...) |
+| 6 | Origen | Nombre de la campaña |
+| 7 | UTM Source | `utm_source` |
+| 8 | UTM Medium | `utm_medium` |
+| 9 | UTM Campaign | `utm_campaign` |
+| 10 | Anuncio | `utm_content` — nombre del anuncio en Meta |
+| 11 | Plataforma | Facebook / Instagram / Meta (sin especificar) / Directo |
+| 12 | Dispositivo | Teléfono / PC |
+| 13 | Venta | Checkbox — marcar cuando el lead compra |
+| 14 | Monto USD | Monto de la venta (sin símbolo, ej: `120`) |
+| 15 | Fecha Venta | Fecha real de la venta (opcional) |
+| 16 | Estado Meta | `✅` éxito · `❌` error · `⚠️` falta monto |
+| 17 | fbc | Cookie `_fbc` de Meta (fbclid) — clave para atribución |
+| 18 | fbp | Cookie `_fbp` de Meta |
+| 19 | IP | IP del cliente al momento del submit |
+| 20 | UserAgent | User-Agent del cliente al momento del submit |
+| 21 | Asignar a | Dropdown con vendedoras — seleccionar para asignar |
+| 22 | Asignado | Se llena automáticamente: nombre vendedora + timestamp |
+
+- **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`
+- **Anuncio:** configurar en Meta Ads Manager: `utm_content={{ad.name}}`
+- Para que FB vs IG sea confiable: `utm_source={{site_source_name}}` en Meta Ads Manager
 
 ### Flujo de registro de ventas
 
 1. Llenar **Monto USD** primero
-2. Marcar checkbox **Venta** ✅ → Apps Script envía evento `Purchase` a Meta Conversions API (`action_source: "website"`, `event_source_url: "https://www.savayavzla.com/cp/colegiales"`)
+2. Marcar checkbox **Venta** ✅ → Apps Script envía evento `Purchase` a Meta CAPI
 3. **Estado Meta** confirma el resultado
 
-Para leads que no pasaron por el formulario (contacto directo por WhatsApp): agregar fila manual con Nombre + WhatsApp mínimo, luego marcar como venta.
+Para leads que no pasaron por el formulario: agregar fila manual con Nombre + WhatsApp mínimo, luego marcar como venta.
+
+### Flujo de asignación de leads a vendedoras
+
+1. Seleccionar una vendedora del dropdown en columna **"Asignar a"** (col 21)
+2. Se abre un dialog en el Sheet con el mensaje pre-rellenado y un botón **Abrir WhatsApp**
+3. Clic en el botón → abre WhatsApp Web con el número de la vendedora y el mensaje listo
+4. Enviar el mensaje desde el WhatsApp del negocio
+5. La columna **"Asignado"** (col 22) se llena automáticamente con nombre + timestamp
+
+Mensaje que se envía a la vendedora:
+```
+Hola, te hemos asignado un nuevo cliente potencial desde el equipo de marketing de Savaya 👟
+
+📋 Nombre: [nombre del lead]
+📍 Ciudad: [ciudad]
+📧 Email: [email]
+📱 Contáctalo aquí: https://wa.me/[teléfono]
+
+Por favor comúnícate a la brevedad 🙏
+```
 
 ---
 
@@ -161,18 +215,46 @@ Cada vez que un lead llena el form, `api/lead.js` llama a `POST https://connect.
 Archivo local: `google-apps-script.js`
 Crea automáticamente una pestaña por campaña. Si la pestaña ya existe y le faltan columnas, `ensureHeaders()` las agrega sola con el próximo lead.
 
-**Script Properties requeridas (Configuración del proyecto → Propiedades del script):**
+### Configuración de vendedoras
+
+Al tope del script, editar el array `VENDEDORAS`:
+```javascript
+var VENDEDORAS = [
+  { nombre: 'Vendedora 1', numero: '584121211526' }
+];
+```
+- `nombre`: aparece en el dropdown del Sheet
+- `numero`: WhatsApp con código de país (sin +, sin espacios)
+
+Para agregar una vendedora: añadir una línea al array y actualizar el script en producción.
+
+### Script Properties requeridas
+
+Configuración del proyecto → Propiedades del script:
+
 | Propiedad | Valor |
 |---|---|
 | `FB_PIXEL_ID` | `27355395054120748` |
 | `FB_ACCESS_TOKEN` | Token de Conversions API de Meta |
 
-**Trigger de ventas (instalar una sola vez):**
-Activadores → Agregar activador → función: `onVentaEdit` → evento: Al editar
+### Triggers installable (instalar una sola vez cada uno)
 
-**Para actualizar el script en producción:**
-1. Extensions → Apps Script → reemplazar código → guardar
-2. Deploy → Manage deployments → editar → Nueva versión → Deploy
+Activadores (ícono del reloj) → Agregar activador:
+
+| Función | Evento | Para qué |
+|---|---|---|
+| `onVentaEdit` | Del spreadsheet → Al editar | Envía Purchase a Meta al marcar Venta ✅ |
+| `onAsignarEdit` | Del spreadsheet → Al editar | Abre dialog de WhatsApp al seleccionar vendedora |
+
+### Menú Savaya en el Sheet
+
+Al abrir el Sheet aparece el menú **Savaya** en la barra superior (requiere que `onOpen` esté en el script — es trigger simple, no necesita instalación manual).
+
+- **Savaya → Configurar dropdowns de asignación:** aplica el dropdown de vendedoras a todas las filas de datos de la pestaña activa. Ejecutar una vez al pegar leads existentes o al configurar el Sheet por primera vez.
+
+### Para actualizar el script en producción
+1. Extensiones → Apps Script → reemplazar código → Guardar
+2. Implementar → Gestionar implementaciones → lápiz → Nueva versión → Deploy
 
 ---
 
@@ -184,7 +266,7 @@ Hay dos flujos definidos y documentados. Elegir según si hay landing page o no.
 
 ### Blueprint A — Con Landing Page + Formulario
 
-Campaña completa con página de captura. El usuario llena un form → WhatsApp se abre → datos van solos al Sheet. El vendedor solo marca la venta.
+Campaña completa con página de captura. El usuario llena un form → WhatsApp se abre → datos van solos al Sheet. El vendedor asigna el lead y marca la venta.
 
 **Cuándo usarlo:** Producto con propuesta de valor que necesita explicarse, audiencia fría, mayor volumen de leads esperado.
 
@@ -196,21 +278,21 @@ Anuncio → Landing page (form: Nombre, Email, Teléfono, Ciudad)
       window.open(whatsappUrl)  ← inmediato, sin await
       fetch('/api/lead', keepalive)  ← background
         → Meta Conversions API: evento Lead (server-side, dedup por eventId)
-        → Apps Script webhook: fila en Sheet
+        → Apps Script webhook: fila en Sheet (con IP + UserAgent)
         → MailerLite: agrega suscriptor al grupo → automatización 24h → email
-  → WhatsApp abierto
-  → Vendedor llena Monto USD → marca Venta ✅
+  → WhatsApp abierto (cliente habla con el negocio)
+  → Admin selecciona vendedora en "Asignar a" → dialog → abre WhatsApp → envía mensaje
+  → Vendedora atiende al cliente
+  → Admin llena Monto USD → marca Venta ✅
   → Apps Script onVentaEdit → Purchase a Meta CAPI (action_source: website)
 ```
 
-**Sheet:** Una sola tab "Leads". Columnas:
-`Fecha · Nombre · Email · Teléfono · Ciudad · Plataforma · Dispositivo · UTM Source · UTM Medium · UTM Campaign · Anuncio · fbc · fbp · Venta · Monto USD · Fecha Venta · Estado Meta`
+**Sheet:** Una sola tab por campaña. 22 columnas (ver tabla completa arriba).
 
-**Señales Meta Lead:** email hash + phone hash + fbc + fbp + IP + userAgent
-**Señales Meta Purchase:** email hash + phone hash + fbc + fbp + IP + userAgent (guardados en Sheet al llegar el lead)
-**Match quality esperado:** ~85-90%
+**Señales Meta Lead:** email hash + phone hash + fn hash + city hash + fbc + fbp + IP + userAgent → ~9/10 match quality
+**Señales Meta Purchase:** email hash + phone hash + fn hash + city hash + fbc + fbp + IP + userAgent (guardados en Sheet al llegar el lead) → ~8-9/10 match quality
 
-**API (`api/lead.js`) recibe:** campaign, eventId, nombre, email, telefono, ciudad, fbc, fbp, utmSource, utmMedium, utmCampaign, utmContent, plataforma, dispositivo, userAgent
+**API (`api/lead.js`) recibe:** campaign, eventId, name, email, city, whatsapp, fbc, fbp, utm, platform, device, userAgent (IP se toma del request)
 
 ---
 
@@ -258,11 +340,17 @@ Anuncio → Bridge page (sin form, sin interacción del usuario)
 **Validación de teléfono en el form:** mínimo 10 dígitos después de quitar no-numéricos. Rechaza números cortos como cédulas o formatos inválidos.
 
 **onVentaEdit (Apps Script):**
-- Verifica que la hoja y columna editada sea la de "Venta"
-- Valida: monto no vacío; email O teléfono presente
-- Si monto vacío → escribe "⚠️ Falta el monto" en Estado Meta → return
-- Hashea email y teléfono con SHA-256 antes de enviar a Meta
-- Purchase usa `action_source: "website"` + `event_source_url: "https://www.savayavzla.com/cp/colegiales"`
+- Solo actúa en columna VENTA (13), cuando el valor pasa a `true`
+- Si Estado Meta no está vacío → no reenvía (protección contra doble envío)
+- Si monto vacío → escribe `⚠️` en Estado Meta y aborta
+- Hashea email, teléfono, nombre, ciudad con SHA-256 antes de enviar a Meta
+- Purchase incluye IP y UserAgent guardados al llegar el lead → match quality ~8-9/10
+
+**onAsignarEdit (Apps Script):**
+- Solo actúa en columna ASIGNAR (21), cuando cambia a un valor no vacío
+- Si Asignado (22) ya tiene valor → no re-dispara
+- Marca Asignado con `nombreVendedora · timestamp` antes de mostrar el dialog
+- Muestra modal con preview del mensaje y link `https://api.whatsapp.com/send?phone=...`
 
 **UTMs en Meta Ads Manager (configurar en cada anuncio):**
 ```
@@ -278,11 +366,12 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 1. Elegir blueprint (A con form / B sin form)
 2. Duplicar `cp/colegiales/` → `cp/<nombre-nueva-campaña>/` como base
 3. Cambiar `const CAMPAIGN = 'colegiales'` por el nuevo nombre
-4. Cambiar `const WHATSAPP_NUMBERS` si aplica
+4. `const WHATSAPP_NUMBERS` ya tiene un solo número — cambiar si aplica
 5. Actualizar el `event_source_url` en `google-apps-script.js` si es una campaña diferente
 6. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas)
 7. Crear un grupo nuevo en MailerLite para la campaña y actualizar `MAILERLITE_GROUP_ID` en Vercel (o usar el mismo grupo si se quiere la misma automatización)
 8. Push a GitHub → Vercel despliega automáticamente
+9. En el Sheet, ejecutar **Savaya → Configurar dropdowns de asignación** para activar los dropdowns en las filas existentes
 
 ---
 
@@ -290,7 +379,7 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 
 - [x] Campaña `colegiales`: landing mayorista calzado escolar, tallas 28-34 y 35-39
 - [x] `api/lead.js`: Meta CAPI + Google Sheets webhook + MailerLite, deduplicación por `event_id`
-- [x] Reparto de leads entre múltiples números de WhatsApp (aleatorio por submit)
+- [x] Número único de WhatsApp: `+58 412-1211526` en landing, footer, email y Apps Script
 - [x] Dominio `www.savayavzla.com` apuntado a este proyecto
 - [x] Monorepo subido a `github.com/aandreskss/SAVAYA`
 - [x] Evento Lead enriquecido: `content_category`, `content_type`, `lead_name`
@@ -298,7 +387,8 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 - [x] Columna **Anuncio** en Google Sheets via `utm_content`
 - [x] Registro de ventas offline → Meta: columnas Venta/Monto/Fecha Venta/Estado Meta + trigger `onVentaEdit`
 - [x] Validación: bloquea envío de Purchase si Monto está vacío
-- [x] `fbc` y `fbp` guardados en Sheet e incluidos en `user_data` del Purchase (~85%+ match quality)
+- [x] `fbc` y `fbp` guardados en Sheet e incluidos en `user_data` del Purchase
+- [x] **IP y UserAgent** guardados en Sheet (cols 19-20) → Purchase match quality ~8-9/10
 - [x] **CRO landing móvil:** form arriba del fold (imagen oculta en <900px), sin animación reveal, badge de urgencia
 - [x] **Validación teléfono:** mínimo 10 dígitos — rechaza cédulas y números inválidos
 - [x] **Pixel events completos:** `ViewContent` al cargar + `InitiateCheckout` al tocar el form
@@ -307,3 +397,4 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 - [x] **MailerLite:** dominio verificado, grupo `SAVAYA COLEGIAL`, automatización 24h activa
 - [x] **Email template:** `email-colegiales.html` — ángulo A+C (acceso prioritario + urgencia septiembre)
 - [x] **DNS MailerLite** agregados en Vercel: DKIM (CNAME) + SPF (TXT) + verificación (TXT)
+- [x] **Asignación de leads a vendedoras:** dropdown en Sheet → dialog → WhatsApp pre-rellenado → columna Asignado con timestamp
