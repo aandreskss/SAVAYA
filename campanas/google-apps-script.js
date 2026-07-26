@@ -169,7 +169,8 @@ function sendPurchaseToMeta(data) {
   var event = {
     event_name:   'Purchase',
     event_time:   data.eventTime,
-    action_source: 'other', // venta offline (WhatsApp)
+    action_source: 'website',
+    event_source_url: 'https://www.savayavzla.com/cp/colegiales',
     user_data:    userData,
     custom_data:  {
       value:            parseFloat(data.monto) || 0,

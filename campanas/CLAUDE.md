@@ -122,13 +122,108 @@ Activadores → Agregar activador → función: `onVentaEdit` → evento: Al edi
 
 ---
 
+## Blueprints de campañas
+
+Hay dos flujos definidos y documentados. Elegir según si hay landing page o no.
+
+---
+
+### Blueprint A — Con Landing Page + Formulario
+
+Campaña completa con página de captura. El usuario llena un form → WhatsApp se abre → datos van solos al Sheet. El vendedor solo marca la venta.
+
+**Cuándo usarlo:** Producto con propuesta de valor que necesita explicarse, audiencia fría, mayor volumen de leads esperado.
+
+**Flujo:**
+```
+Anuncio → Landing page (form: Nombre, Email, Teléfono, Ciudad)
+  → submit:
+      client-side: fbq Lead + fbq Contact (mismo eventId, dedup)
+      window.open(whatsappUrl)  ← inmediato, sin await
+      fetch('/api/lead', keepalive)  ← background
+        → Meta Conversions API: evento Lead (server-side, dedup por eventId)
+        → Apps Script webhook: fila en Sheet
+  → WhatsApp abierto
+  → Vendedor llena Monto USD → marca Venta ✅
+  → Apps Script onVentaEdit → Purchase a Meta CAPI (action_source: other)
+```
+
+**Sheet:** Una sola tab "Leads". Columnas:
+`Fecha · Nombre · Email · Teléfono · Ciudad · Plataforma · Dispositivo · UTM Source · UTM Medium · UTM Campaign · Anuncio · fbc · fbp · Venta · Monto USD · Fecha Venta · Estado Meta`
+
+**Señales Meta Lead:** email hash + phone hash + fbc + fbp + IP + userAgent
+**Señales Meta Purchase:** email hash + phone hash + fbc + fbp
+**Match quality esperado:** ~85-90%
+
+**API (`api/lead.js`) recibe:** campaign, eventId, nombre, email, telefono, ciudad, fbc, fbp, utmSource, utmMedium, utmCampaign, utmContent, plataforma, dispositivo, userAgent
+
+---
+
+### Blueprint B — Sin Landing Page (WhatsApp-Only)
+
+Sin formulario. Una "bridge page" invisible captura la señal del anuncio y redirige a WhatsApp en < 1 segundo. El vendedor registra los datos del cliente manualmente cuando cierra la venta.
+
+**Cuándo usarlo:** Producto de venta directa, audiencia caliente, se quiere eliminar fricción del formulario.
+
+**Flujo:**
+```
+Anuncio → Bridge page (sin form, sin interacción del usuario)
+  → al cargar:
+      client-side: fbq Lead (con fbc capturado)
+      fetch('/api/lead', keepalive)  ← background
+        → Meta Conversions API: evento Lead
+        → Apps Script webhook: fila en Tab "Leads" (sin datos del cliente)
+      window.location = whatsappUrl  ← redirección inmediata
+  → WhatsApp abierto
+  → Vendedor atiende, cierra venta
+  → Vendedor agrega fila en Tab "Ventas": Nombre + Email + Teléfono + Ciudad + Monto
+  → Marca Venta ✅
+  → Apps Script onVentaEdit → Purchase a Meta CAPI (action_source: other)
+```
+
+**Sheet:** Dos tabs separadas.
+- Tab "Leads": auto (bridge page). `Fecha · Plataforma · Dispositivo · UTM Source · UTM Medium · UTM Campaign · Anuncio · fbc · fbp`
+- Tab "Ventas": manual (vendedor). `Fecha · Nombre · Email · Teléfono · Ciudad · Plataforma · Venta · Monto USD · Fecha Venta · Estado Meta · fbc · fbp`
+
+**Señales Meta Lead:** fbc + fbp + IP + userAgent (sin datos personales)
+**Señales Meta Purchase:** email hash + phone hash + fbc (si disponible) + fbp
+**Match quality esperado:** ~70-80%
+
+**API (`api/lead.js`) recibe:** campaign, eventId, fbc, fbp, utmSource, utmMedium, utmCampaign, utmContent, plataforma, dispositivo, userAgent (sin nombre/email/teléfono)
+
+---
+
+### Elementos comunes a ambos blueprints
+
+**normalizePhone(phone):**
+- Quitar espacios, guiones, paréntesis, símbolo +
+- Si empieza con 0 → reemplazar con código de país (Venezuela: 58)
+- Resultado: solo dígitos con código de país. Ej: `"0424-555-1234"` → `"584245551234"`
+
+**onVentaEdit (Apps Script):**
+- Verifica que la hoja y columna editada sea la de "Venta"
+- Valida: monto no vacío; email O teléfono presente
+- Si monto vacío → escribe "⚠️ Falta el monto" en Estado Meta → return
+- Hashea email y teléfono con SHA-256 antes de enviar a Meta
+- Purchase usa `action_source: "other"` (evento offline)
+
+**UTMs en Meta Ads Manager (configurar en cada anuncio):**
+```
+utm_source={{site_source_name}}&utm_medium=cpc&utm_campaign={{campaign.name}}&utm_content={{ad.name}}
+```
+
+**Script Properties Apps Script requeridas:** `FB_PIXEL_ID` + `FB_ACCESS_TOKEN`
+
+---
+
 ## Cómo agregar una campaña nueva
 
-1. Duplicar `cp/colegiales/` → `cp/<nombre-nueva-campaña>/`
-2. Cambiar `const CAMPAIGN = 'colegiales'` por el nuevo nombre
-3. Cambiar `const WHATSAPP_NUMBERS` si aplica
-4. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas)
-5. Push a GitHub → Vercel despliega automáticamente
+1. Elegir blueprint (A con form / B sin form)
+2. Duplicar `cp/colegiales/` → `cp/<nombre-nueva-campaña>/` como base
+3. Cambiar `const CAMPAIGN = 'colegiales'` por el nuevo nombre
+4. Cambiar `const WHATSAPP_NUMBERS` si aplica
+5. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas)
+6. Push a GitHub → Vercel despliega automáticamente
 
 ---
 
