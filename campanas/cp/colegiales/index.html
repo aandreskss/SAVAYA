@@ -280,7 +280,7 @@ body{padding-bottom:78px;}
             <div class="field" data-field="whatsapp">
               <label for="whatsapp">Número de WhatsApp</label>
               <input type="tel" id="whatsapp" name="whatsapp" placeholder="Ej: 0414-1234567" autocomplete="tel" required>
-              <span class="err-msg">Escribe un número de WhatsApp válido.</span>
+              <span class="err-msg">Escribe tu número completo (ej: 0412-1234567).</span>
             </div>
 
             <div class="consent">
@@ -602,7 +602,7 @@ body{padding-bottom:78px;}
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     setFieldError('email', !emailOk); if (!emailOk) ok = false;
     setFieldError('city', city.length < 2); if (city.length < 2) ok = false;
-    const phoneOk = phoneDigits.length >= 7 && phoneDigits.length <= 13;
+    const phoneOk = phoneDigits.length >= 10 && phoneDigits.length <= 13;
     setFieldError('whatsapp', !phoneOk); if (!phoneOk) ok = false;
 
     if (!consent) { formStatus.textContent = 'Debes aceptar recibir información para continuar.'; formStatus.classList.add('show'); ok = false; }
