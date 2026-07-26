@@ -36,11 +36,13 @@ module.exports = async (req, res) => {
   const ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
   const eventTime = Math.floor(Date.now() / 1000);
 
+  const forwarded = req.headers['x-forwarded-for'];
+  const clientIp = forwarded ? forwarded.split(',')[0].trim() : req.socket?.remoteAddress;
+  const userAgentHeader = req.headers['user-agent'] || '';
+
   const tasks = [];
 
   if (PIXEL_ID && ACCESS_TOKEN) {
-    const forwarded = req.headers['x-forwarded-for'];
-    const clientIp = forwarded ? forwarded.split(',')[0].trim() : req.socket?.remoteAddress;
 
     const firstName = name.trim().split(/\s+/)[0];
 
@@ -52,7 +54,7 @@ module.exports = async (req, res) => {
       ct:      [sha256(city)],
       country: [sha256('ve')],
       client_ip_address: clientIp,
-      client_user_agent: req.headers['user-agent'],
+      client_user_agent: userAgentHeader,
     };
     if (fbp) userData.fbp = fbp;
     if (fbc) userData.fbc = fbc;
@@ -124,10 +126,12 @@ module.exports = async (req, res) => {
           campaign: campaign || 'sin_campana',
           source:   campaign || 'sin_campana',
           utm,
-          platform: platform || '',
-          device:   device   || '',
-          fbc:      fbc      || '',
-          fbp:      fbp      || '',
+          platform:  platform      || '',
+          device:    device        || '',
+          fbc:       fbc           || '',
+          fbp:       fbp           || '',
+          ip:        clientIp      || '',
+          userAgent: userAgentHeader,
         }),
       }).catch((err) => console.error('Error enviando a LEAD_WEBHOOK_URL:', err))
     );

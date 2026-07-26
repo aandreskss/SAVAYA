@@ -40,7 +40,7 @@ var HEADERS = [
   'Origen', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Anuncio',
   'Plataforma', 'Dispositivo',
   'Venta', 'Monto USD', 'Fecha Venta', 'Estado Meta',
-  'fbc', 'fbp'
+  'fbc', 'fbp', 'IP', 'UserAgent'
 ];
 
 var COL = {
@@ -48,7 +48,7 @@ var COL = {
   ORIGEN: 6, UTM_SOURCE: 7, UTM_MEDIUM: 8, UTM_CAMPAIGN: 9, ANUNCIO: 10,
   PLATAFORMA: 11, DISPOSITIVO: 12,
   VENTA: 13, MONTO: 14, FECHA_VENTA: 15, ESTADO_META: 16,
-  FBC: 17, FBP: 18
+  FBC: 17, FBP: 18, IP: 19, UA: 20
 };
 
 // ── Recepción de leads ────────────────────────────────────────────────────────
@@ -71,14 +71,16 @@ function doPost(e) {
     (data.utm && data.utm.utm_medium)   || '',
     (data.utm && data.utm.utm_campaign) || '',
     (data.utm && data.utm.utm_content)  || '',
-    data.platform  || '',
-    data.device    || '',
-    false,         // Venta — checkbox vacío por defecto
-    '',            // Monto USD
-    '',            // Fecha Venta
-    '',            // Estado Meta
-    data.fbc || '', // fbc — fbclid para matching de ventas
-    data.fbp || '', // fbp — cookie de pixel
+    data.platform   || '',
+    data.device     || '',
+    false,          // Venta — checkbox vacío por defecto
+    '',             // Monto USD
+    '',             // Fecha Venta
+    '',             // Estado Meta
+    data.fbc       || '',
+    data.fbp       || '',
+    data.ip        || '',
+    data.userAgent || '',
   ]);
 
   // Poner checkbox real en la columna Venta de la fila recién agregada
@@ -121,6 +123,8 @@ function onVentaEdit(e) {
   var fechaVenta = rowData[COL.FECHA_VENTA - 1];
   var fbc        = rowData[COL.FBC - 1];
   var fbp        = rowData[COL.FBP - 1];
+  var ip         = rowData[COL.IP - 1];
+  var userAgent  = rowData[COL.UA - 1];
 
   // Bloquear si no hay monto
   if (!monto || parseFloat(monto) <= 0) {
@@ -136,7 +140,8 @@ function onVentaEdit(e) {
 
   var result = sendPurchaseToMeta({
     name: name, email: email, city: city, phone: phone,
-    monto: monto, eventTime: eventTime, fbc: fbc, fbp: fbp
+    monto: monto, eventTime: eventTime, fbc: fbc, fbp: fbp,
+    ip: ip, userAgent: userAgent
   });
 
   estadoCell.setValue(result);
@@ -163,8 +168,10 @@ function sendPurchaseToMeta(data) {
     ct:      [sha256(data.city)],
     country: [sha256('ve')]
   };
-  if (data.fbc) userData.fbc = data.fbc;
-  if (data.fbp) userData.fbp = data.fbp;
+  if (data.fbc)       userData.fbc               = data.fbc;
+  if (data.fbp)       userData.fbp               = data.fbp;
+  if (data.ip)        userData.client_ip_address = data.ip;
+  if (data.userAgent) userData.client_user_agent = data.userAgent;
 
   var event = {
     event_name:   'Purchase',

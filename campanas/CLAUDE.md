@@ -96,7 +96,7 @@ Al hacer submit el formulario:
 
 ### Datos en Google Sheets
 
-Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo** · **Venta** · **Monto USD** · **Fecha Venta** · **Estado Meta** · **fbc** · **fbp**
+Columnas: Fecha · Nombre · Email · Ciudad · WhatsApp · Origen · UTM Source · UTM Medium · UTM Campaign · **Anuncio** · **Plataforma** · **Dispositivo** · **Venta** · **Monto USD** · **Fecha Venta** · **Estado Meta** · **fbc** · **fbp** · **IP** · **UserAgent**
 
 - **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`. Valores: `Facebook`, `Instagram`, `Meta (sin especificar)`, `Directo / Otro`
 - **Dispositivo:** detectado por `navigator.userAgent`. Valores: `Teléfono`, `PC`
@@ -207,7 +207,7 @@ Anuncio → Landing page (form: Nombre, Email, Teléfono, Ciudad)
 `Fecha · Nombre · Email · Teléfono · Ciudad · Plataforma · Dispositivo · UTM Source · UTM Medium · UTM Campaign · Anuncio · fbc · fbp · Venta · Monto USD · Fecha Venta · Estado Meta`
 
 **Señales Meta Lead:** email hash + phone hash + fbc + fbp + IP + userAgent
-**Señales Meta Purchase:** email hash + phone hash + fbc + fbp
+**Señales Meta Purchase:** email hash + phone hash + fbc + fbp + IP + userAgent (guardados en Sheet al llegar el lead)
 **Match quality esperado:** ~85-90%
 
 **API (`api/lead.js`) recibe:** campaign, eventId, nombre, email, telefono, ciudad, fbc, fbp, utmSource, utmMedium, utmCampaign, utmContent, plataforma, dispositivo, userAgent
