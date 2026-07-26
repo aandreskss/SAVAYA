@@ -15,6 +15,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/cp/colegiales/assets/hero-colegial.webp" fetchpriority="high">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WK0Z4V9R39"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-WK0Z4V9R39');
+</script>
 <style>
 :root{
   --gold:#CA8C31; --gold-light:#E5BB5B; --gold-pale:#FFEA84; --cream:#FFF2BC;
@@ -209,6 +216,10 @@ body{padding-bottom:78px;}
     content_type:     'product',
     content_ids:      ['colegiales-2026'],
     currency:         'USD',
+  });
+  gtag('event', 'view_item', {
+    currency: 'USD',
+    items: [{ item_id: 'colegiales-2026', item_name: 'Zapato Escolar Mayorista SAVAYA 2026', item_category: 'Calzado Escolar al Mayor' }],
   });
 </script>
 <noscript><img height="1" width="1" style="display:none"
@@ -572,6 +583,10 @@ body{padding-bottom:78px;}
     input.addEventListener('focus', () => {
       if (_formStarted) return;
       _formStarted = true;
+      gtag('event', 'begin_checkout', {
+        currency: 'USD',
+        items: [{ item_id: 'colegiales-2026', item_name: 'Zapato Escolar Mayorista SAVAYA 2026', item_category: 'Calzado Escolar al Mayor' }],
+      });
       fbq('track', 'InitiateCheckout', {
         content_name:     'Zapato Escolar Mayorista SAVAYA - Temporada Escolar 2026',
         content_category: 'Calzado Escolar al Mayor',
@@ -642,6 +657,14 @@ body{padding-bottom:78px;}
     };
     fbq('track', 'Lead',    leadCustomData, { eventID: eventId });
     fbq('track', 'Contact', leadCustomData, { eventID: `${eventId}_c` });
+
+    gtag('event', 'generate_lead', {
+      currency: 'USD',
+      city,
+      campaign: CAMPAIGN,
+      platform: PLATFORM,
+      device:   DEVICE,
+    });
 
     // Abrir WhatsApp de inmediato — estamos en el call stack del gesto del usuario, sin await,
     // así el navegador no lo bloquea como popup
