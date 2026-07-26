@@ -56,7 +56,7 @@ Hasta que la tienda exista, los anuncios pueden apuntar directo a `https://savay
 En el `index.html` de cada campaña, cerca del inicio del `<body>`:
 ```js
 const FB_PIXEL_ID = '27355395054120748';                          // Pixel de SAVAYA (ya configurado)
-const WHATSAPP_NUMBERS = ['584129404770', '584121211526'];        // números del negocio — se reparten al azar por lead
+const WHATSAPP_NUMBERS = ['584121211526'];                        // número del negocio
 const CAMPAIGN = 'colegiales';                                    // cámbialo por campaña
 ```
 Cada vez que un lead completa el formulario, se elige al azar uno de los números de `WHATSAPP_NUMBERS` para el botón "Continuar por WhatsApp" — así los leads se reparten entre los vendedores sin depender de un solo número. Puedes poner uno o varios números en el arreglo.
