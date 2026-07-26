@@ -203,6 +203,13 @@ body{padding-bottom:78px;}
   'https://connect.facebook.net/en_US/fbevents.js');
   fbq('init', FB_PIXEL_ID);
   fbq('track', 'PageView');
+  fbq('track', 'ViewContent', {
+    content_name:     'Zapato Escolar Mayorista SAVAYA - Temporada Escolar 2026',
+    content_category: 'Calzado Escolar al Mayor',
+    content_type:     'product',
+    content_ids:      ['colegiales-2026'],
+    currency:         'USD',
+  });
 </script>
 <noscript><img height="1" width="1" style="display:none"
   src="https://www.facebook.com/tr?id=27355395054120748&ev=PageView&noscript=1"
@@ -558,8 +565,23 @@ body{padding-bottom:78px;}
   const PLATFORM = detectPlatform();
   const DEVICE   = detectDevice();
 
-  // ---------- validación + envío del formulario ----------
+  // ---------- InitiateCheckout al primer toque del form ----------
   const form = document.getElementById('leadForm');
+  let _formStarted = false;
+  form.querySelectorAll('input').forEach(input => {
+    input.addEventListener('focus', () => {
+      if (_formStarted) return;
+      _formStarted = true;
+      fbq('track', 'InitiateCheckout', {
+        content_name:     'Zapato Escolar Mayorista SAVAYA - Temporada Escolar 2026',
+        content_category: 'Calzado Escolar al Mayor',
+        content_type:     'product',
+        num_items:        1,
+      });
+    });
+  });
+
+  // ---------- validación + envío del formulario ----------
   const submitBtn = document.getElementById('submitBtn');
   const formStatus = document.getElementById('formStatus');
 
