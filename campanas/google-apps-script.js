@@ -39,7 +39,8 @@
 // ── Vendedoras — editar según el equipo ──────────────────────────────────────
 // nombre: lo que aparece en el dropdown. numero: WhatsApp con código de país.
 var VENDEDORAS = [
-  { nombre: 'Vendedora 1', numero: '584121211526' }
+  { nombre: 'Rosmary', numero: '584121211526' },
+  { nombre: 'Cecilia', numero: '584242908090' }
 ];
 
 // ── Columnas ─────────────────────────────────────────────────────────────────
