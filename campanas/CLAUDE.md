@@ -55,15 +55,20 @@ Las rutas `/cp/*` y `/api/*` de `www.savayavzla.com` son servidas por este proye
 
 ## WhatsApp del negocio
 
-Número activo: **+58 412-1211526** (`584121211526`)
+Dos números activos con round-robin en la landing:
+
+| Vendedora | Número | Formato |
+|---|---|---|
+| Rosmary | `584121211526` | +58 412-1211526 |
+| Cecilia | `584242908090` | +58 424-2908090 |
 
 Usado en:
-- `WHATSAPP_NUMBERS` de la landing → redirección al submit del form
-- Footer de la landing
-- Email template de seguimiento (`email-colegiales.html`)
-- `VENDEDORAS` del Apps Script → asignación de leads
+- `WHATSAPP_NUMBERS` de la landing → round-robin al submit del form
+- Footer de la landing (ambos números)
+- Email template de seguimiento (`email-colegiales.html`) — solo Rosmary
+- `VENDEDORAS` del Apps Script → asignación de leads (ambas)
 
-Para cambiar el número: actualizar los 4 lugares anteriores.
+Para agregar/cambiar un número: actualizar los 4 lugares anteriores.
 
 ---
 
@@ -110,32 +115,35 @@ Al hacer submit el formulario:
 
 ### Datos en Google Sheets
 
-Columnas (22 en total):
+Columnas (25 en total). Las cols 17–20 se pueden ocultar sin romper nada — el Apps Script las sigue leyendo aunque estén ocultas.
 
-| # | Columna | Descripción |
-|---|---|---|
-| 1 | Fecha | Timestamp ISO del submit |
-| 2 | Nombre | Nombre del lead |
-| 3 | Email | Email del lead |
-| 4 | Ciudad | Ciudad del lead |
-| 5 | WhatsApp | Teléfono normalizado (58...) |
-| 6 | Origen | Nombre de la campaña |
-| 7 | UTM Source | `utm_source` |
-| 8 | UTM Medium | `utm_medium` |
-| 9 | UTM Campaign | `utm_campaign` |
-| 10 | Anuncio | `utm_content` — nombre del anuncio en Meta |
-| 11 | Plataforma | Facebook / Instagram / Meta (sin especificar) / Directo |
-| 12 | Dispositivo | Teléfono / PC |
-| 13 | Venta | Checkbox — marcar cuando el lead compra |
-| 14 | Monto USD | Monto de la venta (sin símbolo, ej: `120`) |
-| 15 | Fecha Venta | Fecha real de la venta (opcional) |
-| 16 | Estado Meta | `✅` éxito · `❌` error · `⚠️` falta monto |
-| 17 | fbc | Cookie `_fbc` de Meta (fbclid) — clave para atribución |
-| 18 | fbp | Cookie `_fbp` de Meta |
-| 19 | IP | IP del cliente al momento del submit |
-| 20 | UserAgent | User-Agent del cliente al momento del submit |
-| 21 | Asignar a | Dropdown con vendedoras — seleccionar para asignar |
-| 22 | Asignado | Se llena automáticamente: nombre vendedora + timestamp |
+| # | Col | Columna | Descripción |
+|---|---|---|---|
+| 1 | A | Fecha | Timestamp ISO del submit |
+| 2 | B | Nombre | Nombre del lead |
+| 3 | C | Email | Email del lead |
+| 4 | D | Ciudad | Ciudad del lead |
+| 5 | E | WhatsApp | Teléfono normalizado (58...) |
+| 6 | F | Origen | Nombre de la campaña |
+| 7 | G | UTM Source | `utm_source` |
+| 8 | H | UTM Medium | `utm_medium` |
+| 9 | I | UTM Campaign | `utm_campaign` |
+| 10 | J | Anuncio | `utm_content` — nombre del anuncio en Meta |
+| 11 | K | Plataforma | Facebook / Instagram / Meta (sin especificar) / Directo |
+| 12 | L | Dispositivo | Teléfono / PC |
+| 13 | M | Venta | Checkbox — marcar cuando el lead compra |
+| 14 | N | Monto USD | Monto de la venta (sin símbolo, ej: `120`) |
+| 15 | O | Fecha Venta | Fecha real de la venta (opcional) |
+| 16 | P | Estado Meta | `✅` éxito · `❌` error · `⚠️` falta monto |
+| 17 | Q | fbc | Cookie `_fbc` de Meta (fbclid) — clave para atribución |
+| 18 | R | fbp | Cookie `_fbp` de Meta |
+| 19 | S | IP | IP del cliente al momento del submit |
+| 20 | T | UserAgent | User-Agent del cliente al momento del submit |
+| 21 | U | Asignar a | Dropdown con vendedoras — seleccionar para asignar |
+| 22 | V | Asignado | Se llena automáticamente: nombre vendedora + timestamp |
+| 23 | W | Negocio | Sí / No — respuesta del toggle en el formulario |
+| 24 | X | Cal. Auto | 🔥 Caliente / 🌡️ Tibio / ❄️ Frío — calculado al llegar el lead |
+| 25 | Y | Cal. Vendedor | Dropdown — el vendedor confirma/corrige tras el WhatsApp |
 
 - **Plataforma:** detectada por `utm_source` (prioridad) y luego `document.referrer`
 - **Anuncio:** configurar en Meta Ads Manager: `utm_content={{ad.name}}`
@@ -220,7 +228,8 @@ Crea automáticamente una pestaña por campaña. Si la pestaña ya existe y le f
 Al tope del script, editar el array `VENDEDORAS`:
 ```javascript
 var VENDEDORAS = [
-  { nombre: 'Vendedora 1', numero: '584121211526' }
+  { nombre: 'Rosmary', numero: '584121211526' },
+  { nombre: 'Cecilia', numero: '584242908090' }
 ];
 ```
 - `nombre`: aparece en el dropdown del Sheet
@@ -248,13 +257,80 @@ Activadores (ícono del reloj) → Agregar activador:
 
 ### Menú Savaya en el Sheet
 
-Al abrir el Sheet aparece el menú **Savaya** en la barra superior (requiere que `onOpen` esté en el script — es trigger simple, no necesita instalación manual).
+Al abrir el Sheet aparece el menú **Savaya** en la barra superior (trigger simple `onOpen`, no necesita instalación manual).
 
-- **Savaya → Configurar dropdowns de asignación:** aplica el dropdown de vendedoras a todas las filas de datos de la pestaña activa. Ejecutar una vez al pegar leads existentes o al configurar el Sheet por primera vez.
+| Opción | Función | Para qué |
+|---|---|---|
+| Configurar dropdowns de asignación | `setupAsignarDropdowns` | Aplica dropdown de vendedoras a todas las filas de la pestaña activa |
+| 📊 Actualizar métricas | `buildMetrics` | Genera/regenera la pestaña de métricas con gráficas |
+| ⏰ Instalar actualización automática | `installMetricsTrigger` | Crea trigger para regenerar métricas todos los días a las 8am |
 
 ### Para actualizar el script en producción
 1. Extensiones → Apps Script → reemplazar código → Guardar
 2. Implementar → Gestionar implementaciones → lápiz → Nueva versión → Deploy
+
+---
+
+## Hoja de métricas (📊 Métricas)
+
+Se genera con **Savaya → 📊 Actualizar métricas**. Lee todas las pestañas de campaña del Sheet y construye una pestaña resumen con tablas + gráficas.
+
+### Secciones de la pestaña
+
+| Sección | Columnas |
+|---|---|
+| Resumen general | Leads totales, ventas, conversión %, monto total, ticket promedio |
+| Por calificación auto | 🔥/🌡️/❄️ — leads, ventas, conversión, monto por nivel |
+| Por vendedora | Leads asignados, ventas cerradas, conversión, monto |
+| Por ciudad | Leads, ventas, conversión, monto (ciudades normalizadas) |
+| Por plataforma | Leads, ventas, conversión, monto |
+| Por dispositivo | Leads, ventas, conversión, monto |
+| Por día de la semana | Leads, ventas, % del total (Lunes–Domingo) |
+| Por campaña Meta (utm_campaign) | Leads, ventas, conversión, monto |
+| Por anuncio (utm_content) | Leads, ventas, conversión, monto |
+| Por landing (pestaña) | Leads, ventas, conversión, monto |
+| Tendencia por fecha | Leads y ventas por día calendario |
+
+### Gráficas automáticas (6 en total)
+
+Se posicionan a la derecha de los datos (col I y col P):
+
+| Gráfica | Tipo |
+|---|---|
+| Tendencia de leads | Línea (fecha, leads, ventas) |
+| Leads por ciudad | Barras horizontales |
+| Leads por día de semana | Columnas |
+| Por plataforma | Torta |
+| Por dispositivo | Torta |
+| Ventas por vendedora | Barras (asignados + ventas) |
+
+Al regenerar, las gráficas viejas se eliminan y se recrean. Si una sección no tiene datos, su gráfica se omite silenciosamente.
+
+### Normalización de ciudades (`normalizeCity`)
+
+Resuelve el problema de que el mismo lugar se escriba de formas distintas (estado vs ciudad, con/sin tildes, abreviaturas).
+
+**Estrategia:**
+1. Normaliza el input: minúsculas, sin tildes, sin puntuación
+2. Busca coincidencia exacta en `CITY_MAP`
+3. Si no, busca la clave más larga que aparezca como **palabra completa** en el texto
+4. Fallback: título de caso del valor original
+
+**Ejemplos:**
+| Lo que escribe el cliente | Se almacena como |
+|---|---|
+| Carabobo / carabobo / Edo. Carabobo | **Valencia** |
+| Caracas / Distrito Capital / Dtto Capital | **Caracas** |
+| Aragua / Maracay / Turmero / Cagua | **Maracay** |
+| Lara / Barquisimeto / Cabudare | **Barquisimeto** |
+| Zulia / Maracaibo | **Maracaibo** |
+| Táchira / San Cristóbal | **San Cristóbal** |
+| Miranda / Los Teques / Guarenas / Guatire | **Miranda** |
+| Nueva Esparta / Margarita / Porlamar | **Isla de Margarita** |
+| Puerto Ordaz / San Félix / Ciudad Guayana | **Ciudad Guayana** |
+| Vargas / La Guaira / Maiquetía | **La Guaira** |
+
+El mapa (`CITY_MAP`) cubre todos los estados venezolanos + sus municipios principales. Para agregar un alias nuevo: añadir entrada al objeto `CITY_MAP` en `google-apps-script.js`.
 
 ---
 
@@ -287,12 +363,12 @@ Anuncio → Landing page (form: Nombre, Email, Teléfono, Ciudad)
   → Apps Script onVentaEdit → Purchase a Meta CAPI (action_source: website)
 ```
 
-**Sheet:** Una sola tab por campaña. 22 columnas (ver tabla completa arriba).
+**Sheet:** Una sola tab por campaña. 25 columnas (ver tabla completa arriba).
 
 **Señales Meta Lead:** email hash + phone hash + fn hash + city hash + fbc + fbp + IP + userAgent → ~9/10 match quality
 **Señales Meta Purchase:** email hash + phone hash + fn hash + city hash + fbc + fbp + IP + userAgent (guardados en Sheet al llegar el lead) → ~8-9/10 match quality
 
-**API (`api/lead.js`) recibe:** campaign, eventId, name, email, city, whatsapp, fbc, fbp, utm, platform, device, userAgent (IP se toma del request)
+**API (`api/lead.js`) recibe:** campaign, eventId, name, email, city, whatsapp, negocio, fbc, fbp, utm, platform, device, userAgent (IP se toma del request)
 
 ---
 
@@ -366,7 +442,7 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 1. Elegir blueprint (A con form / B sin form)
 2. Duplicar `cp/colegiales/` → `cp/<nombre-nueva-campaña>/` como base
 3. Cambiar `const CAMPAIGN = 'colegiales'` por el nuevo nombre
-4. `const WHATSAPP_NUMBERS` ya tiene un solo número — cambiar si aplica
+4. `const WHATSAPP_NUMBERS` tiene los dos números de Rosmary y Cecilia — ajustar si aplica
 5. Actualizar el `event_source_url` en `google-apps-script.js` si es una campaña diferente
 6. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas)
 7. Crear un grupo nuevo en MailerLite para la campaña y actualizar `MAILERLITE_GROUP_ID` en Vercel (o usar el mismo grupo si se quiere la misma automatización)
@@ -398,3 +474,7 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 - [x] **Email template:** `email-colegiales.html` — ángulo A+C (acceso prioritario + urgencia septiembre)
 - [x] **DNS MailerLite** agregados en Vercel: DKIM (CNAME) + SPF (TXT) + verificación (TXT)
 - [x] **Asignación de leads a vendedoras:** dropdown en Sheet → dialog → WhatsApp pre-rellenado → columna Asignado con timestamp
+- [x] **Hoja de métricas `📊 Métricas`:** `buildMetrics()` genera pestaña con 11 secciones y 6 gráficas automáticas (tendencia, ciudad, día semana, plataforma, dispositivo, vendedora). Trigger diario 8am opcional.
+- [x] **Normalización de ciudades:** `normalizeCity()` + `CITY_MAP` agrupa variantes del mismo lugar (estado vs ciudad, tildes, abreviaturas) → evita duplicados en métricas. Cubre todos los estados de Venezuela.
+- [x] **Sistema de calificación de leads:** toggle Sí/No en el form + lógica negocio × ciudad principal → Cal. Auto (col X) con color. Cal. Vendedor (col Y) para confirmación manual. Sección POR CALIFICACIÓN en métricas.
+- [x] **Dos vendedoras activas:** Rosmary (`584121211526`) y Cecilia (`584242908090`). Round-robin en la landing, dropdown en el Sheet, ambos números en el footer.
