@@ -99,6 +99,12 @@ img,svg{display:block;max-width:100%;}
 .form-status{font-size:13px;margin-top:10px;text-align:center;color:#c85a4a;display:none;}
 .form-status.show{display:block;}
 
+/* toggle Sí/No */
+.toggle-group{display:flex;gap:10px;margin-top:2px;}
+.toggle-btn{flex:1;padding:13px 14px;border-radius:var(--radius-pill);border:2px solid var(--line);background:var(--bg);font-family:var(--font);font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:border-color .15s,background .15s,color .15s;text-align:center;}
+.toggle-btn:hover{border-color:var(--gold);color:var(--ink);}
+.toggle-btn.active{border-color:var(--gold);background:var(--cream);color:var(--gold-dark);}
+
 .success-card{display:none;text-align:center;padding:8px 4px;}
 .success-card.show{display:block;}
 .success-card .icon{width:56px;height:56px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;}
@@ -292,6 +298,14 @@ body{padding-bottom:78px;}
               <label for="whatsapp">Número de WhatsApp</label>
               <input type="tel" id="whatsapp" name="whatsapp" placeholder="Ej: 0414-1234567" autocomplete="tel" required>
               <span class="err-msg">Escribe tu número completo (ej: 0412-1234567).</span>
+            </div>
+
+            <div class="field" data-field="negocio">
+              <label>¿Tienes una tienda de ropa o zapatos?</label>
+              <div class="toggle-group">
+                <button type="button" class="toggle-btn" data-value="si">Sí, tengo tienda</button>
+                <button type="button" class="toggle-btn" data-value="no">No por ahora</button>
+              </div>
             </div>
 
             <div class="consent">
@@ -595,6 +609,29 @@ body{padding-bottom:78px;}
     });
   });
 
+  // ---------- toggle negocio ----------
+  let negocioValue = '';
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      negocioValue = btn.dataset.value;
+      if (!_formStarted) {
+        _formStarted = true;
+        gtag('event', 'begin_checkout', {
+          currency: 'USD',
+          items: [{ item_id: 'colegiales-2026', item_name: 'Zapato Escolar Mayorista SAVAYA 2026', item_category: 'Calzado Escolar al Mayor' }],
+        });
+        fbq('track', 'InitiateCheckout', {
+          content_name:     'Zapato Escolar Mayorista SAVAYA - Temporada Escolar 2026',
+          content_category: 'Calzado Escolar al Mayor',
+          content_type:     'product',
+          num_items:        1,
+        });
+      }
+    });
+  });
+
   // ---------- validación + envío del formulario ----------
   const submitBtn = document.getElementById('submitBtn');
   const formStatus = document.getElementById('formStatus');
@@ -691,6 +728,7 @@ body{padding-bottom:78px;}
         utm,
         platform: PLATFORM,
         device:   DEVICE,
+        negocio:  negocioValue,
       }),
       keepalive: true,
     }).catch((err) => console.error('Error enviando lead a /api/lead', err));

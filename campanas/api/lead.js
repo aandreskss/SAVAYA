@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
     name, email, city, whatsapp,
     eventId, fbp, fbc, eventSourceUrl,
     campaign, utm, testEventCode,
-    platform, device,
+    platform, device, negocio,
   } = req.body || {};
 
   if (!name || !email || !city || !whatsapp) {
@@ -128,6 +128,7 @@ module.exports = async (req, res) => {
           utm,
           platform:  platform      || '',
           device:    device        || '',
+          negocio:   negocio       || '',
           fbc:       fbc           || '',
           fbp:       fbp           || '',
           ip:        clientIp      || '',
