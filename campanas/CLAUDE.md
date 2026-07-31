@@ -77,7 +77,7 @@ Para agregar/cambiar un número: actualizar los 4 lugares anteriores.
 | Carpeta | Estado | URL producción |
 |---|---|---|
 | `cp/colegiales` | ✅ Live | `www.savayavzla.com/cp/colegiales` |
-| `cp/Zapatillas` | 🔧 Ready to deploy | `www.savayavzla.com/cp/Zapatillas` |
+| `cp/Zapatillas` | ✅ Live | `www.savayavzla.com/cp/Zapatillas` |
 
 ---
 
