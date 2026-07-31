@@ -77,6 +77,35 @@ Para agregar/cambiar un número: actualizar los 4 lugares anteriores.
 | Carpeta | Estado | URL producción |
 |---|---|---|
 | `cp/colegiales` | ✅ Live | `www.savayavzla.com/cp/colegiales` |
+| `cp/Zapatillas` | 🔧 Ready to deploy | `www.savayavzla.com/cp/Zapatillas` |
+
+---
+
+## Meta Ads — Historial Colegiales
+
+### Campaña 1 — PAUSADA (2026-07-29)
+- **Objetivo:** Ventas (error — el flujo es lead gen, no e-commerce)
+- **Evento optimización:** Registro completo — nunca disparó, no se pudo cambiar una vez activa
+- **Resultado:** nunca salió del aprendizaje; CPL subió a $3 en los últimos 3 días
+- **Acumulado:** 100+ leads, ~$12/día
+- **Aprendizaje:** el anuncio de **solo imagen funcionó mejor** que el video → creativo ganador
+
+### Campaña 2 — ACTIVA (desde 2026-07-23)
+- **Objetivo:** Clientes potenciales (Leads) ✅
+- **Evento optimización:** Lead (activo via Conversions API)
+- **Dataset:** SAVAYA2026
+- **Presupuesto:** $24/día (consolidado desde el 2026-07-29 al pausar campaña 1)
+- **Anuncios:** video + imagen estática (imagen agregada 2026-07-29 — creativo ganador de campaña 1)
+- **Estado:** en aprendizaje — 33 leads acumulados pre-cambios, $1.5 CPL
+- **Aprendizaje reiniciado el 2026-07-29** por dos cambios simultáneos: nuevo anuncio imagen + presupuesto duplicado a $24/día
+- Salida de aprendizaje estimada: ~2026-08-01 al 08-02
+- **Revisión 2026-07-30:** no esperar salida de learning — revisar CPL y cuál anuncio (video vs imagen) entrega más
+
+### Lecciones aprendidas
+- Para landing → WhatsApp siempre usar objetivo **Leads**, nunca Ventas
+- Meta **no permite cambiar el evento de optimización** en una campaña activa — si te equivocas, solo queda pausarla y consolidar presupuesto en la campaña correcta
+- Al pausar la campaña equivocada, mover el presupuesto completo a la correcta de golpe (ya está en aprendizaje, no hay fase que proteger)
+- Tomar el **creativo ganador** de la campaña vieja y meterlo en la nueva antes de pausarla
 
 ---
 
