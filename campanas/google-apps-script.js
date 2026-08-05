@@ -40,7 +40,7 @@
 // nombre: lo que aparece en el dropdown. numero: WhatsApp con código de país.
 var VENDEDORAS = [
   { nombre: 'Rosmary', numero: '584121211526' },
-  { nombre: 'Cecilia', numero: '584242908090' }
+  { nombre: 'Tienda', numero: '584242908090' }
 ];
 
 // ── Columnas ─────────────────────────────────────────────────────────────────
