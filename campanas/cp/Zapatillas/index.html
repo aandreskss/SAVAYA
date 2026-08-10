@@ -650,10 +650,13 @@ body{padding-bottom:78px;}
     return ok;
   }
 
+  let _submitting = false;
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (_submitting) return;
     if (!validate()) return;
 
+    _submitting = true;
     submitBtn.disabled = true;
     submitBtn.textContent = 'Abriendo WhatsApp…';
     formStatus.classList.remove('show');
