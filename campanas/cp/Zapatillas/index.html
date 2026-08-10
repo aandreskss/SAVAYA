@@ -489,6 +489,20 @@ body{padding-bottom:78px;}
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
 
+  // Restaurar estado enviado si el usuario vuelve desde WhatsApp (bfcache / page restore)
+  const SUBMIT_KEY = 'savaya_zapatillas_submitted_v1';
+  (function restoreSubmitState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SUBMIT_KEY) || 'null');
+      if (saved && (Date.now() - saved.time) < 2 * 60 * 60 * 1000) {
+        document.getElementById('leadForm').style.display = 'none';
+        const sc = document.getElementById('successCard');
+        sc.classList.add('show');
+        if (saved.waUrl) document.getElementById('whatsappCta').href = saved.waUrl;
+      }
+    } catch (_) {}
+  })();
+
   // carrusel loop infinito
   const marqueeTrack = document.getElementById('marqueeTrack');
   if (marqueeTrack) {
@@ -695,6 +709,8 @@ body{padding-bottom:78px;}
     document.getElementById('whatsappCta').href = waUrl;
     document.getElementById('leadForm').style.display = 'none';
     document.getElementById('successCard').classList.add('show');
+
+    try { localStorage.setItem(SUBMIT_KEY, JSON.stringify({ time: Date.now(), waUrl })); } catch (_) {}
 
     fetch('/api/lead', {
       method: 'POST',
