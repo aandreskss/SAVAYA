@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { refreshRate } from '@/domains/exchange-rates/service'
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret')
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -20,3 +20,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }
+
+export { handler as GET, handler as POST }

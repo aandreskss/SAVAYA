@@ -4,12 +4,11 @@ import { orders, orderStatusHistory } from '@/domains/orders/schema'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { eq, and, lte, sql } from 'drizzle-orm'
 
-// GET /api/cron/expire-reservations
-// Runs every hour via Vercel Cron Jobs.
+// Runs every hour via Upstash QStash (POST) or direct call (GET).
 // Finds orders in pending_payment with an expired reservation and cancels them.
 // Protected by x-cron-secret header.
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   // Auth: require cron secret
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
@@ -104,3 +103,5 @@ export async function GET(request: NextRequest) {
     orderNumbers: expiredOrders.map((o) => o.orderNumber),
   })
 }
+
+export { handler as GET, handler as POST }
