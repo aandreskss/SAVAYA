@@ -2,8 +2,10 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { refreshRate } from '@/domains/exchange-rates/service'
 
 async function handler(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET
+  const headerSecret = req.headers.get('x-cron-secret')
+  const urlSecret = new URL(req.url).searchParams.get('secret')
+  if (headerSecret !== cronSecret && urlSecret !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

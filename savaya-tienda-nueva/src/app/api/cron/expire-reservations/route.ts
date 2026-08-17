@@ -9,11 +9,11 @@ import { eq, and, lte, sql } from 'drizzle-orm'
 // Protected by x-cron-secret header.
 
 async function handler(request: NextRequest) {
-  // Auth: require cron secret
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
-    const incomingSecret = request.headers.get('x-cron-secret')
-    if (incomingSecret !== cronSecret) {
+    const headerSecret = request.headers.get('x-cron-secret')
+    const urlSecret = new URL(request.url).searchParams.get('secret')
+    if (headerSecret !== cronSecret && urlSecret !== cronSecret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
