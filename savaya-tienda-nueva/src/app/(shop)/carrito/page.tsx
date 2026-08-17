@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { getCart } from '@/domains/cart/actions'
 import { CartPageClient } from '@/domains/cart/components/CartPageClient'
-import { getCurrentRate, convertToVes } from '@/domains/exchange-rates/service'
+import { getCurrentRate } from '@/domains/exchange-rates/service'
+import { convertToVes } from '@/domains/exchange-rates/utils'
 
 export const metadata: Metadata = {
   title: 'Tu carrito — SAVAYA',

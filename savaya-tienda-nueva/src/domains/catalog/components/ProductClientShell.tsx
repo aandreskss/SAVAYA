@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ProductGallery } from './ProductGallery'
 import { ProductInfo } from './ProductInfo'
 import type { ProductDetail } from '@/domains/catalog/repository'
-import type { ExchangeRate } from '@/domains/exchange-rates/service'
+import type { ExchangeRate } from '@/domains/exchange-rates/utils'
 import type { ActionResult } from '@/shared/lib/types'
 
 // ---------------------------------------------------------------------------

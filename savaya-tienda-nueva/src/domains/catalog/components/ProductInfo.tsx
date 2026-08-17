@@ -10,9 +10,8 @@ import {
   Modal,
 } from '@/shared/ui'
 import { ProductVariantSelector } from './ProductVariantSelector'
-import { convertToVes, formatVes } from '@/domains/exchange-rates/service'
+import { convertToVes, formatVes, type ExchangeRate } from '@/domains/exchange-rates/utils'
 import type { ProductDetail } from '@/domains/catalog/repository'
-import type { ExchangeRate } from '@/domains/exchange-rates/service'
 import type { ActionResult } from '@/shared/lib/types'
 import { cn } from '@/shared/lib/utils'
 

@@ -1,16 +1,9 @@
+import 'server-only'
 import { getLatestRate, saveRate } from './repository'
+export type { ExchangeRate } from './utils'
+export { convertToVes, formatVes } from './utils'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type ExchangeRate = {
-  currency: 'usd'
-  rateVes: number
-  source: string
-  fetchedAt: Date
-  isManualOverride: boolean
-}
+import type { ExchangeRate } from './utils'
 
 const FALLBACK_RATE: ExchangeRate = {
   currency: 'usd',
@@ -139,23 +132,3 @@ export async function refreshRate(): Promise<ExchangeRate> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// convertToVes — convierte USD a Bs. usando la tasa
-// ---------------------------------------------------------------------------
-
-export function convertToVes(amountUsd: number, rate: ExchangeRate): number {
-  return amountUsd * rate.rateVes
-}
-
-// ---------------------------------------------------------------------------
-// formatVes — formatea Bs. para mostrar al usuario
-// ---------------------------------------------------------------------------
-
-export function formatVes(amountVes: number): string {
-  return new Intl.NumberFormat('es-VE', {
-    style: 'currency',
-    currency: 'VES',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amountVes)
-}
