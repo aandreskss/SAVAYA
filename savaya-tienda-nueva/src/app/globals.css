@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand constants — always dark/light regardless of theme */
+  --color-brand-black: #111111;
+  --color-brand-white: #FFFFFF;
+  --color-brand-offwhite: #FAF7F2;
+
+  /* Surfaces — light-first (default: women's store) */
+  --color-surface: #FAF7F2;
+  --color-surface-2: #F1EFEA;
+  --color-surface-3: #E8E4DC;
+
+  /* Accent gold */
+  --color-accent-gold: #C9A227;
+  --color-accent-gold-hover: #D4A830;
+  --color-accent-gold-soft: #FFF9E6;
+
+  /* Text — light mode */
+  --color-text-primary: #111111;
+  --color-text-primary-inverse: #FAF7F2;
+  --color-text-secondary: #726F6A;
+  --color-text-muted: #9B9691;
+
+  /* Borders — light mode */
+  --color-border: #E4E0D9;
+  --color-border-hover: #CEC9C1;
+
+  /* States */
+  --color-success: #1D9B5F;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+
+  /* ─── Tipografía ─── */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+
+  /* ─── Border radius ─── */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  /* ─── Sombras (claras) ─── */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 12px 0 rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 8px 30px 0 rgb(0 0 0 / 0.14), 0 4px 8px -4px rgb(0 0 0 / 0.1);
+
+  /* ─── Spacing ─── */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-24: 96px;
+
+  /* ─── Breakpoints ─── */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1440px;
+
+  /* ─── Transiciones ─── */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 350ms;
+}
+
+/* ─── Tema oscuro ─── */
+[data-theme="dark"],
+[data-gender="hombre"] {
+  --color-surface: #0D0D0D;
+  --color-surface-2: #1A1918;
+  --color-surface-3: #252220;
+  --color-text-primary: #F1EFEA;
+  --color-text-primary-inverse: #111111;
+  --color-text-secondary: #9B9691;
+  --color-text-muted: #726F6A;
+  --color-border: #2E2C29;
+  --color-border-hover: #403E3B;
+  --color-accent-gold-soft: #2A1F00;
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+  --shadow-md: 0 4px 12px 0 rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 8px 24px 0 rgb(0 0 0 / 0.5), 0 4px 8px -4px rgb(0 0 0 / 0.4);
+}
+
+/* ─── SVY FOR MEN — color accent override ─── */
+[data-gender="hombre"] {
+  --color-accent-gold: #C9A227;
+  --color-accent-gold-hover: #D4A830;
+}
+
+/* ─── Base ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-gold);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-hover);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ─── Componentes de formulario y checkout ─── */
+@layer components {
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 1.75rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-accent-gold);
+    color: var(--color-brand-black);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 150ms;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-accent-gold-hover);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 1.75rem;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: center;
+    border: 1.5px solid var(--color-border);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 150ms, border-color 150ms;
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-surface-2);
+    border-color: var(--color-border-hover);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .input {
+    width: 100%;
+    padding: 0.875rem 1.125rem;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border);
+    background-color: var(--color-brand-white);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    appearance: none;
+    transition: border-color 150ms;
+  }
+  .input::placeholder {
+    color: var(--color-text-secondary);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-accent-gold);
+  }
+}
