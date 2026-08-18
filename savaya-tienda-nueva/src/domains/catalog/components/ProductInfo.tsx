@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useCartStore } from '@/domains/cart/cart-store'
+import type { CartSummary } from '@/domains/cart/repository'
 import Link from 'next/link'
 import {
   Button,
@@ -206,6 +208,10 @@ export function ProductInfo({
       if (result.success) {
         setCartSuccess(true)
         setTimeout(() => setCartSuccess(false), 2500)
+        if (result.data) {
+          useCartStore.getState().setSummary(result.data as CartSummary)
+          useCartStore.getState().openCart()
+        }
       } else {
         setCartError(result.error)
       }

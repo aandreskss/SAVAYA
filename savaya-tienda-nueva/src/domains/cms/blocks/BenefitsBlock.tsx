@@ -139,7 +139,7 @@ export function BenefitsBlock({ title, benefits }: Props) {
   const colCount = benefits.length <= 4 ? benefits.length : 3
 
   return (
-    <section className="px-4 md:px-10 py-3 pb-9">
+    <section className="px-4 md:px-10 py-12 md:py-16">
       {title && (
         <h2 className="mb-7 text-center font-display font-bold text-xl text-text-primary uppercase">
           {title}
