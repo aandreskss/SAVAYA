@@ -147,7 +147,6 @@ export async function loginCustomer(data: LoginInput): Promise<ActionResult<void
     await signIn('credentials', {
       email: parsed.data.email,
       password: parsed.data.password,
-      totpCode: '',
       redirect: false,
     })
     return { success: true, data: undefined }
@@ -211,7 +210,7 @@ export async function loginAdmin(data: LoginInput): Promise<ActionResult<void>> 
 
     if (err instanceof AuthError) {
       if (err.type === 'CredentialsSignin') {
-        return { success: false, error: 'Credenciales incorrectas o código 2FA inválido.' }
+        return { success: false, error: 'Correo, contraseña o código 2FA incorrecto.' }
       }
       console.error('[loginAdmin] AuthError:', err.type, err.message)
       return { success: false, error: 'Error al iniciar sesión. Intenta de nuevo.' }

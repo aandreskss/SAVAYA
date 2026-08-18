@@ -15,7 +15,7 @@ export const RegisterCustomerSchema = z.object({
 export const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  totpCode: z.string().length(6).optional(),
+  totpCode: z.string().refine((v) => v === '' || v.length === 6, 'El código debe tener 6 dígitos').optional(),
 })
 
 export const ResetPasswordSchema = z

@@ -12,7 +12,6 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [totpCode, setTotpCode] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [needs2FA, setNeeds2FA] = useState(false)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -22,16 +21,13 @@ export default function AdminLoginPage() {
       const result = await loginAdmin({
         email,
         password,
-        totpCode: needs2FA ? totpCode : undefined,
+        totpCode: totpCode.trim() || undefined,
       })
 
       if (result.success) {
         router.push('/admin')
         router.refresh()
       } else {
-        if (result.error.includes('2FA') || result.error.includes('código')) {
-          setNeeds2FA(true)
-        }
         setError(result.error)
       }
     })
@@ -82,23 +78,23 @@ export default function AdminLoginPage() {
               />
             </div>
 
-            {needs2FA && (
-              <div>
-                <label htmlFor="totpCode" className="block text-sm font-medium mb-1.5">
-                  Código de autenticación (6 dígitos)
-                </label>
-                <input
-                  id="totpCode"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={totpCode}
-                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full border border-border rounded-md px-3 py-2.5 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-accent-gold/20 focus:border-accent-gold transition-colors tracking-[0.25em] text-center font-mono"
-                />
-              </div>
-            )}
+            <div>
+              <label htmlFor="totpCode" className="block text-sm font-medium mb-1.5">
+                Código 2FA{' '}
+                <span className="text-text-secondary font-normal">(si está configurado)</span>
+              </label>
+              <input
+                id="totpCode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="——————"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full border border-border rounded-md px-3 py-2.5 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-accent-gold/20 focus:border-accent-gold transition-colors tracking-[0.25em] text-center font-mono"
+              />
+            </div>
 
             {error && (
               <p role="alert" className="text-sm text-error bg-error/5 border border-error/20 rounded-md px-3 py-2">
