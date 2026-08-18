@@ -4,6 +4,7 @@
 // Auth server actions — registration, login, logout, password reset, 2FA
 // ---------------------------------------------------------------------------
 
+import { AuthError } from 'next-auth'
 import { signIn, signOut, auth } from '@/domains/auth/auth'
 import { db } from '@/shared/lib/db'
 import { users, twoFactorSecrets, twoFactorBackupCodes } from '@/domains/auth/schema'
@@ -150,10 +151,18 @@ export async function loginCustomer(data: LoginInput): Promise<ActionResult<void
     })
     return { success: true, data: undefined }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error de autenticación'
-    if (message.includes('CredentialsSignin')) {
-      return { success: false, error: 'Correo o contraseña incorrectos.' }
+    // Re-throw Next.js internal errors (redirect, not-found, etc.)
+    if (typeof err === 'object' && err !== null && 'digest' in err) throw err
+
+    if (err instanceof AuthError) {
+      if (err.type === 'CredentialsSignin') {
+        return { success: false, error: 'Correo o contraseña incorrectos.' }
+      }
+      console.error('[loginCustomer] AuthError:', err.type, err.message)
+      return { success: false, error: 'Error al iniciar sesión. Intenta de nuevo.' }
     }
+
+    console.error('[loginCustomer] Unexpected error:', err)
     return { success: false, error: 'Error al iniciar sesión. Intenta de nuevo.' }
   }
 }
@@ -196,17 +205,18 @@ export async function loginAdmin(data: LoginInput): Promise<ActionResult<void>> 
 
     return { success: true, data: undefined }
   } catch (err) {
-    // Auth.js throws on failure — distinguish between 2FA-required and wrong credentials
-    const message =
-      err instanceof Error ? err.message : 'Error de autenticación'
+    // Re-throw Next.js internal errors (redirect, not-found, etc.)
+    if (typeof err === 'object' && err !== null && 'digest' in err) throw err
 
-    if (message.includes('CredentialsSignin')) {
-      return {
-        success: false,
-        error: 'Credenciales incorrectas o código 2FA inválido.',
+    if (err instanceof AuthError) {
+      if (err.type === 'CredentialsSignin') {
+        return { success: false, error: 'Credenciales incorrectas o código 2FA inválido.' }
       }
+      console.error('[loginAdmin] AuthError:', err.type, err.message)
+      return { success: false, error: 'Error al iniciar sesión. Intenta de nuevo.' }
     }
 
+    console.error('[loginAdmin] Unexpected error:', err)
     return { success: false, error: 'Error al iniciar sesión. Intenta de nuevo.' }
   }
 }
