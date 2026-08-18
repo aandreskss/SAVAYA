@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { auth } from '@/domains/auth/auth'
 import { ADMIN_NAV } from '@/domains/admin/lib/nav'
