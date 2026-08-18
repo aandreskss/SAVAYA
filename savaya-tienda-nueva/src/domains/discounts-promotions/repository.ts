@@ -1,13 +1,13 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import { sql, eq, desc } from 'drizzle-orm'
+import type { NeonHttpQueryResultHKT } from 'drizzle-orm/neon-http'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
-import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
 import { discounts, couponUsages } from './schema'
 import type { Discount, DiscountType, DiscountAppliesToType } from './types'
 import type { DiscountFormPayload } from './validators'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyTx = PgTransaction<PostgresJsQueryResultHKT, any, any>
+type AnyTx = PgTransaction<NeonHttpQueryResultHKT, any, any>
 
 // ---------------------------------------------------------------------------
 // Read
@@ -47,7 +47,7 @@ export async function countCustomerUsages(
   discountId: string,
   customerId: string,
 ): Promise<number> {
-  const [{ count }] = await db.execute<{ count: string }>(
+  const [{ count }] = await rawQuery<{ count: string }>(
     sql`SELECT COUNT(*) as count FROM coupon_usages WHERE discount_id = ${discountId} AND customer_id = ${customerId}`,
   )
   return parseInt(count, 10)
@@ -55,7 +55,7 @@ export async function countCustomerUsages(
 
 // Does this customer have any prior orders (for isFirstOrderOnly check)?
 export async function customerHasOrders(customerId: string): Promise<boolean> {
-  const [{ count }] = await db.execute<{ count: string }>(
+  const [{ count }] = await rawQuery<{ count: string }>(
     sql`SELECT COUNT(*) as count FROM orders WHERE customer_id = ${customerId} AND status NOT IN ('cancelled')`,
   )
   return parseInt(count, 10) > 0

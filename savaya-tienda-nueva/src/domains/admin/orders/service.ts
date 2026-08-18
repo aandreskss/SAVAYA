@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import { sql } from 'drizzle-orm'
 import { orders, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
@@ -29,9 +29,9 @@ async function transitionOrderStatus(
   reason?: string,
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    const [current] = await tx.execute<{ status: string }>(sql`
+    const [current] = (await tx.execute<{ status: string }>(sql`
       SELECT status FROM orders WHERE id = ${orderId} FOR UPDATE LIMIT 1
-    `)
+    `)).rows
 
     if (!current) throw new OrderTransitionError('Pedido no encontrado')
 
@@ -72,11 +72,11 @@ export async function approvePayment(
   actor: ActorContext,
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    const [proof] = await tx.execute<{ status: string }>(sql`
+    const [proof] = (await tx.execute<{ status: string }>(sql`
       SELECT status FROM payment_proofs
       WHERE id = ${proofId} AND order_id = ${orderId}
       FOR UPDATE LIMIT 1
-    `)
+    `)).rows
 
     if (!proof) throw new OrderTransitionError('Comprobante no encontrado')
     if (proof.status !== 'pending') {
@@ -87,9 +87,9 @@ export async function approvePayment(
       )
     }
 
-    const [current] = await tx.execute<{ status: string }>(sql`
+    const [current] = (await tx.execute<{ status: string }>(sql`
       SELECT status FROM orders WHERE id = ${orderId} FOR UPDATE LIMIT 1
-    `)
+    `)).rows
     if (!current) throw new OrderTransitionError('Pedido no encontrado')
 
     const fromStatus = current.status as OrderStatus
@@ -128,7 +128,7 @@ export async function approvePayment(
   })
 
   // Fire-and-forget notification (outside transaction)
-  db.execute<{ order_number: string; total_usd: string; total_bs: string; customer_id: string; first_name: string; last_name: string; email: string }>(
+  rawQuery<{ order_number: string; total_usd: string; total_bs: string; customer_id: string; first_name: string; last_name: string; email: string }>(
     sql`SELECT o.order_number, o.total_usd, o.total_bs, o.customer_id,
                c.first_name, c.last_name, c.email
         FROM orders o JOIN customers c ON c.id = o.customer_id
@@ -155,11 +155,11 @@ export async function rejectPayment(
   actor: ActorContext,
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    const [proof] = await tx.execute<{ status: string }>(sql`
+    const [proof] = (await tx.execute<{ status: string }>(sql`
       SELECT status FROM payment_proofs
       WHERE id = ${proofId} AND order_id = ${orderId}
       FOR UPDATE LIMIT 1
-    `)
+    `)).rows
 
     if (!proof) throw new OrderTransitionError('Comprobante no encontrado')
     if (proof.status !== 'pending') {
@@ -170,9 +170,9 @@ export async function rejectPayment(
       )
     }
 
-    const [current] = await tx.execute<{ status: string }>(sql`
+    const [current] = (await tx.execute<{ status: string }>(sql`
       SELECT status FROM orders WHERE id = ${orderId} FOR UPDATE LIMIT 1
-    `)
+    `)).rows
     if (!current) throw new OrderTransitionError('Pedido no encontrado')
 
     const fromStatus = current.status as OrderStatus
@@ -217,7 +217,7 @@ export async function rejectPayment(
   })
 
   // Fire-and-forget notification (outside transaction)
-  db.execute<{ order_number: string; customer_id: string; first_name: string; last_name: string; email: string }>(
+  rawQuery<{ order_number: string; customer_id: string; first_name: string; last_name: string; email: string }>(
     sql`SELECT o.order_number, o.customer_id, c.first_name, c.last_name, c.email
         FROM orders o JOIN customers c ON c.id = o.customer_id
         WHERE o.id = ${orderId} LIMIT 1`,

@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { rawQuery } from '@/shared/lib/db'
 import { sql } from 'drizzle-orm'
 import type {
   DashboardKPIs,
@@ -27,7 +27,7 @@ export async function getDashboardKPIs(start: Date, end: Date): Promise<Dashboar
   if (!process.env.DATABASE_URL) return { revenue: 0, orderCount: 0, avgTicket: 0, uniqueCustomers: 0, newCustomers: 0 }
 
   try {
-    const rows = await db.execute(sql`
+    const rows = await rawQuery<Row>(sql`
       SELECT
         COALESCE(SUM(total_usd) FILTER (
           WHERE status IN ('paid', 'preparing', 'shipped', 'delivered')
@@ -50,7 +50,7 @@ export async function getDashboardKPIs(start: Date, end: Date): Promise<Dashboar
         ) AS new_customers
       FROM orders
       WHERE created_at >= ${start} AND created_at < ${end}
-    `) as unknown as Row[]
+    `)
 
     const row = rows[0] ?? {}
     const revenue = num(row.revenue)
@@ -77,7 +77,7 @@ export async function getSalesChartData(start: Date, end: Date): Promise<SalesCh
   if (!process.env.DATABASE_URL) return []
 
   try {
-    const rows = await db.execute(sql`
+    const rows = await rawQuery<Row>(sql`
       SELECT
         DATE(created_at AT TIME ZONE 'America/Caracas')::text AS day,
         COALESCE(SUM(total_usd), 0) AS revenue,
@@ -87,7 +87,7 @@ export async function getSalesChartData(start: Date, end: Date): Promise<SalesCh
         AND created_at >= ${start} AND created_at < ${end}
       GROUP BY day
       ORDER BY day
-    `) as unknown as Row[]
+    `)
 
     return rows.map((r) => ({
       day: str(r.day),
@@ -108,7 +108,7 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
   if (!process.env.DATABASE_URL) return []
 
   try {
-    const rows = await db.execute(sql`
+    const rows = await rawQuery<Row>(sql`
       SELECT
         o.id AS order_id,
         o.order_number,
@@ -125,7 +125,7 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
         AND o.status = 'payment_under_review'
       ORDER BY pp.created_at ASC
       LIMIT 20
-    `) as unknown as Row[]
+    `)
 
     return rows.map((r) => ({
       orderId: str(r.order_id),
@@ -152,7 +152,7 @@ export async function getLowStockItems(): Promise<LowStockItem[]> {
   if (!process.env.DATABASE_URL) return []
 
   try {
-    const rows = await db.execute(sql`
+    const rows = await rawQuery<Row>(sql`
       SELECT
         pv.id AS variant_id,
         p.name AS product_name,
@@ -168,7 +168,7 @@ export async function getLowStockItems(): Promise<LowStockItem[]> {
       WHERE (inv.quantity - inv.reserved) <= ${LOW_STOCK_THRESHOLD}
       ORDER BY (inv.quantity - inv.reserved) ASC
       LIMIT 30
-    `) as unknown as Row[]
+    `)
 
     return rows.map((r) => ({
       variantId: str(r.variant_id),
@@ -192,7 +192,7 @@ export async function getTopProducts(start: Date, end: Date): Promise<TopProduct
   if (!process.env.DATABASE_URL) return []
 
   try {
-    const rows = await db.execute(sql`
+    const rows = await rawQuery<Row>(sql`
       SELECT
         oi.product_snapshot->>'name' AS name,
         oi.product_snapshot->>'slug' AS slug,
@@ -205,7 +205,7 @@ export async function getTopProducts(start: Date, end: Date): Promise<TopProduct
       GROUP BY oi.product_snapshot->>'name', oi.product_snapshot->>'slug'
       ORDER BY revenue DESC
       LIMIT 10
-    `) as unknown as Row[]
+    `)
 
     return rows.map((r) => ({
       name: str(r.name),
@@ -227,7 +227,7 @@ export async function getSalesByMethod(start: Date, end: Date): Promise<SalesByM
   if (!process.env.DATABASE_URL) return []
 
   try {
-    const rows = await db.execute(sql`
+    const rows = await rawQuery<Row>(sql`
       SELECT
         pm.name AS method_name,
         pm.type AS method_type,
@@ -239,7 +239,7 @@ export async function getSalesByMethod(start: Date, end: Date): Promise<SalesByM
         AND o.created_at >= ${start} AND o.created_at < ${end}
       GROUP BY pm.id, pm.name, pm.type
       ORDER BY revenue DESC
-    `) as unknown as Row[]
+    `)
 
     return rows.map((r) => ({
       methodName: str(r.method_name),

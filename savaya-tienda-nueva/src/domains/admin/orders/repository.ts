@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import { sql } from 'drizzle-orm'
 import type {
   AdminOrderListItem,
@@ -28,7 +28,7 @@ export async function listAdminOrders(
       )`
     : sql``
 
-  const rows = await db.execute<{
+  const rows = await rawQuery<{
     id: string
     order_number: string
     customer_first_name: string
@@ -70,7 +70,7 @@ export async function listAdminOrders(
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
   `)
 
-  const [{ count }] = await db.execute<{ count: string }>(sql`
+  const [{ count }] = await rawQuery<{ count: string }>(sql`
     SELECT COUNT(*)::text AS count
     FROM orders o
     JOIN customers c ON c.id = o.customer_id
@@ -99,7 +99,7 @@ export async function listAdminOrders(
 export async function getAdminOrderByNumber(
   orderNumber: string,
 ): Promise<AdminOrderDetail | null> {
-  const [order] = await db.execute<{
+  const [order] = await rawQuery<{
     id: string
     order_number: string
     status: string
@@ -154,7 +154,7 @@ export async function getAdminOrderByNumber(
   if (!order) return null
 
   const [items, history, proof] = await Promise.all([
-    db.execute<{
+    rawQuery<{
       id: string
       quantity: number
       unit_price_usd: string
@@ -167,7 +167,7 @@ export async function getAdminOrderByNumber(
       ORDER BY created_at ASC
     `),
 
-    db.execute<{
+    rawQuery<{
       id: string
       from_status: string | null
       to_status: string
@@ -188,7 +188,7 @@ export async function getAdminOrderByNumber(
       ORDER BY osh.created_at ASC
     `),
 
-    db.execute<{
+    rawQuery<{
       id: string
       status: string
       amount_paid: string
@@ -285,7 +285,7 @@ export async function getAdminOrderByNumber(
 }
 
 export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
-  const rows = await db.execute<{
+  const rows = await rawQuery<{
     order_id: string
     order_number: string
     customer_first_name: string
@@ -366,7 +366,7 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
 export async function getPaymentProofById(
   proofId: string,
 ): Promise<{ cloudinaryPublicId: string | null } | null> {
-  const [row] = await db.execute<{ cloudinary_public_id: string | null }>(sql`
+  const [row] = await rawQuery<{ cloudinary_public_id: string | null }>(sql`
     SELECT cloudinary_public_id FROM payment_proofs WHERE id = ${proofId} LIMIT 1
   `)
   if (!row) return null

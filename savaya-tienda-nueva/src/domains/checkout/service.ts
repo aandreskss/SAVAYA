@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import { sql, eq, inArray } from 'drizzle-orm'
 import { orders, orderItems, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
@@ -16,7 +16,7 @@ import type { OrderResult } from './types'
 
 async function generateOrderNumber(): Promise<string> {
   // Uses a sequence count derived from the current orders count to produce SAV-XXXXXX
-  const [{ count }] = await db.execute<{ count: string }>(
+  const [{ count }] = await rawQuery<{ count: string }>(
     sql`SELECT COUNT(*) as count FROM orders`,
   )
   const next = parseInt(count, 10) + 1
@@ -394,7 +394,7 @@ export async function createOrder(
       const { orderId, orderNumber: on, totalUsd: tu, totalBs: tb } = result.data
       const customerEmail = input.personalData.email
       const customerName = `${input.personalData.firstName} ${input.personalData.lastName}`
-      const items = (await db.execute<{ name: string; sku: string; qty: number; unit: number }>(
+      const items = (await rawQuery<{ name: string; sku: string; qty: number; unit: number }>(
         sql`SELECT ps->>'productName' as name, ps->>'sku' as sku,
                    quantity as qty, unit_price_usd::float as unit
             FROM order_items WHERE order_id = ${orderId}`,

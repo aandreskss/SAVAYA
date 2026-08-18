@@ -60,7 +60,7 @@ Dos números activos con round-robin en la landing:
 | Vendedora | Número | Formato |
 |---|---|---|
 | Rosmary | `584121211526` | +58 412-1211526 |
-| Tienda | `584242908090` | +58 424-2908090 |
+| Ventas | `584242908090` | +58 424-2908090 |
 
 Usado en:
 - `WHATSAPP_NUMBERS` de la landing → round-robin al submit del form
@@ -260,7 +260,7 @@ Al tope del script, editar el array `VENDEDORAS`:
 ```javascript
 var VENDEDORAS = [
   { nombre: 'Rosmary', numero: '584121211526' },
-  { nombre: 'Tienda', numero: '584242908090' }
+  { nombre: 'Ventas', numero: '584242908090' }
 ];
 ```
 - `nombre`: aparece en el dropdown del Sheet
@@ -473,7 +473,7 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 1. Elegir blueprint (A con form / B sin form)
 2. Duplicar `cp/colegiales/` → `cp/<nombre-nueva-campaña>/` como base
 3. Cambiar `const CAMPAIGN = 'colegiales'` por el nuevo nombre
-4. `const WHATSAPP_NUMBERS` tiene los dos números de Rosmary y Tienda — ajustar si aplica
+4. `const WHATSAPP_NUMBERS` tiene los dos números de Rosmary y Ventas — ajustar si aplica
 5. Actualizar el `event_source_url` en `google-apps-script.js` si es una campaña diferente
 6. Usar **rutas absolutas** para todos los assets: `/cp/<nombre>/assets/...` (no rutas relativas)
 7. Crear un grupo nuevo en MailerLite para la campaña y actualizar `MAILERLITE_GROUP_ID` en Vercel (o usar el mismo grupo si se quiere la misma automatización)
@@ -508,5 +508,5 @@ utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.n
 - [x] **Hoja de métricas `📊 Métricas`:** `buildMetrics()` genera pestaña con 11 secciones y 6 gráficas automáticas (tendencia, ciudad, día semana, plataforma, dispositivo, vendedora). Trigger diario 8am opcional.
 - [x] **Normalización de ciudades:** `normalizeCity()` + `CITY_MAP` agrupa variantes del mismo lugar (estado vs ciudad, tildes, abreviaturas) → evita duplicados en métricas. Cubre todos los estados de Venezuela.
 - [x] **Sistema de calificación de leads:** toggle Sí/No en el form + lógica negocio × ciudad principal → Cal. Auto (col X) con color. Cal. Vendedor (col Y) para confirmación manual. Sección POR CALIFICACIÓN en métricas.
-- [x] **Dos vendedoras activas:** Rosmary (`584121211526`) y Tienda (`584242908090`). Round-robin en la landing, dropdown en el Sheet, ambos números en el footer.
+- [x] **Dos vendedoras activas:** Rosmary (`584121211526`) y Ventas (`584242908090`). Round-robin en la landing, dropdown en el Sheet, ambos números en el footer.
 - [x] **Redirect raíz → campaña activa:** `vercel.json` redirige `/` a `/cp/Zapatillas/`. Campaña `colegiales` archivada pero funcional en su URL directa.

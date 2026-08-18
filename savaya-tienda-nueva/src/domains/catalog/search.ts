@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import { sql, and, eq } from 'drizzle-orm'
 import { products, categories } from '@/domains/catalog/schema'
 
@@ -34,7 +34,7 @@ export class PostgresSearchProvider implements SearchProvider {
 
     try {
       // Full-text + trigram combined — returns at most `limit` products
-      const productRows = await db.execute<{
+      const productRows = await rawQuery<{
         id: string
         name: string
         slug: string
@@ -71,7 +71,7 @@ export class PostgresSearchProvider implements SearchProvider {
         LIMIT ${limit}
       `)
 
-      const categoryRows = await db.execute<{
+      const categoryRows = await rawQuery<{
         id: string
         name: string
         slug: string

@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import { sql } from 'drizzle-orm'
 import { customerNotes, customerTags } from '@/domains/customers/schema'
 import { auditLog } from '@/domains/audit-log/schema'
@@ -35,7 +35,7 @@ export async function listAdminCustomers(
       )`
     : sql``
 
-  const rows = await db.execute<{
+  const rows = await rawQuery<{
     id: string
     first_name: string
     last_name: string
@@ -74,7 +74,7 @@ export async function listAdminCustomers(
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
   `)
 
-  const [{ count }] = await db.execute<{ count: string }>(sql`
+  const [{ count }] = await rawQuery<{ count: string }>(sql`
     SELECT COUNT(*)::text AS count
     FROM customers c
     WHERE c.is_active = true
@@ -105,7 +105,7 @@ export async function listAdminCustomers(
 export async function getAdminCustomerById(
   customerId: string,
 ): Promise<CustomerDetail | null> {
-  const [customer] = await db.execute<{
+  const [customer] = await rawQuery<{
     id: string
     first_name: string
     last_name: string
@@ -128,11 +128,11 @@ export async function getAdminCustomerById(
   if (!customer) return null
 
   const [tags, notes, orders, addresses] = await Promise.all([
-    db.execute<{ tag: string }>(sql`
+    rawQuery<{ tag: string }>(sql`
       SELECT tag FROM customer_tags WHERE customer_id = ${customerId}
     `),
 
-    db.execute<{
+    rawQuery<{
       id: string
       content: string
       author_email: string | null
@@ -145,7 +145,7 @@ export async function getAdminCustomerById(
       ORDER BY cn.created_at DESC
     `),
 
-    db.execute<{
+    rawQuery<{
       id: string
       order_number: string
       status: string
@@ -168,7 +168,7 @@ export async function getAdminCustomerById(
       LIMIT 20
     `),
 
-    db.execute<{
+    rawQuery<{
       id: string
       label: string
       state: string

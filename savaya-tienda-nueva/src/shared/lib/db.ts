@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
+import { neon } from '@neondatabase/serverless'
+import { drizzle } from 'drizzle-orm/neon-http'
 import * as authSchema from '@/domains/auth/schema'
 import * as usersSchema from '@/domains/users/schema'
 import * as rolesPermissionsSchema from '@/domains/roles-permissions/schema'
@@ -21,19 +21,14 @@ import * as notificationsSchema from '@/domains/notifications/schema'
 import * as wholesaleSchema from '@/domains/wholesale/schema'
 
 // ---------------------------------------------------------------------------
-// Postgres connection
-// max: 1 is required in serverless (Vercel) to avoid connection pool exhaustion.
-// Each function invocation gets its own connection that is closed on exit.
+// Neon HTTP driver — stateless HTTP requests per query, no persistent TCP
+// connections, no connection pool limits. Ideal for Vercel serverless.
+// Transactions are batched in a single HTTP request via Neon's batch API.
 // ---------------------------------------------------------------------------
 
-const client = postgres(process.env.DATABASE_URL!, {
-  max: 1,          // 1 connection per Lambda invocation — prevents PgBouncer pool exhaustion
-  idle_timeout: 20,
-  connect_timeout: 10,
-  prepare: false,  // required for Supabase PgBouncer (transaction mode)
-})
+const sql = neon(process.env.DATABASE_URL!)
 
-export const db = drizzle(client, {
+export const db = drizzle(sql, {
   schema: {
     ...authSchema,
     ...usersSchema,
@@ -58,3 +53,16 @@ export const db = drizzle(client, {
 })
 
 export type Database = typeof db
+
+// ---------------------------------------------------------------------------
+// rawQuery — executes raw SQL and returns rows as an array.
+// Neon HTTP driver returns { rows: T[] } instead of T[] directly (unlike postgres.js).
+// ---------------------------------------------------------------------------
+import type { SQL } from 'drizzle-orm'
+
+export async function rawQuery<T extends Record<string, unknown> = Record<string, unknown>>(
+  query: SQL,
+): Promise<T[]> {
+  const result = await db.execute(query)
+  return result.rows as T[]
+}

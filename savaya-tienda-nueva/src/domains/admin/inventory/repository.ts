@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import { sql } from 'drizzle-orm'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { auditLog } from '@/domains/audit-log/schema'
@@ -21,7 +21,7 @@ export async function listInventory(search?: string): Promise<InventoryRow[]> {
       )`
     : sql``
 
-  const rows = await db.execute<{
+  const rows = await rawQuery<{
     variant_id: string
     product_id: string
     product_name: string
@@ -72,7 +72,7 @@ export async function listInventory(search?: string): Promise<InventoryRow[]> {
 }
 
 export async function getVariantInventoryHistory(variantId: string): Promise<MovementHistoryRow[]> {
-  const rows = await db.execute<{
+  const rows = await rawQuery<{
     id: string
     type: string
     quantity: number
@@ -105,7 +105,7 @@ export async function getVariantInventoryHistory(variantId: string): Promise<Mov
 }
 
 export async function getVariantDetail(variantId: string) {
-  const rows = await db.execute<{
+  const rows = await rawQuery<{
     variant_id: string
     product_id: string
     product_name: string
@@ -164,12 +164,12 @@ export async function applyManualMovement(
 
   await db.transaction(async (tx) => {
     // Read current inventory (lock row)
-    const currentRows = await tx.execute<{ id: string; quantity: number; reserved: number }>(sql`
+    const currentRows = (await tx.execute<{ id: string; quantity: number; reserved: number }>(sql`
       SELECT id, quantity, reserved
       FROM inventory
       WHERE variant_id = ${variantId}
       FOR UPDATE
-    `)
+    `)).rows
 
     const current = currentRows[0]
 

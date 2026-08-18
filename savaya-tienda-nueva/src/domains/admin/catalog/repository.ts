@@ -1,4 +1,4 @@
-import { db } from '@/shared/lib/db'
+import { db, rawQuery } from '@/shared/lib/db'
 import {
   products,
   productVariants,
@@ -87,7 +87,7 @@ export async function listAdminProducts(
     total: string
   }
 
-  const rows = await db.execute<Row>(sql`
+  const rows = await rawQuery<Row>(sql`
     SELECT
       p.id,
       p.name,
@@ -784,7 +784,7 @@ export async function listAdminCategories(): Promise<AdminCategoryRow[]> {
     product_count: string
   }
 
-  const rows = await db.execute<Row>(sql`
+  const rows = await rawQuery<Row>(sql`
     SELECT
       c.id,
       c.name,
@@ -928,7 +928,7 @@ export async function listAdminCollections(): Promise<AdminCollectionRow[]> {
     product_count: string
   }
 
-  const rows = await db.execute<Row>(sql`
+  const rows = await rawQuery<Row>(sql`
     SELECT
       c.id,
       c.name,
