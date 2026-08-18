@@ -6,6 +6,7 @@ import { RecentlyViewed } from '@/domains/catalog/components/RecentlyViewed'
 import { RecentlyViewedTracker } from '@/domains/catalog/components/RecentlyViewedTracker'
 import { ProductCard, Breadcrumb } from '@/shared/ui'
 import { addToCart } from '@/domains/cart/actions'
+import { getWishlistIds } from '@/domains/customers/wishlist-actions'
 import type { Metadata } from 'next'
 
 // ---------------------------------------------------------------------------
@@ -49,10 +50,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params
 
-  // Fetch product + exchange rate in parallel
-  const [product, exchangeRate] = await Promise.all([
+  // Fetch product, exchange rate, and wishlist IDs in parallel
+  const [product, exchangeRate, wishlistVariantIds] = await Promise.all([
     getProductBySlug(slug),
     getCurrentRate(),
+    getWishlistIds(),
   ])
 
   if (!product) notFound()
@@ -139,11 +141,7 @@ export default async function ProductPage({ params }: Props) {
           product={product}
           exchangeRate={exchangeRate}
           onAddToCart={addToCart}
-          onWishlistToggle={async () => {
-            'use server'
-            // Placeholder — Fase 3.5 implementa wishlist real
-          }}
-          isInWishlist={false}
+          wishlistVariantIds={wishlistVariantIds}
         />
 
         {/* Related products */}

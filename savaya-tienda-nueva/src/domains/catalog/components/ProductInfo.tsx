@@ -27,7 +27,7 @@ export type ProductInfoProps = {
   exchangeRate: ExchangeRate
   onVariantChange: (variantId: string) => void
   onAddToCart: (variantId: string, quantity: number) => Promise<ActionResult<unknown>>
-  onWishlistToggle: (productId: string) => Promise<void>
+  onWishlistToggle: (variantId: string) => Promise<void>
   isInWishlist: boolean
 }
 
@@ -219,8 +219,10 @@ export function ProductInfo({
   }
 
   function handleWishlistToggle() {
+    const variantId = selectedVariantId ?? product.variants[0]?.id
+    if (!variantId) return
     startTransition(async () => {
-      await onWishlistToggle(product.id)
+      await onWishlistToggle(variantId)
     })
   }
 

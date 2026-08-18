@@ -395,7 +395,18 @@ export async function createOrder(
       })
     }
 
-    // ── 15. Clear cart ────────────────────────────────────────────────────
+    // ── 15. Update customer denormalized counters ─────────────────────────
+    await db
+      .update(customers)
+      .set({
+        totalOrders: sql`${customers.totalOrders} + 1`,
+        totalSpentUsd: sql`${customers.totalSpentUsd} + ${totalUsd.toFixed(2)}`,
+        lastOrderAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(customers.id, customerId))
+
+    // ── 16. Clear cart ────────────────────────────────────────────────────
     await db.delete(cartItems).where(eq(cartItems.cartId, cartId))
 
     // Fire-and-forget confirmation email (failure must not fail the order)

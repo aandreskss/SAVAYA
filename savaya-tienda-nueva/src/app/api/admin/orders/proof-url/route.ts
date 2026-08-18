@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/domains/auth/auth'
 import { getPaymentProofById } from '@/domains/admin/orders/repository'
+import crypto from 'crypto'
 
 // GET /api/admin/orders/proof-url?proofId=xxx
-// Streams a private Cloudinary payment proof through our server so:
-// - The browser never receives Cloudinary credentials
-// - Access is gated behind admin auth + payments:read permission
-// - The asset URL is never exposed to the client
+// Streams a private Cloudinary payment proof through our server so the
+// browser never receives Cloudinary credentials and access is gated behind auth.
 
 export async function GET(request: NextRequest) {
   const session = await auth()
@@ -35,23 +34,60 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Cloudinary no configurado', { status: 503 })
   }
 
-  // Access a private Cloudinary asset server-to-server using HTTP Basic auth
-  // (api_key:api_secret). This never exposes credentials to the browser.
-  const deliveryUrl = `https://res.cloudinary.com/${cloudName}/image/private/${proof.cloudinaryPublicId}`
-  const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
+  // Cloudinary private assets require the Admin API download endpoint —
+  // res.cloudinary.com delivery URLs don't accept HTTP Basic auth.
+  const publicId = proof.cloudinaryPublicId
+  const timestamp = Math.floor(Date.now() / 1000)
+
+  // Sign: sorted params + apiSecret (SHA1)
+  const paramsToSign = `public_id=${publicId}&timestamp=${timestamp}&type=private`
+  const signature = crypto
+    .createHash('sha1')
+    .update(paramsToSign + apiSecret)
+    .digest('hex')
+
+  const downloadUrl = new URL(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/download`,
+  )
+  downloadUrl.searchParams.set('public_id', publicId)
+  downloadUrl.searchParams.set('type', 'private')
+  downloadUrl.searchParams.set('timestamp', String(timestamp))
+  downloadUrl.searchParams.set('api_key', apiKey)
+  downloadUrl.searchParams.set('signature', signature)
 
   let upstream: Response
   try {
-    upstream = await fetch(deliveryUrl, {
-      headers: { Authorization: `Basic ${credentials}` },
-      // no cache — fresh fetch every time (proofs can be updated)
-      cache: 'no-store',
-    })
+    upstream = await fetch(downloadUrl.toString(), { cache: 'no-store' })
   } catch {
     return new NextResponse('Error al obtener el comprobante', { status: 502 })
   }
 
   if (!upstream.ok) {
+    // If image/download fails it might be a PDF/raw file — retry with raw/download
+    try {
+      const rawUrl = new URL(
+        `https://api.cloudinary.com/v1_1/${cloudName}/raw/download`,
+      )
+      rawUrl.searchParams.set('public_id', publicId)
+      rawUrl.searchParams.set('type', 'private')
+      rawUrl.searchParams.set('timestamp', String(timestamp))
+      rawUrl.searchParams.set('api_key', apiKey)
+      rawUrl.searchParams.set('signature', signature)
+
+      const rawUpstream = await fetch(rawUrl.toString(), { cache: 'no-store' })
+      if (rawUpstream.ok) {
+        const contentType = rawUpstream.headers.get('Content-Type') ?? 'application/octet-stream'
+        return new NextResponse(rawUpstream.body, {
+          headers: {
+            'Content-Type': contentType,
+            'Cache-Control': 'private, no-store',
+            'X-Frame-Options': 'SAMEORIGIN',
+          },
+        })
+      }
+    } catch {
+      // fall through to error below
+    }
     return new NextResponse('Comprobante no encontrado en almacenamiento', { status: 404 })
   }
 
@@ -60,9 +96,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(upstream.body, {
     headers: {
       'Content-Type': contentType,
-      // private, no-store: never cached by browser or CDN
       'Cache-Control': 'private, no-store',
-      // block embedding in iframes outside our domain
       'X-Frame-Options': 'SAMEORIGIN',
     },
   })
