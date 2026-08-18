@@ -26,7 +26,7 @@ export function AdminShell({ navItems, userPermissions, userName, children }: Pr
   }
 
   return (
-    <div data-theme="dark" className="flex h-screen overflow-hidden bg-surface">
+    <div data-theme="dark" className="flex h-screen overflow-hidden bg-surface text-text-primary">
       {/* Desktop sidebar */}
       <AdminSidebar
         navItems={navItems}

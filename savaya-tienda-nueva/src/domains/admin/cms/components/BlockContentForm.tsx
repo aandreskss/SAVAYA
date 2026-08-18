@@ -43,10 +43,11 @@ function Field({
 }
 
 const inputClass =
-  'w-full border border-border rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-accent-gold/20'
+  'w-full border border-border rounded-lg px-3 py-2 text-sm bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-gold/20'
 
 const textareaClass =
-  'w-full border border-border rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-accent-gold/20 resize-y'
+  'w-full border border-border rounded-lg px-3 py-2 text-sm bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-gold/20 resize-y'
+
 
 // ---------------------------------------------------------------------------
 // Sub-forms
