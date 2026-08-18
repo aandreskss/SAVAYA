@@ -45,14 +45,12 @@ export async function updateSectionContent(
 export async function updateSectionsOrder(
   items: { id: string; sortOrder: number }[],
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    for (const item of items) {
-      await tx
-        .update(pageSections)
-        .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
-        .where(eq(pageSections.id, item.id))
-    }
-  })
+  for (const item of items) {
+    await db
+      .update(pageSections)
+      .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
+      .where(eq(pageSections.id, item.id))
+  }
 }
 
 export async function toggleSectionActive(

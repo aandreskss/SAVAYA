@@ -162,88 +162,63 @@ export async function applyManualMovement(
 ): Promise<void> {
   const { variantId, type, delta, reason } = payload
 
-  await db.transaction(async (tx) => {
-    // Read current inventory (lock row)
-    const currentRows = (await tx.execute<{ id: string; quantity: number; reserved: number }>(sql`
-      SELECT id, quantity, reserved
-      FROM inventory
-      WHERE variant_id = ${variantId}
-      FOR UPDATE
-    `)).rows
+  // neon-http does not support db.transaction() or FOR UPDATE.
+  // Manual admin movements are low-frequency, so sequential reads + writes are acceptable here.
+  const [current] = await rawQuery<{ id: string; quantity: number; reserved: number }>(
+    sql`SELECT id, quantity, reserved FROM inventory WHERE variant_id = ${variantId} LIMIT 1`,
+  )
 
-    const current = currentRows[0]
+  if (!current) {
+    // Create inventory record if it doesn't exist yet
+    const newQty = Math.max(0, delta)
+    await db.insert(inventory).values({ variantId, quantity: newQty, reserved: 0 })
 
-    if (!current) {
-      // Create inventory record if it doesn't exist yet
-      await tx.insert(inventory).values({
-        variantId,
-        quantity: Math.max(0, delta),
-        reserved: 0,
-      })
-
-      const newQty = Math.max(0, delta)
-
-      await tx.insert(inventoryMovements).values({
-        variantId,
-        type,
-        quantity: delta,
-        reason,
-        performedBy: actor.actorId,
-      })
-
-      await tx.insert(auditLog).values({
-        actorId: actor.actorId,
-        actorEmail: actor.actorEmail,
-        action: 'inventory.manual_movement',
-        resourceType: 'product_variant',
-        resourceId: variantId,
-        before: { quantity: 0, reserved: 0 },
-        after: { quantity: newQty, reserved: 0, movementType: type, delta, reason },
-        ip: actor.ip,
-      })
-
-      return
-    }
-
-    const newQty = Number(current.quantity) + delta
-
-    if (newQty < 0) {
-      throw new Error(
-        `Stock insuficiente. Stock actual: ${current.quantity}, ajuste: ${delta}`,
-      )
-    }
-
-    if (Number(current.reserved) > newQty) {
-      throw new Error(
-        `No se puede reducir el stock por debajo de las reservas activas (${current.reserved} unidades reservadas)`,
-      )
-    }
-
-    // Update inventory quantity
-    await tx
-      .update(inventory)
-      .set({ quantity: newQty, updatedAt: new Date() })
-      .where(sql`variant_id = ${variantId}`)
-
-    // Record movement (append-only)
-    await tx.insert(inventoryMovements).values({
-      variantId,
-      type,
-      quantity: delta,
-      reason,
-      performedBy: actor.actorId,
+    await db.insert(inventoryMovements).values({
+      variantId, type, quantity: delta, reason, performedBy: actor.actorId,
     })
 
-    // Audit
-    await tx.insert(auditLog).values({
+    await db.insert(auditLog).values({
       actorId: actor.actorId,
       actorEmail: actor.actorEmail,
       action: 'inventory.manual_movement',
       resourceType: 'product_variant',
       resourceId: variantId,
-      before: { quantity: current.quantity, reserved: current.reserved },
-      after: { quantity: newQty, reserved: current.reserved, movementType: type, delta, reason },
+      before: { quantity: 0, reserved: 0 },
+      after: { quantity: newQty, reserved: 0, movementType: type, delta, reason },
       ip: actor.ip,
     })
+    return
+  }
+
+  const newQty = Number(current.quantity) + delta
+
+  if (newQty < 0) {
+    throw new Error(`Stock insuficiente. Stock actual: ${current.quantity}, ajuste: ${delta}`)
+  }
+
+  if (Number(current.reserved) > newQty) {
+    throw new Error(
+      `No se puede reducir el stock por debajo de las reservas activas (${current.reserved} unidades reservadas)`,
+    )
+  }
+
+  await db
+    .update(inventory)
+    .set({ quantity: newQty, updatedAt: new Date() })
+    .where(sql`variant_id = ${variantId}`)
+
+  await db.insert(inventoryMovements).values({
+    variantId, type, quantity: delta, reason, performedBy: actor.actorId,
+  })
+
+  await db.insert(auditLog).values({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'inventory.manual_movement',
+    resourceType: 'product_variant',
+    resourceId: variantId,
+    before: { quantity: current.quantity, reserved: current.reserved },
+    after: { quantity: newQty, reserved: current.reserved, movementType: type, delta, reason },
+    ip: actor.ip,
   })
 }

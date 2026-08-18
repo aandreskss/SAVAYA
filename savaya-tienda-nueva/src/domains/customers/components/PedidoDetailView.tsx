@@ -9,11 +9,14 @@ interface Props {
 
 export function PedidoDetailView({ order }: Props) {
   const shipping = order.shippingSnapshot as {
+    methodName?: string
+    zoneType?: string
     recipientName?: string
     address?: string
     city?: string
     state?: string
     municipality?: string
+    reference?: string
   } | null
 
   return (
@@ -132,15 +135,51 @@ export function PedidoDetailView({ order }: Props) {
         {/* Shipping */}
         {shipping && (
           <section className="border border-border rounded-lg p-5">
-            <h3 className="font-medium text-sm mb-4">Dirección de entrega</h3>
-            <address className="not-italic text-sm text-text-secondary space-y-1">
-              <p className="text-text-primary font-medium">{shipping.recipientName}</p>
-              <p>{shipping.address}</p>
-              {shipping.municipality && <p>{shipping.municipality}</p>}
-              <p>
-                {[shipping.city, shipping.state].filter(Boolean).join(', ')}
-              </p>
-            </address>
+            <h3 className="font-medium text-sm mb-4">Entrega</h3>
+            <dl className="text-sm text-text-secondary space-y-1">
+              {shipping.methodName && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Método</dt>
+                  <dd className="text-text-primary font-medium">{shipping.methodName}</dd>
+                </div>
+              )}
+              {shipping.zoneType === 'pickup' && !shipping.methodName && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Tipo</dt>
+                  <dd>Retiro en tienda</dd>
+                </div>
+              )}
+              {shipping.recipientName && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Destinatario</dt>
+                  <dd>{shipping.recipientName}</dd>
+                </div>
+              )}
+              {shipping.address && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Dirección</dt>
+                  <dd>{shipping.address}</dd>
+                </div>
+              )}
+              {shipping.municipality && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Municipio</dt>
+                  <dd>{shipping.municipality}</dd>
+                </div>
+              )}
+              {(shipping.city || shipping.state) && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Ciudad/Estado</dt>
+                  <dd>{[shipping.city, shipping.state].filter(Boolean).join(', ')}</dd>
+                </div>
+              )}
+              {shipping.reference && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Referencia</dt>
+                  <dd>{shipping.reference}</dd>
+                </div>
+              )}
+            </dl>
           </section>
         )}
       </div>

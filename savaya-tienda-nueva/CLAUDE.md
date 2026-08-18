@@ -22,7 +22,8 @@ SAVAYA es una marca venezolana de calzado (Carabobo) migrando de venta mayorista
 - **Next.js 16** (App Router) + **React 19.2** + **TypeScript strict** (`strict: true`, sin `any` implícito).
 - **Tailwind CSS v4**, todo el diseño vía **design tokens** (ver `docs/UX-UI.md` / Fase 2), nunca valores mágicos sueltos.
 - **PostgreSQL vía Neon** — migrado de Supabase en 2026-08-17. Driver: `@neondatabase/serverless` + `drizzle-orm/neon-http`. Usa HTTP por request (stateless), sin pool de conexiones TCP — ideal para serverless/Vercel sin los límites de PgBouncer. `DATABASE_URL` en `.env.local` y en Vercel apunta a Neon. No hay `DIRECT_URL` — una sola variable. Decisión documentada en `docs/adr/002-database.md`.
-- **Drizzle ORM** (TypeScript-first, SQL explícito, mejor rendimiento en serverless/edge que Prisma, migraciones con `drizzle-kit`). `db` exportado desde `src/shared/lib/db.ts`; helper `rawQuery<T>(sql)` wrappea `db.execute()` devolviendo `rows as T[]` (el driver neon-http devuelve `{ rows, command, fields }` — no un array directo). Todas las queries raw usan `rawQuery<T>` en vez de `db.execute()` directamente. Dentro de transacciones, usar `(await tx.execute<T>(sql`...`)).rows`. `AnyTx = PgTransaction<NeonHttpQueryResultHKT, any, any>` (importar de `drizzle-orm/neon-http`). Justificación completa en `docs/adr/002-orm.md`.
+- **Drizzle ORM** (TypeScript-first, SQL explícito, mejor rendimiento en serverless/edge que Prisma, migraciones con `drizzle-kit`). `db` exportado desde `src/shared/lib/db.ts`; helper `rawQuery<T>(sql)` wrappea `db.execute()` devolviendo `rows as T[]` (el driver neon-http devuelve `{ rows, command, fields }` — no un array directo). Todas las queries raw usan `rawQuery<T>` en vez de `db.execute()` directamente. Justificación completa en `docs/adr/002-orm.md`.
+  - **⚠️ CRÍTICO — neon-http NO soporta transacciones**: `db.transaction()` lanza "No transactions support in neon-http driver" en runtime. `SELECT ... FOR UPDATE` tampoco funciona. **Nunca uses estas construcciones.** El patrón correcto es: operaciones secuenciales `await` + `UPDATE ... WHERE condición_atómica` para concurrencia (ej.: `UPDATE inventory SET reserved = reserved + N WHERE (quantity - reserved) >= N`). Si el UPDATE no afecta filas → deshacer manualmente las operaciones anteriores. Este patrón reemplaza `db.transaction()` + `FOR UPDATE` en TODO el codebase.
 - **Auth.js (NextAuth v5)** con credentials + verificación por email; sesiones en cookies `HttpOnly`, `Secure`, `SameSite=Lax`; reautenticación obligatoria para acciones admin sensibles; **2FA (TOTP)** obligatorio para roles Admin/Super Admin. Los usuarios de `savaya-tienda` (Supabase Auth) no se migran — se descartan. La nueva tienda arranca con tablas de Auth.js limpias y un admin nuevo.
 - **Zod** para toda validación de entrada, compartido entre client y server donde aplique.
 - **Zustand** solo para estado de UI efímero (drawer del carrito abierto/cerrado, etc.) — nunca para precios/stock/totales, eso vive en servidor.
@@ -276,7 +277,7 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - `BadgeVariant` no tiene `'neutral'` — usar `'default'`
   - Sub-nav en `/admin/productos` actúa como "Productos | Categorías | Colecciones"
 - **Inventario admin (Fase 4.4):**
-  - `src/domains/admin/inventory/repository.ts` — `listInventory(search?)` JOIN products/colors/sizes/inventory; `getVariantDetail(variantId)`; `getVariantInventoryHistory(variantId)` (últimos 100, LEFT JOIN users para email); `applyManualMovement()` con `SELECT ... FOR UPDATE` + insert `inventory_movements` + AuditLog, todo en transaction
+  - `src/domains/admin/inventory/repository.ts` — `listInventory(search?)` JOIN products/colors/sizes/inventory; `getVariantDetail(variantId)`; `getVariantInventoryHistory(variantId)` (últimos 100, LEFT JOIN users para email); `applyManualMovement()` — UPDATE inventory + insert `inventory_movements` + AuditLog en operaciones secuenciales (sin transaction — neon-http no la soporta)
   - `applyManualMovement`: si no existe registro en `inventory` para esa variante, lo crea; si `newQty < 0` o `reserved > newQty` → lanza error con mensaje descriptivo (capturado en action)
   - Constraint clave: **nunca UPDATE directo de `inventory.quantity` desde admin UI** — todo pasa por `inventory_movements` con actor, tipo y motivo
   - `src/domains/admin/inventory/actions.ts` — `applyManualMovementAction()` requiere permiso `inventory:write`
@@ -290,7 +291,7 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - `src/domains/discounts-promotions/` — types, validators, repository, service, actions (domain completo)
   - `src/domains/admin/discounts/` — types (re-export), repository (re-export), validators (re-export), actions (CRUD con `promotions:write`), DiscountsManager component
   - `validateCoupon(code, subtotalUsd, customerId?)` en `service.ts` — reglas: isActive, startsAt/endsAt, maxUsesTotal, minOrderUsd, maxUsesPerCustomer, isFirstOrderOnly
-  - `recordCouponUsage(tx, { discountId, customerId, orderId })` — llamado dentro de `db.transaction()` en `checkout/service.ts`; usa `AnyTx = PgTransaction<NeonHttpQueryResultHKT, any, any>` (importar de `drizzle-orm/neon-http`)
+  - `recordCouponUsage({ discountId, customerId, orderId })` — llamado secuencialmente en `checkout/service.ts` usando `db` directamente (no toma `tx` — neon-http no soporta transacciones)
   - `validateCouponAction` en `discounts-promotions/actions.ts` — server action para storefront (sin auth, guests pueden aplicar cupones); dev fallback: código `SAVAYA10` = 10%
   - `CouponInput` en `domains/cart/components/CouponInput.tsx` — state local + `useTransition`; muestra badge verde con monto al aplicar; botón "Quitar" para remover
   - `CartPageClient` actualizado: importa `useCheckoutStore` para `appliedCoupon` + `setAppliedCoupon`; muestra línea "Descuento −$X.XX" en breakdown; total refleja descuento
@@ -367,10 +368,9 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - Causa: Supabase PgBouncer (15 conexiones en free tier) saturaba el pool con tráfico concurrente en Vercel Lambda
   - Driver cambiado: `postgres.js` + `drizzle-orm/postgres-js` → `@neondatabase/serverless` + `drizzle-orm/neon-http`
   - `src/shared/lib/db.ts` reescrito: usa `neon(DATABASE_URL)` + `drizzle(sql, { schema })` + helper `rawQuery<T>`
-  - `rawQuery<T>(query: SQL): Promise<T[]>` — wrappea `db.execute()` extrayendo `.rows`; usar en vez de `db.execute()` directo fuera de transacciones
+  - `rawQuery<T>(query: SQL): Promise<T[]>` — wrappea `db.execute()` extrayendo `.rows`; usar en vez de `db.execute()` directo
   - 9 archivos actualizados: `dashboard/repository`, `catalog/repository`, `catalog/search`, `customers/repository`, `inventory/repository`, `orders/repository`, `orders/service`, `checkout/service`, `discounts-promotions/repository`
-  - `AnyTx` en `discounts-promotions/repository.ts`: `PgTransaction<NeonHttpQueryResultHKT, any, any>` (importar de `drizzle-orm/neon-http`)
-  - Dentro de `db.transaction()`, `tx.execute<T>(sql`...`)` devuelve `NeonHttpQueryResult` → acceder con `.rows`
+  - ⚠️ **Nota retroactiva**: neon-http NO soporta `db.transaction()` ni `FOR UPDATE` — los archivos de la sección "Migración Supabase → Neon" que mencionaban `AnyTx` / `tx.execute()` fueron corregidos posteriormente (ver sección "Correcciones post-lanzamiento 2026-08-18")
   - `admin/page.tsx` optimizado: 6 Suspense separados → un solo `Promise.all` con todos los bloques del dashboard como componentes de presentación puros
   - Schema aplicado en Neon con `drizzle-kit push`; usuarios admin recreados con script temporal
   - `.env.local` actualizado: solo `DATABASE_URL` (sin `DIRECT_URL`); apunta a `ep-round-cherry-ay3dqlqz.c-5.us-east-2.aws.neon.tech`
@@ -389,3 +389,36 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - Imágenes: Unsplash (whitelisted en `next.config.ts`); `cloudinary_public_id` = `samples/<slug>-N` (placeholder)
   - Stock: 5–15 unidades por variante; 2–4 colores × tallas 35–40; mezcla `isFeatured`, `isNew`, `compare_at_price`
   - Correr con: `node --env-file=.env.local scripts/seed-sample-products.mjs`
+
+- **Correcciones post-lanzamiento (2026-08-18):**
+  - **Causa raíz global**: neon-http driver no soporta `db.transaction()` ni `SELECT ... FOR UPDATE` — todos los servicios heredados de la era Supabase/postgres.js que usaban estas construcciones fallaban en runtime.
+  - **`src/domains/checkout/service.ts`** — reescrito completamente:
+    - Eliminado `db.transaction()` + `FOR UPDATE`; reemplazado por operaciones `await` secuenciales
+    - Reserva de inventario: `UPDATE inventory SET reserved = reserved + N WHERE (quantity - reserved) >= N` — atómico sin transaction; si afecta 0 filas → deshace reservas previas del loop y elimina la orden
+    - Identidad del cliente: `const session = await auth(); const customerEmail = session?.user?.email ?? personalData.email` — si el comprador está logueado, su email de sesión es la identidad canónica, evitando crear cliente duplicado
+    - Contadores denormalizados: `customers.totalOrders`, `totalSpentUsd`, `lastOrderAt` ahora se actualizan al crear el pedido (antes no se actualizaban)
+  - **`src/domains/discounts-promotions/repository.ts`** — `recordCouponUsage` ya no recibe `tx`: firma cambiada de `recordCouponUsage(tx, payload)` a `recordCouponUsage(payload)` usando `db` directamente
+  - **`src/domains/customers/service.ts`** — `setDefaultAddress` reescrito sin `db.transaction()`: dos `await db.update()` secuenciales (primero limpia `isDefault`, luego establece el nuevo)
+  - **`src/domains/customers/wishlist-actions.ts`** — `getCustomerId()` ahora crea el registro de cliente lazily si el usuario está autenticado pero aún no tiene `customers` row (primer ingreso vía OAuth)
+  - **`src/domains/catalog/components/ProductClientShell.tsx`** — rewiring completo de wishlist: importa `toggleWishlist` directamente, gestiona estado local con `Set<string>` de `wishlistVariantIds`, actualizaciones optimistas; ya no pasa props `isInWishlist`/`onWishlistToggle` desde el Server Component padre
+  - **`src/domains/catalog/components/ProductInfo.tsx`** — `onWishlistToggle` ahora recibe `variantId: string` (antes recibía `productId`)
+  - **`src/app/(shop)/producto/[slug]/page.tsx`** — fetch paralelo de `wishlistVariantIds` desde `getWishlistIds()`; pasa a `ProductClientShell`
+  - **`src/domains/customers/components/WishlistButton.tsx`** — ruta corregida: `/login` → `/iniciar-sesion`
+  - **`src/app/api/admin/orders/proof-url/route.ts`** — proxy de Cloudinary reescrito: la URL de delivery (`res.cloudinary.com`) no acepta Basic Auth; ahora usa Admin API download (`api.cloudinary.com/v1_1/{cloud}/image/download`) con firma SHA1 (`public_id + timestamp + type + apiSecret`); fallback a `raw/download` para PDFs
+  - **`src/domains/admin/orders/repository.ts`**:
+    - Query de comprobante: `JOIN payment_methods` → `LEFT JOIN payment_methods` (evita que el comprobante desaparezca si el método fue eliminado)
+    - Nueva función `deleteOrder(orderId, actorId, actorEmail, ip)`: carga orden + items → libera inventory.reserved para estados pre-entrega → elimina `inventory_movements` (no tiene FK cascade) → elimina orden (cascade a items/history/proofs) → decrementa `customers.totalOrders`/`totalSpentUsd` con `GREATEST(0,...)` → inserta AuditLog
+  - **`src/domains/admin/orders/actions.ts`** — nuevo `deleteOrderAction(orderId)` con permiso `orders:write`
+  - **`src/domains/roles-permissions/permissions.ts`** — añadido `ORDERS_DELETE: 'orders:delete'` (constante de código; **pendiente agregar al seed DB y roles**)
+  - **`src/domains/admin/orders/components/OrderDetailView.tsx`** — botón "Eliminar pedido" + modal de confirmación con `deleteOrderAction`; redirección a `/admin/pedidos` tras eliminar
+
+  **Correcciones adicionales (2026-08-18 — misma sesión):**
+  - `src/domains/admin/orders/service.ts` — `transitionOrderStatus`, `approvePayment`, `rejectPayment` reescritos con `rawQuery` + `await` secuenciales (eliminado `db.transaction()` + `FOR UPDATE`)
+  - `src/domains/checkout/service.ts` — `productSnapshot` corregido: `productName→name`, `color→colorName`, `size→sizeName`; también añadidos `methodName` y `costUsd` al `shippingSnapshot`; query fire-and-forget actualizada de `ps->>'productName'` a `ps->>'name'`; import de `shippingMethods` para lookupear el nombre del método al crear el pedido
+  - `src/domains/admin/orders/actions.ts` — permiso cambiado de `orders:delete` (inexistente en DB) a `orders:write`
+  - `src/domains/customers/components/PedidoDetailView.tsx` — sección de entrega reescrita con `<dl>` estructurado que muestra `methodName`, `recipientName`, `address`, `municipality`, `city/state`, `reference`; maneja pickup sin dirección
+  - `src/domains/admin/inventory/repository.ts` — `applyManualMovement` reescrito sin `db.transaction()` + `FOR UPDATE`
+  - `src/domains/admin/cms/repository.ts` — `updateSectionsOrder` reescrito: loop con `await db.update()` (eliminado `db.transaction()`)
+  - `src/domains/admin/catalog/repository.ts` — 7 funciones reescritas sin transacciones: `createProduct`, `updateProduct`, `archiveProduct`, `restoreProduct`, `publishProduct`, `unpublishProduct`, `duplicateProduct`; todas usan `await db.*` secuenciales
+  - `src/app/api/cron/expire-reservations/route.ts` — reescrito con `await` secuenciales por orden (eliminado `db.transaction()`); response ahora incluye `failed` array si algún pedido falla
+  - **Resultado**: `await db.transaction` = 0 ocurrencias en el codebase; `FOR UPDATE` = 0 en queries SQL

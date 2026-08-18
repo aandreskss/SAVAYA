@@ -7,6 +7,7 @@ import { eq, and, lte, sql } from 'drizzle-orm'
 // Runs every hour via Upstash QStash (POST) or direct call (GET).
 // Finds orders in pending_payment with an expired reservation and cancels them.
 // Protected by x-cron-secret header.
+// Uses sequential awaits — neon-http does not support db.transaction().
 
 async function handler(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
@@ -40,66 +41,61 @@ async function handler(request: NextRequest) {
     return NextResponse.json({ expired: 0 })
   }
 
-  // For each expired order, release inventory and cancel
+  const failed: string[] = []
+
   for (const order of expiredOrders) {
     try {
-      await db.transaction(async (tx) => {
-        // Get reserved inventory movements for this order
-        // (cart may be cleared already; movements are the authoritative record)
-        const reservations = await tx
-          .select({
-            variantId: inventoryMovements.variantId,
-            quantity: inventoryMovements.quantity,
-          })
-          .from(inventoryMovements)
-          .where(
-            and(
-              eq(inventoryMovements.orderId, order.id),
-              eq(inventoryMovements.type, 'reservation'),
-            ),
-          )
-
-        // Release each reservation
-        for (const reservation of reservations) {
-          // Insert release movement
-          await tx.insert(inventoryMovements).values({
-            variantId: reservation.variantId,
-            type: 'reservation_release',
-            quantity: reservation.quantity,
-            reason: `Reserva expirada — pedido ${order.orderNumber}`,
-            orderId: order.id,
-          })
-
-          // Decrement reserved
-          await tx
-            .update(inventory)
-            .set({
-              reserved: sql`GREATEST(0, ${inventory.reserved} - ${reservation.quantity})`,
-            })
-            .where(eq(inventory.variantId, reservation.variantId))
-        }
-
-        // Transition order to cancelled
-        await tx
-          .update(orders)
-          .set({ status: 'cancelled', updatedAt: new Date() })
-          .where(eq(orders.id, order.id))
-
-        // Status history
-        await tx.insert(orderStatusHistory).values({
-          orderId: order.id,
-          fromStatus: 'pending_payment',
-          toStatus: 'cancelled',
-          reason: 'Reserva de inventario expirada — cancelado automáticamente',
+      // Get reserved inventory movements for this order
+      const reservations = await db
+        .select({
+          variantId: inventoryMovements.variantId,
+          quantity: inventoryMovements.quantity,
         })
+        .from(inventoryMovements)
+        .where(
+          and(
+            eq(inventoryMovements.orderId, order.id),
+            eq(inventoryMovements.type, 'reservation'),
+          ),
+        )
+
+      // Release each reservation
+      for (const reservation of reservations) {
+        await db.insert(inventoryMovements).values({
+          variantId: reservation.variantId,
+          type: 'reservation_release',
+          quantity: reservation.quantity,
+          reason: `Reserva expirada — pedido ${order.orderNumber}`,
+          orderId: order.id,
+        })
+
+        await db
+          .update(inventory)
+          .set({ reserved: sql`GREATEST(0, ${inventory.reserved} - ${reservation.quantity})` })
+          .where(eq(inventory.variantId, reservation.variantId))
+      }
+
+      // Transition order to cancelled
+      await db
+        .update(orders)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(orders.id, order.id))
+
+      await db.insert(orderStatusHistory).values({
+        orderId: order.id,
+        fromStatus: 'pending_payment',
+        toStatus: 'cancelled',
+        reason: 'Reserva de inventario expirada — cancelado automáticamente',
       })
     } catch (err) {
       console.error(`Error expiring order ${order.orderNumber}:`, err)
+      failed.push(order.orderNumber)
     }
   }
 
   return NextResponse.json({
-    expired: expiredOrders.length,
+    expired: expiredOrders.length - failed.length,
+    failed: failed.length > 0 ? failed : undefined,
     orderNumbers: expiredOrders.map((o) => o.orderNumber),
   })
 }

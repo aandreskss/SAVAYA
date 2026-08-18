@@ -319,90 +319,86 @@ export async function createProduct(
   actorEmail: string,
   ip: string,
 ): Promise<string> {
-  const productId = await db.transaction(async (tx) => {
-    const [product] = await tx
-      .insert(products)
-      .values({
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        categoryId: data.categoryId,
-        gender: data.gender,
-        productType: data.productType,
-        basePrice: String(data.basePrice),
-        compareAtPrice: data.compareAtPrice ? String(data.compareAtPrice) : null,
-        isFeatured: data.isFeatured,
-        isNew: data.isNew,
-        isActive: data.isActive,
-        tags: data.tags,
-        seoTitle: data.seoTitle,
-        seoDescription: data.seoDescription,
-        seoKeywords: data.seoKeywords,
-        metaImageUrl: data.metaImageUrl,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
-      })
-      .returning({ id: products.id })
-
-    const id = product.id
-
-    if (data.collectionIds.length > 0) {
-      await tx.insert(productCollections).values(
-        data.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
-      )
-    }
-
-    if (data.variants.length > 0) {
-      const insertedVariants = await tx
-        .insert(productVariants)
-        .values(
-          data.variants.map((v) => ({
-            productId: id,
-            colorId: v.colorId,
-            sizeId: v.sizeId,
-            sku: v.sku,
-            price: String(v.price),
-            compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
-            isActive: v.isActive,
-          })),
-        )
-        .returning({ id: productVariants.id })
-
-      await tx.insert(inventory).values(
-        insertedVariants.map((v, i) => ({
-          variantId: v.id,
-          quantity: data.variants[i].initialStock,
-          reserved: 0,
-        })),
-      )
-    }
-
-    if (data.media.length > 0) {
-      await tx.insert(productMedia).values(
-        data.media.map((m) => ({
-          productId: id,
-          cloudinaryPublicId: m.cloudinaryPublicId,
-          url: m.url,
-          altText: m.altText,
-          isPrimary: m.isPrimary,
-          sortOrder: m.sortOrder,
-        })),
-      )
-    }
-
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'product.create',
-      resourceType: 'product',
-      resourceId: id,
-      after: { name: data.name, slug: data.slug },
-      ip,
+  const [product] = await db
+    .insert(products)
+    .values({
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      categoryId: data.categoryId,
+      gender: data.gender,
+      productType: data.productType,
+      basePrice: String(data.basePrice),
+      compareAtPrice: data.compareAtPrice ? String(data.compareAtPrice) : null,
+      isFeatured: data.isFeatured,
+      isNew: data.isNew,
+      isActive: data.isActive,
+      tags: data.tags,
+      seoTitle: data.seoTitle,
+      seoDescription: data.seoDescription,
+      seoKeywords: data.seoKeywords,
+      metaImageUrl: data.metaImageUrl,
+      publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
     })
+    .returning({ id: products.id })
 
-    return id
+  const id = product.id
+
+  if (data.collectionIds.length > 0) {
+    await db.insert(productCollections).values(
+      data.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
+    )
+  }
+
+  if (data.variants.length > 0) {
+    const insertedVariants = await db
+      .insert(productVariants)
+      .values(
+        data.variants.map((v) => ({
+          productId: id,
+          colorId: v.colorId,
+          sizeId: v.sizeId,
+          sku: v.sku,
+          price: String(v.price),
+          compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
+          isActive: v.isActive,
+        })),
+      )
+      .returning({ id: productVariants.id })
+
+    await db.insert(inventory).values(
+      insertedVariants.map((v, i) => ({
+        variantId: v.id,
+        quantity: data.variants[i].initialStock,
+        reserved: 0,
+      })),
+    )
+  }
+
+  if (data.media.length > 0) {
+    await db.insert(productMedia).values(
+      data.media.map((m) => ({
+        productId: id,
+        cloudinaryPublicId: m.cloudinaryPublicId,
+        url: m.url,
+        altText: m.altText,
+        isPrimary: m.isPrimary,
+        sortOrder: m.sortOrder,
+      })),
+    )
+  }
+
+  await db.insert(auditLog).values({
+    actorId,
+    actorEmail,
+    action: 'product.create',
+    resourceType: 'product',
+    resourceId: id,
+    after: { name: data.name, slug: data.slug },
+    ip,
   })
 
-  return productId
+  return id
 }
 
 // ---------------------------------------------------------------------------
@@ -416,132 +412,130 @@ export async function updateProduct(
   actorEmail: string,
   ip: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
-      .update(products)
+  await db
+    .update(products)
+    .set({
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      categoryId: data.categoryId,
+      gender: data.gender,
+      productType: data.productType,
+      basePrice: String(data.basePrice),
+      compareAtPrice: data.compareAtPrice ? String(data.compareAtPrice) : null,
+      isFeatured: data.isFeatured,
+      isNew: data.isNew,
+      isActive: data.isActive,
+      tags: data.tags,
+      seoTitle: data.seoTitle,
+      seoDescription: data.seoDescription,
+      seoKeywords: data.seoKeywords,
+      metaImageUrl: data.metaImageUrl,
+      publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(products.id, id))
+
+  // Sync collections
+  await db.delete(productCollections).where(eq(productCollections.productId, id))
+  if (data.collectionIds.length > 0) {
+    await db.insert(productCollections).values(
+      data.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
+    )
+  }
+
+  // Sync variants
+  const existingRows = await db
+    .select({ id: productVariants.id })
+    .from(productVariants)
+    .where(eq(productVariants.productId, id))
+
+  const existingIds = new Set(existingRows.map((r) => r.id))
+  const submittedWithIds = data.variants.filter((v) => v.id).map((v) => v.id!)
+  const submittedIdSet = new Set(submittedWithIds)
+
+  // Soft-delete removed variants
+  const toDeactivate = [...existingIds].filter((eid) => !submittedIdSet.has(eid))
+  if (toDeactivate.length > 0) {
+    await db
+      .update(productVariants)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(inArray(productVariants.id, toDeactivate))
+  }
+
+  // Update existing variants
+  for (const v of data.variants.filter((v) => v.id)) {
+    await db
+      .update(productVariants)
       .set({
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        categoryId: data.categoryId,
-        gender: data.gender,
-        productType: data.productType,
-        basePrice: String(data.basePrice),
-        compareAtPrice: data.compareAtPrice ? String(data.compareAtPrice) : null,
-        isFeatured: data.isFeatured,
-        isNew: data.isNew,
-        isActive: data.isActive,
-        tags: data.tags,
-        seoTitle: data.seoTitle,
-        seoDescription: data.seoDescription,
-        seoKeywords: data.seoKeywords,
-        metaImageUrl: data.metaImageUrl,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
+        colorId: v.colorId,
+        sizeId: v.sizeId,
+        sku: v.sku,
+        price: String(v.price),
+        compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
+        isActive: v.isActive,
         updatedAt: new Date(),
       })
-      .where(eq(products.id, id))
+      .where(eq(productVariants.id, v.id!))
+  }
 
-    // Sync collections
-    await tx.delete(productCollections).where(eq(productCollections.productId, id))
-    if (data.collectionIds.length > 0) {
-      await tx.insert(productCollections).values(
-        data.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
-      )
-    }
-
-    // Sync variants
-    const existingRows = await tx
-      .select({ id: productVariants.id })
-      .from(productVariants)
-      .where(eq(productVariants.productId, id))
-
-    const existingIds = new Set(existingRows.map((r) => r.id))
-    const submittedWithIds = data.variants.filter((v) => v.id).map((v) => v.id!)
-    const submittedIdSet = new Set(submittedWithIds)
-
-    // Soft-delete removed variants
-    const toDeactivate = [...existingIds].filter((eid) => !submittedIdSet.has(eid))
-    if (toDeactivate.length > 0) {
-      await tx
-        .update(productVariants)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(inArray(productVariants.id, toDeactivate))
-    }
-
-    // Update existing variants
-    for (const v of data.variants.filter((v) => v.id)) {
-      await tx
-        .update(productVariants)
-        .set({
+  // Insert new variants
+  const newVariants = data.variants.filter((v) => !v.id)
+  if (newVariants.length > 0) {
+    const inserted = await db
+      .insert(productVariants)
+      .values(
+        newVariants.map((v) => ({
+          productId: id,
           colorId: v.colorId,
           sizeId: v.sizeId,
           sku: v.sku,
           price: String(v.price),
           compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
           isActive: v.isActive,
-          updatedAt: new Date(),
-        })
-        .where(eq(productVariants.id, v.id!))
-    }
-
-    // Insert new variants
-    const newVariants = data.variants.filter((v) => !v.id)
-    if (newVariants.length > 0) {
-      const inserted = await tx
-        .insert(productVariants)
-        .values(
-          newVariants.map((v) => ({
-            productId: id,
-            colorId: v.colorId,
-            sizeId: v.sizeId,
-            sku: v.sku,
-            price: String(v.price),
-            compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
-            isActive: v.isActive,
-          })),
-        )
-        .returning({ id: productVariants.id })
-
-      await tx.insert(inventory).values(
-        inserted.map((v, i) => ({
-          variantId: v.id,
-          quantity: newVariants[i].initialStock,
-          reserved: 0,
         })),
       )
-    }
+      .returning({ id: productVariants.id })
 
-    // Sync media: update existing, insert new
-    for (const m of data.media.filter((m) => m.id)) {
-      await tx
-        .update(productMedia)
-        .set({ isPrimary: m.isPrimary, sortOrder: m.sortOrder, altText: m.altText })
-        .where(eq(productMedia.id, m.id!))
-    }
+    await db.insert(inventory).values(
+      inserted.map((v, i) => ({
+        variantId: v.id,
+        quantity: newVariants[i].initialStock,
+        reserved: 0,
+      })),
+    )
+  }
 
-    const newMedia = data.media.filter((m) => !m.id)
-    if (newMedia.length > 0) {
-      await tx.insert(productMedia).values(
-        newMedia.map((m) => ({
-          productId: id,
-          cloudinaryPublicId: m.cloudinaryPublicId,
-          url: m.url,
-          altText: m.altText,
-          isPrimary: m.isPrimary,
-          sortOrder: m.sortOrder,
-        })),
-      )
-    }
+  // Sync media: update existing, insert new
+  for (const m of data.media.filter((m) => m.id)) {
+    await db
+      .update(productMedia)
+      .set({ isPrimary: m.isPrimary, sortOrder: m.sortOrder, altText: m.altText })
+      .where(eq(productMedia.id, m.id!))
+  }
 
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'product.update',
-      resourceType: 'product',
-      resourceId: id,
-      after: { name: data.name, slug: data.slug, isActive: data.isActive },
-      ip,
-    })
+  const newMedia = data.media.filter((m) => !m.id)
+  if (newMedia.length > 0) {
+    await db.insert(productMedia).values(
+      newMedia.map((m) => ({
+        productId: id,
+        cloudinaryPublicId: m.cloudinaryPublicId,
+        url: m.url,
+        altText: m.altText,
+        isPrimary: m.isPrimary,
+        sortOrder: m.sortOrder,
+      })),
+    )
+  }
+
+  await db.insert(auditLog).values({
+    actorId,
+    actorEmail,
+    action: 'product.update',
+    resourceType: 'product',
+    resourceId: id,
+    after: { name: data.name, slug: data.slug, isActive: data.isActive },
+    ip,
   })
 }
 
@@ -555,21 +549,8 @@ export async function archiveProduct(
   actorEmail: string,
   ip: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
-      .update(products)
-      .set({ isActive: false, updatedAt: new Date() })
-      .where(eq(products.id, id))
-
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'product.archive',
-      resourceType: 'product',
-      resourceId: id,
-      ip,
-    })
-  })
+  await db.update(products).set({ isActive: false, updatedAt: new Date() }).where(eq(products.id, id))
+  await db.insert(auditLog).values({ actorId, actorEmail, action: 'product.archive', resourceType: 'product', resourceId: id, ip })
 }
 
 export async function restoreProduct(
@@ -578,21 +559,8 @@ export async function restoreProduct(
   actorEmail: string,
   ip: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
-      .update(products)
-      .set({ isActive: true, updatedAt: new Date() })
-      .where(eq(products.id, id))
-
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'product.restore',
-      resourceType: 'product',
-      resourceId: id,
-      ip,
-    })
-  })
+  await db.update(products).set({ isActive: true, updatedAt: new Date() }).where(eq(products.id, id))
+  await db.insert(auditLog).values({ actorId, actorEmail, action: 'product.restore', resourceType: 'product', resourceId: id, ip })
 }
 
 export async function publishProduct(
@@ -601,21 +569,8 @@ export async function publishProduct(
   actorEmail: string,
   ip: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
-      .update(products)
-      .set({ publishedAt: new Date(), isActive: true, updatedAt: new Date() })
-      .where(eq(products.id, id))
-
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'product.publish',
-      resourceType: 'product',
-      resourceId: id,
-      ip,
-    })
-  })
+  await db.update(products).set({ publishedAt: new Date(), isActive: true, updatedAt: new Date() }).where(eq(products.id, id))
+  await db.insert(auditLog).values({ actorId, actorEmail, action: 'product.publish', resourceType: 'product', resourceId: id, ip })
 }
 
 export async function unpublishProduct(
@@ -624,21 +579,8 @@ export async function unpublishProduct(
   actorEmail: string,
   ip: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
-      .update(products)
-      .set({ publishedAt: null, updatedAt: new Date() })
-      .where(eq(products.id, id))
-
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'product.unpublish',
-      resourceType: 'product',
-      resourceId: id,
-      ip,
-    })
-  })
+  await db.update(products).set({ publishedAt: null, updatedAt: new Date() }).where(eq(products.id, id))
+  await db.insert(auditLog).values({ actorId, actorEmail, action: 'product.unpublish', resourceType: 'product', resourceId: id, ip })
 }
 
 export async function duplicateProduct(
@@ -667,84 +609,80 @@ export async function duplicateProduct(
     n++
   }
 
-  const newId = await db.transaction(async (tx) => {
-    const [created] = await tx
-      .insert(products)
-      .values({
-        name: baseName,
-        slug,
-        description: source.description,
-        categoryId: source.categoryId,
-        gender: source.gender,
-        productType: source.productType,
-        basePrice: String(source.basePrice),
-        compareAtPrice: source.compareAtPrice ? String(source.compareAtPrice) : null,
-        isFeatured: false,
-        isNew: false,
-        isActive: false,
-        tags: source.tags,
-        seoTitle: source.seoTitle,
-        seoDescription: source.seoDescription,
-        seoKeywords: source.seoKeywords,
-        metaImageUrl: source.metaImageUrl,
-        publishedAt: null,
-      })
-      .returning({ id: products.id })
+  const [created] = await db
+    .insert(products)
+    .values({
+      name: baseName,
+      slug,
+      description: source.description,
+      categoryId: source.categoryId,
+      gender: source.gender,
+      productType: source.productType,
+      basePrice: String(source.basePrice),
+      compareAtPrice: source.compareAtPrice ? String(source.compareAtPrice) : null,
+      isFeatured: false,
+      isNew: false,
+      isActive: false,
+      tags: source.tags,
+      seoTitle: source.seoTitle,
+      seoDescription: source.seoDescription,
+      seoKeywords: source.seoKeywords,
+      metaImageUrl: source.metaImageUrl,
+      publishedAt: null,
+    })
+    .returning({ id: products.id })
 
-    const id = created.id
+  const newId = created.id
 
-    if (source.collectionIds.length > 0) {
-      await tx.insert(productCollections).values(
-        source.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
-      )
-    }
+  if (source.collectionIds.length > 0) {
+    await db.insert(productCollections).values(
+      source.collectionIds.map((collectionId) => ({ productId: newId, collectionId })),
+    )
+  }
 
-    if (source.variants.length > 0) {
-      const insertedVariants = await tx
-        .insert(productVariants)
-        .values(
-          source.variants.map((v) => ({
-            productId: id,
-            colorId: v.colorId,
-            sizeId: v.sizeId,
-            sku: `${v.sku}-C`,
-            price: String(v.price),
-            compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
-            isActive: v.isActive,
-          })),
-        )
-        .returning({ id: productVariants.id })
-
-      await tx.insert(inventory).values(
-        insertedVariants.map((v) => ({ variantId: v.id, quantity: 0, reserved: 0 })),
-      )
-    }
-
-    if (source.media.length > 0) {
-      await tx.insert(productMedia).values(
-        source.media.map((m) => ({
-          productId: id,
-          cloudinaryPublicId: m.cloudinaryPublicId,
-          url: m.url,
-          altText: m.altText,
-          isPrimary: m.isPrimary,
-          sortOrder: m.sortOrder,
+  if (source.variants.length > 0) {
+    const insertedVariants = await db
+      .insert(productVariants)
+      .values(
+        source.variants.map((v) => ({
+          productId: newId,
+          colorId: v.colorId,
+          sizeId: v.sizeId,
+          sku: `${v.sku}-C`,
+          price: String(v.price),
+          compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
+          isActive: v.isActive,
         })),
       )
-    }
+      .returning({ id: productVariants.id })
 
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'product.duplicate',
-      resourceType: 'product',
-      resourceId: id,
-      before: { sourceId },
-      after: { name: baseName, slug },
-      ip,
-    })
+    await db.insert(inventory).values(
+      insertedVariants.map((v) => ({ variantId: v.id, quantity: 0, reserved: 0 })),
+    )
+  }
 
-    return id
+  if (source.media.length > 0) {
+    await db.insert(productMedia).values(
+      source.media.map((m) => ({
+        productId: newId,
+        cloudinaryPublicId: m.cloudinaryPublicId,
+        url: m.url,
+        altText: m.altText,
+        isPrimary: m.isPrimary,
+        sortOrder: m.sortOrder,
+      })),
+    )
+  }
+
+  await db.insert(auditLog).values({
+    actorId,
+    actorEmail,
+    action: 'product.duplicate',
+    resourceType: 'product',
+    resourceId: newId,
+    before: { sourceId },
+    after: { name: baseName, slug },
+    ip,
   })
 
   return newId

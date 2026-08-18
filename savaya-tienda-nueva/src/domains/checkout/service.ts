@@ -9,6 +9,7 @@ import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { cartItems } from '@/domains/cart/schema'
 import { productVariants, products, colors, sizes } from '@/domains/catalog/schema'
 import { customers } from '@/domains/customers/schema'
+import { shippingMethods } from '@/domains/shipping/schema'
 import { validateCoupon, calculateDiscount } from '@/domains/discounts-promotions/service'
 import { recordCouponUsage } from '@/domains/discounts-promotions/repository'
 import { sendOrderConfirmation } from '@/domains/notifications/service'
@@ -232,6 +233,13 @@ export async function createOrder(
 
   const orderNumber = await generateOrderNumber()
 
+  // Fetch shipping method name for the snapshot
+  const [shippingMethod] = await db
+    .select({ name: shippingMethods.name })
+    .from(shippingMethods)
+    .where(eq(shippingMethods.id, shippingData.methodId))
+    .limit(1)
+
   const reservedUntil = new Date(Date.now() + reservationExpiryHours * 60 * 60 * 1000)
 
   const hasProof = paymentData.methodType !== 'cash' && !!paymentData.cloudinaryPublicId
@@ -259,6 +267,7 @@ export async function createOrder(
           zoneId: shippingData.zoneId,
           zoneType: shippingData.zoneType,
           methodId: shippingData.methodId,
+          methodName: shippingMethod?.name ?? null,
           cityId: shippingData.cityId,
           recipientName: shippingData.recipientName,
           state: shippingData.state,
@@ -267,6 +276,7 @@ export async function createOrder(
           parish: shippingData.parish,
           address: shippingData.address,
           reference: shippingData.reference,
+          costUsd: shippingCostUsd.toFixed(2),
         },
         reservedUntil,
         idempotencyKey,
@@ -286,10 +296,10 @@ export async function createOrder(
         unitPriceUsd: unitPrice.toFixed(2),
         totalUsd: (unitPrice * cartRow.quantity).toFixed(2),
         productSnapshot: {
-          productName: variant.productName,
+          name: variant.productName,
           sku: variant.sku,
-          color: variant.colorName,
-          size: variant.sizeName,
+          colorName: variant.colorName,
+          sizeName: variant.sizeName,
           unitPriceUsd: unitPrice,
         },
       }
@@ -413,7 +423,7 @@ export async function createOrder(
     const customerEmail = input.personalData.email
     const customerName = `${input.personalData.firstName} ${input.personalData.lastName}`
     rawQuery<{ name: string; sku: string; qty: number; unit: number }>(
-      sql`SELECT ps->>'productName' as name, ps->>'sku' as sku,
+      sql`SELECT ps->>'name' as name, ps->>'sku' as sku,
                quantity as qty, unit_price_usd::float as unit
           FROM order_items WHERE order_id = ${orderId}`,
     ).then((items) => {

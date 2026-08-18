@@ -130,7 +130,7 @@ export async function transitionOrderStatusAction(
 export async function deleteOrderAction(orderId: string): Promise<ActionResult> {
   const actor = await getActorContext()
   if (!actor) return { success: false, error: 'No autenticado' }
-  if (!actor.permissions.includes('orders:delete')) {
+  if (!actor.permissions.includes('orders:write')) {
     return { success: false, error: 'Sin permiso para eliminar pedidos' }
   }
 
