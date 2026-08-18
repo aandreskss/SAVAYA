@@ -21,8 +21,8 @@ SAVAYA es una marca venezolana de calzado (Carabobo) migrando de venta mayorista
 
 - **Next.js 16** (App Router) + **React 19.2** + **TypeScript strict** (`strict: true`, sin `any` implícito).
 - **Tailwind CSS v4**, todo el diseño vía **design tokens** (ver `docs/UX-UI.md` / Fase 2), nunca valores mágicos sueltos.
-- **PostgreSQL vía Supabase** — proyecto `fytegzrfsirbtyekncrn` (proyecto nuevo — el original `ujgupdrkdpebodwxrcii` se perdió). Drizzle se conecta directamente al connection string de Postgres, **sin usar el SDK de Supabase JS** (`@supabase/supabase-js`). `DATABASE_URL` usa pooler port 6543; `DIRECT_URL` usa directo port 5432. Decisión documentada en `docs/adr/002-database.md`.
-- **Drizzle ORM** (TypeScript-first, SQL explícito, mejor rendimiento en serverless/edge que Prisma, migraciones con `drizzle-kit`). Las tablas nuevas se crean con migraciones de Drizzle sobre la misma DB; las tablas viejas de `savaya-tienda` coexisten hasta el corte (Fase 8). Justificación completa en `docs/adr/002-orm.md`.
+- **PostgreSQL vía Neon** — migrado de Supabase en 2026-08-17. Driver: `@neondatabase/serverless` + `drizzle-orm/neon-http`. Usa HTTP por request (stateless), sin pool de conexiones TCP — ideal para serverless/Vercel sin los límites de PgBouncer. `DATABASE_URL` en `.env.local` y en Vercel apunta a Neon. No hay `DIRECT_URL` — una sola variable. Decisión documentada en `docs/adr/002-database.md`.
+- **Drizzle ORM** (TypeScript-first, SQL explícito, mejor rendimiento en serverless/edge que Prisma, migraciones con `drizzle-kit`). `db` exportado desde `src/shared/lib/db.ts`; helper `rawQuery<T>(sql)` wrappea `db.execute()` devolviendo `rows as T[]` (el driver neon-http devuelve `{ rows, command, fields }` — no un array directo). Todas las queries raw usan `rawQuery<T>` en vez de `db.execute()` directamente. Dentro de transacciones, usar `(await tx.execute<T>(sql`...`)).rows`. `AnyTx = PgTransaction<NeonHttpQueryResultHKT, any, any>` (importar de `drizzle-orm/neon-http`). Justificación completa en `docs/adr/002-orm.md`.
 - **Auth.js (NextAuth v5)** con credentials + verificación por email; sesiones en cookies `HttpOnly`, `Secure`, `SameSite=Lax`; reautenticación obligatoria para acciones admin sensibles; **2FA (TOTP)** obligatorio para roles Admin/Super Admin. Los usuarios de `savaya-tienda` (Supabase Auth) no se migran — se descartan. La nueva tienda arranca con tablas de Auth.js limpias y un admin nuevo.
 - **Zod** para toda validación de entrada, compartido entre client y server donde aplique.
 - **Zustand** solo para estado de UI efímero (drawer del carrito abierto/cerrado, etc.) — nunca para precios/stock/totales, eso vive en servidor.
@@ -32,7 +32,7 @@ SAVAYA es una marca venezolana de calzado (Carabobo) migrando de venta mayorista
 - **Tasas BCV**: abstracción `ExchangeRateProvider` (ver Fase 5.2) — nunca llamar a una API externa directamente desde un componente o ruta suelta.
 - **Vitest** + Testing Library (unit/integration), **Playwright** (E2E).
 - **Sentry** (errores) + Vercel Analytics/Speed Insights (performance real).
-- Hosting: **Vercel** (monorepo `aandreskss/SAVAYA`, rama `main`, root directory `savaya-tienda-nueva/`). Media: **Cloudinary** (cuenta Savaya — cloud name distinto al `dckobjcbj` de Tuluoshop/savaya-tienda). DB: **Supabase PostgreSQL** — proyecto `fytegzrfsirbtyekncrn`.
+- Hosting: **Vercel** (monorepo `aandreskss/SAVAYA`, rama `main`, root directory `savaya-tienda-nueva/`). Media: **Cloudinary** (cuenta Savaya — cloud name distinto al `dckobjcbj` de Tuluoshop/savaya-tienda). DB: **Neon PostgreSQL** — endpoint `ep-round-cherry-ay3dqlqz.c-5.us-east-2.aws.neon.tech`, base `neondb`.
 
 No uses versiones beta salvo que el estable no cubra un requisito crítico; si lo haces, documenta el motivo en un ADR.
 
@@ -126,7 +126,8 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
 
 | Servicio | Referencia |
 |---|---|
-| **Supabase** | Proyecto `fytegzrfsirbtyekncrn` · `DATABASE_URL` pooler port 6543 · `DIRECT_URL` directo port 5432 |
+| **Neon** | Endpoint `ep-round-cherry-ay3dqlqz.c-5.us-east-2.aws.neon.tech` · base `neondb` · usuario `neondb_owner` · una sola var `DATABASE_URL` (sin `DIRECT_URL`) |
+| **Supabase** (inactivo) | Proyecto `fytegzrfsirbtyekncrn` — ya no se usa como DB principal; migrado a Neon en 2026-08-17 |
 | **Cloudinary** | Cuenta Savaya (distinta a `dckobjcbj` de Tuluoshop) · carpetas bajo `savaya/` |
 | **Upstash Redis** | Creado · `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` en `.env.local` |
 | **Meta Pixel** | `27355395054120748` (mismo que campanas) |
@@ -140,7 +141,7 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
 
 ## 9. Estado del proyecto (actualizado 2026-08-17)
 
-**Estado: Fases 0–9 completas. En ajuste post-lanzamiento: reconexión DB + sincronización diseño Figma.**
+**Estado: Fases 0–9 completas. En producción sobre Neon. DB migrada, tema oscuro admin corregido, 18 productos de ejemplo activos.**
 
 | Fase | Estado |
 |---|---|
@@ -250,7 +251,7 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - Login page reskinned con Tailwind (misma lógica funcional de Fase 1.4)
   - `src/proxy.ts` es código muerto — el middleware real es `src/middleware.ts`
 - **Dashboard admin (Fase 4.2):**
-  - `src/domains/admin/dashboard/repository.ts` — 6 queries SQL via `db.execute(sql\`...\`)`, helper `num()`/`str()` para coerciones
+  - `src/domains/admin/dashboard/repository.ts` — 6 queries SQL via `rawQuery<Row>(sql\`...\`)`, helper `num()`/`str()` para coerciones
   - `getDashboardKPIs(start, end)` — un solo SQL con subquery para nuevos clientes
   - `getSalesChartData(start, end)` — agrupado por día en `America/Caracas`
   - `getPendingPayments()` — join paymentProofs + orders + customers + paymentMethods
@@ -261,7 +262,7 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - `DashboardSkeletons` — `KPIsSkeleton`, `ChartSkeleton`, `BlockSkeleton`
   - `PeriodSelector` — Client Component, 4 botones, `router.push('/admin?period=...')`
   - `period.ts` — `parsePeriod()`, `getPeriodBounds()`, `getPeriodLabel()`, `DashboardPeriod` union type
-  - `src/app/admin/page.tsx` — Server Component, `searchParams.period` → `parsePeriod()` → bounds, cada bloque en `<Suspense>`, `forbidden=1` muestra banner de error
+  - `src/app/admin/page.tsx` — Server Component, `searchParams.period` → `parsePeriod()` → bounds, `Promise.all` con los 6 queries en paralelo, bloques de presentación puros (sin Suspense individual), `forbidden=1` muestra banner de error
 - **Catálogo admin (Fase 4.3):**
   - `src/shared/lib/slugify.ts` — `slugify(text)` normaliza NFD, minúsculas, solo `[a-z0-9-]`
   - `src/domains/admin/catalog/repository.ts` — `listAdminProducts` usa `db.execute(sql`...`)` con subqueries (primary image, variant count, total stock); CRUD completo products/categories/collections + AuditLog
@@ -289,7 +290,7 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - `src/domains/discounts-promotions/` — types, validators, repository, service, actions (domain completo)
   - `src/domains/admin/discounts/` — types (re-export), repository (re-export), validators (re-export), actions (CRUD con `promotions:write`), DiscountsManager component
   - `validateCoupon(code, subtotalUsd, customerId?)` en `service.ts` — reglas: isActive, startsAt/endsAt, maxUsesTotal, minOrderUsd, maxUsesPerCustomer, isFirstOrderOnly
-  - `recordCouponUsage(tx, { discountId, customerId, orderId })` — llamado dentro de `db.transaction()` en `checkout/service.ts`; usa `AnyTx = PgTransaction<PostgresJsQueryResultHKT, any, any>` (no `Database`)
+  - `recordCouponUsage(tx, { discountId, customerId, orderId })` — llamado dentro de `db.transaction()` en `checkout/service.ts`; usa `AnyTx = PgTransaction<NeonHttpQueryResultHKT, any, any>` (importar de `drizzle-orm/neon-http`)
   - `validateCouponAction` en `discounts-promotions/actions.ts` — server action para storefront (sin auth, guests pueden aplicar cupones); dev fallback: código `SAVAYA10` = 10%
   - `CouponInput` en `domains/cart/components/CouponInput.tsx` — state local + `useTransition`; muestra badge verde con monto al aplicar; botón "Quitar" para remover
   - `CartPageClient` actualizado: importa `useCheckoutStore` para `appliedCoupon` + `setAppliedCoupon`; muestra línea "Descuento −$X.XX" en breakdown; total refleja descuento
@@ -361,3 +362,30 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - **Logos en `public/images/`:** `savaya-logo.webp` + `savaya-logo.png` (SAVAYA mujer, alas doradas + wordmark), `savaya-mark.png` (solo alas, para favicon/mark), `svy-logo-black.png` + `svy-logo-white.png` (SVY FOR MEN, mariposa geométrica negra)
   - **Pendiente:** Navbar.tsx aún usa `<span>SAVAYA</span>` texto — debe actualizarse a `<SavayaLogo>` cuando se implemente diseño desde claude_design
   - **MCP claude_design instalado:** `claude mcp add claude_design --transport http https://api.anthropic.com/v1/design/mcp` — disponible en próximas sesiones para implementar diseño desde `https://claude.ai/design/p/22724c72-d570-4fc4-ab5b-301c4a13fc65`
+
+- **Migración Supabase → Neon (2026-08-17):**
+  - Causa: Supabase PgBouncer (15 conexiones en free tier) saturaba el pool con tráfico concurrente en Vercel Lambda
+  - Driver cambiado: `postgres.js` + `drizzle-orm/postgres-js` → `@neondatabase/serverless` + `drizzle-orm/neon-http`
+  - `src/shared/lib/db.ts` reescrito: usa `neon(DATABASE_URL)` + `drizzle(sql, { schema })` + helper `rawQuery<T>`
+  - `rawQuery<T>(query: SQL): Promise<T[]>` — wrappea `db.execute()` extrayendo `.rows`; usar en vez de `db.execute()` directo fuera de transacciones
+  - 9 archivos actualizados: `dashboard/repository`, `catalog/repository`, `catalog/search`, `customers/repository`, `inventory/repository`, `orders/repository`, `orders/service`, `checkout/service`, `discounts-promotions/repository`
+  - `AnyTx` en `discounts-promotions/repository.ts`: `PgTransaction<NeonHttpQueryResultHKT, any, any>` (importar de `drizzle-orm/neon-http`)
+  - Dentro de `db.transaction()`, `tx.execute<T>(sql`...`)` devuelve `NeonHttpQueryResult` → acceder con `.rows`
+  - `admin/page.tsx` optimizado: 6 Suspense separados → un solo `Promise.all` con todos los bloques del dashboard como componentes de presentación puros
+  - Schema aplicado en Neon con `drizzle-kit push`; usuarios admin recreados con script temporal
+  - `.env.local` actualizado: solo `DATABASE_URL` (sin `DIRECT_URL`); apunta a `ep-round-cherry-ay3dqlqz.c-5.us-east-2.aws.neon.tech`
+  - Script de migración de datos: `scripts/migrate-supabase-to-neon.mjs` (archivado, ya no se necesita)
+
+- **Correcciones admin dark theme (2026-08-17):**
+  - Causa raíz: `body` computa `color: var(--color-text-primary)` como `#111111` (light); ese valor computado se hereda por CSS, no la variable. Hijos sin clase de color explícita mostraban texto negro sobre fondo oscuro.
+  - Fix: `AdminShell` root div agrega `text-text-primary` — fuerza re-evaluación de la variable dentro del contexto `[data-theme="dark"]` → todos los hijos heredan `#F1EFEA`
+  - `BlockContentForm.tsx` inputs/textareas: `bg-transparent` → `bg-surface text-text-primary`
+  - `globals.css`: agrega `color-scheme: dark` a `select`, `input`, `textarea` dentro de `[data-theme="dark"]` — el OS usa colores del sistema dark para el dropdown nativo de `<select>`
+  - `src/app/admin/analytics/page.tsx`: reemplazó placeholder "Disponible en Fase 4.2" con página real de estado de integraciones (GA4, Meta Pixel, CAPI)
+
+- **18 productos de ejemplo (2026-08-17):**
+  - Script: `scripts/seed-sample-products.mjs` (ESM, usa `@neondatabase/serverless` directo)
+  - Categorías cubiertas: Sandalias (3), Tacones (4), Plataformas (2), Flats (3), Botas (2), Sneakers (2), Mules (2)
+  - Imágenes: Unsplash (whitelisted en `next.config.ts`); `cloudinary_public_id` = `samples/<slug>-N` (placeholder)
+  - Stock: 5–15 unidades por variante; 2–4 colores × tallas 35–40; mezcla `isFeatured`, `isNew`, `compare_at_price`
+  - Correr con: `node --env-file=.env.local scripts/seed-sample-products.mjs`
