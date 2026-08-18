@@ -1,4 +1,4 @@
-import { getSalesByMethod } from '@/domains/admin/dashboard/repository'
+import type { SalesByMethodItem } from '@/domains/admin/dashboard/types'
 
 const METHOD_LABELS: Record<string, string> = {
   zelle: 'Zelle',
@@ -9,9 +9,7 @@ const METHOD_LABELS: Record<string, string> = {
   cash: 'Efectivo',
 }
 
-export async function SalesByMethodBlock({ start, end }: { start: Date; end: Date }) {
-  const items = await getSalesByMethod(start, end)
-
+export function SalesByMethodBlock({ items }: { items: SalesByMethodItem[] }) {
   const totalRevenue = items.reduce((sum, i) => sum + i.revenue, 0)
 
   return (
@@ -35,7 +33,6 @@ export async function SalesByMethodBlock({ start, end }: { start: Date; end: Dat
                   <span className="text-sm font-medium">${item.revenue.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Progress bar */}
                   <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
                     <div
                       className="h-full bg-accent-gold rounded-full"

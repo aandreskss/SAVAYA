@@ -1,10 +1,8 @@
 import Link from 'next/link'
-import { getLowStockItems } from '@/domains/admin/dashboard/repository'
+import type { LowStockItem } from '@/domains/admin/dashboard/types'
 import { cn } from '@/shared/lib/utils'
 
-export async function LowStockBlock() {
-  const items = await getLowStockItems()
-
+export function LowStockBlock({ items }: { items: LowStockItem[] }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">

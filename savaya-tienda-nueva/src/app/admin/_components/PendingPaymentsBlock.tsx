@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getPendingPayments } from '@/domains/admin/dashboard/repository'
+import type { PendingPaymentItem } from '@/domains/admin/dashboard/types'
 
 function RelativeTime({ iso }: { iso: string }) {
   const date = new Date(iso)
@@ -11,9 +11,7 @@ function RelativeTime({ iso }: { iso: string }) {
   return <span>Hace {diffD} día{diffD > 1 ? 's' : ''}</span>
 }
 
-export async function PendingPaymentsBlock() {
-  const items = await getPendingPayments()
-
+export function PendingPaymentsBlock({ items }: { items: PendingPaymentItem[] }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">

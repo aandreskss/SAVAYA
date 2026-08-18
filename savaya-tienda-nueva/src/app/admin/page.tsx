@@ -1,5 +1,12 @@
-import { Suspense } from 'react'
 import { auth } from '@/domains/auth/auth'
+import {
+  getDashboardKPIs,
+  getSalesChartData,
+  getPendingPayments,
+  getLowStockItems,
+  getTopProducts,
+  getSalesByMethod,
+} from '@/domains/admin/dashboard/repository'
 import { getPeriodBounds, getPeriodLabel, parsePeriod } from '@/domains/admin/dashboard/period'
 import { PeriodSelector } from './_components/PeriodSelector'
 import { DashboardKPIs } from './_components/DashboardKPIs'
@@ -8,7 +15,6 @@ import { PendingPaymentsBlock } from './_components/PendingPaymentsBlock'
 import { LowStockBlock } from './_components/LowStockBlock'
 import { TopProductsBlock } from './_components/TopProductsBlock'
 import { SalesByMethodBlock } from './_components/SalesByMethodBlock'
-import { KPIsSkeleton, ChartSkeleton, BlockSkeleton } from './_components/DashboardSkeletons'
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -22,6 +28,16 @@ export default async function AdminDashboardPage({
   const { start, end } = getPeriodBounds(period)
   const periodLabel = getPeriodLabel(period)
   const forbidden = params.forbidden === '1'
+
+  const [kpis, chartData, pendingPayments, lowStock, topProducts, salesByMethod] =
+    await Promise.all([
+      getDashboardKPIs(start, end),
+      getSalesChartData(start, end),
+      getPendingPayments(),
+      getLowStockItems(),
+      getTopProducts(start, end),
+      getSalesByMethod(start, end),
+    ])
 
   return (
     <div className="p-6 md:p-8">
@@ -41,33 +57,17 @@ export default async function AdminDashboardPage({
         <PeriodSelector current={period} />
       </div>
 
-      {/* KPI cards */}
-      <Suspense fallback={<KPIsSkeleton />}>
-        <DashboardKPIs start={start} end={end} />
-      </Suspense>
+      <DashboardKPIs kpis={kpis} />
+      <SalesChartBlock data={chartData} />
 
-      {/* Sales chart */}
-      <Suspense fallback={<ChartSkeleton />}>
-        <SalesChartBlock start={start} end={end} />
-      </Suspense>
-
-      {/* Bottom grid: pending payments + low stock | top products + sales by method */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-6">
-          <Suspense fallback={<BlockSkeleton title="Pagos pendientes de revisión" />}>
-            <PendingPaymentsBlock />
-          </Suspense>
-          <Suspense fallback={<BlockSkeleton title="Stock bajo" />}>
-            <LowStockBlock />
-          </Suspense>
+          <PendingPaymentsBlock items={pendingPayments} />
+          <LowStockBlock items={lowStock} />
         </div>
         <div className="flex flex-col gap-6">
-          <Suspense fallback={<BlockSkeleton title="Productos más vendidos" />}>
-            <TopProductsBlock start={start} end={end} />
-          </Suspense>
-          <Suspense fallback={<BlockSkeleton title="Ventas por método de pago" />}>
-            <SalesByMethodBlock start={start} end={end} />
-          </Suspense>
+          <TopProductsBlock items={topProducts} />
+          <SalesByMethodBlock items={salesByMethod} />
         </div>
       </div>
     </div>

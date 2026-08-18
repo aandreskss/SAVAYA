@@ -1,4 +1,4 @@
-import { getDashboardKPIs } from '@/domains/admin/dashboard/repository'
+import type { DashboardKPIs as DashboardKPIsType } from '@/domains/admin/dashboard/types'
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
@@ -20,9 +20,7 @@ function KPICard({ label, value, sub }: KPICardProps) {
   )
 }
 
-export async function DashboardKPIs({ start, end }: { start: Date; end: Date }) {
-  const kpis = await getDashboardKPIs(start, end)
-
+export function DashboardKPIs({ kpis }: { kpis: DashboardKPIsType }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
       <KPICard label="Ventas" value={fmt(kpis.revenue)} />

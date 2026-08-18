@@ -1,9 +1,7 @@
 import Link from 'next/link'
-import { getTopProducts } from '@/domains/admin/dashboard/repository'
+import type { TopProductItem } from '@/domains/admin/dashboard/types'
 
-export async function TopProductsBlock({ start, end }: { start: Date; end: Date }) {
-  const items = await getTopProducts(start, end)
-
+export function TopProductsBlock({ items }: { items: TopProductItem[] }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
       <h2 className="text-sm font-medium mb-4">Productos más vendidos</h2>
