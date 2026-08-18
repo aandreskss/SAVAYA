@@ -9,6 +9,7 @@ import { SplitBlock } from './blocks/SplitBlock'
 import { BenefitsBlock } from './blocks/BenefitsBlock'
 import { Newsletter } from './blocks/Newsletter'
 import { PromoBanner } from './blocks/PromoBanner'
+import { SocialProofGrid } from './blocks/SocialProofGrid'
 import { getProducts } from '@/domains/catalog/repository'
 import type { ProductCardProps } from '@/shared/ui'
 
@@ -79,6 +80,9 @@ export async function BlockRenderer({ block }: Props) {
 
     case 'promo_banner':
       return <PromoBanner {...(block.content as BlockContent<'promo_banner'>)} />
+
+    case 'social_proof_grid':
+      return <SocialProofGrid {...(block.content as BlockContent<'social_proof_grid'>)} />
 
     default:
       return null

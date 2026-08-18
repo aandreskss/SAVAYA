@@ -38,9 +38,10 @@ function ChevronRight() {
   )
 }
 
-const SCROLL_AMOUNT = 320 // px per arrow click
+const SCROLL_AMOUNT = 320
 
 export function ProductCarousel({
+  eyebrow,
   title,
   subtitle,
   products,
@@ -76,6 +77,14 @@ export function ProductCarousel({
       {/* Header */}
       <div className="mb-5 flex items-end justify-between gap-4">
         <div>
+          {eyebrow && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="block w-4 h-px bg-accent-gold shrink-0" aria-hidden="true" />
+              <span className="font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-accent-gold">
+                {eyebrow}
+              </span>
+            </div>
+          )}
           <h2 className="font-display font-extrabold text-[28px] md:text-[30px] uppercase tracking-tight text-text-primary">
             {title}
           </h2>
@@ -96,7 +105,6 @@ export function ProductCarousel({
 
       {/* Grid on desktop, carousel on mobile + nav arrows */}
       <div className="relative">
-        {/* Arrow left — desktop only */}
         {canScrollLeft && (
           <button
             type="button"
@@ -114,7 +122,6 @@ export function ProductCarousel({
           </button>
         )}
 
-        {/* Scrollable container */}
         <div
           ref={scrollRef}
           onScroll={updateScrollState}
@@ -135,7 +142,6 @@ export function ProductCarousel({
           ))}
         </div>
 
-        {/* Arrow right — desktop only */}
         {canScrollRight && (
           <button
             type="button"

@@ -12,7 +12,9 @@ export const AnnouncementBarSchema = z.object({
 })
 
 export const HeroSchema = z.object({
+  eyebrow: z.string().max(80).optional(),
   headline: z.string().max(100),
+  headlineAccent: z.string().max(60).optional(),
   subheadline: z.string().max(200).optional(),
   ctaPrimaryText: z.string().max(50),
   ctaPrimaryHref: z.string(),
@@ -21,11 +23,14 @@ export const HeroSchema = z.object({
   imageDesktopUrl: z.string().url(),
   imageMobileUrl: z.string().url(),
   imageAlt: z.string().max(150),
-  overlayOpacity: z.number().min(0).max(0.8).default(0.3),
+  overlayOpacity: z.number().min(0).max(0.9).default(0.45),
 })
 
 export const ShopByCategorySchema = z.object({
+  eyebrow: z.string().max(60).optional(),
   title: z.string().max(80).default('Compra por categoría'),
+  ctaText: z.string().max(50).optional(),
+  ctaHref: z.string().optional(),
   categories: z
     .array(
       z.object({
@@ -39,6 +44,7 @@ export const ShopByCategorySchema = z.object({
 })
 
 export const ProductCarouselSchema = z.object({
+  eyebrow: z.string().max(60).optional(),
   title: z.string().max(80),
   subtitle: z.string().max(150).optional(),
   source: z.enum(['new', 'bestseller', 'featured', 'collection']),
@@ -54,6 +60,7 @@ export const ProductCarouselSchema = z.object({
 })
 
 export const PromoBannerSchema = z.object({
+  eyebrow: z.string().max(60).optional(),
   headline: z.string().max(80),
   subheadline: z.string().max(150).optional(),
   ctaText: z.string().max(50),
@@ -61,8 +68,10 @@ export const PromoBannerSchema = z.object({
 })
 
 export const EditorialBlockSchema = z.object({
+  variant: z.enum(['overlay', 'split']).default('overlay'),
   eyebrow: z.string().max(50).optional(),
   headline: z.string().max(100),
+  headlineAccent: z.string().max(60).optional(),
   body: z.string().max(500),
   ctaText: z.string().max(50).optional(),
   ctaHref: z.string().optional(),
@@ -72,12 +81,15 @@ export const EditorialBlockSchema = z.object({
 })
 
 export const SplitBlockSchema = z.object({
+  leftEyebrow: z.string().max(60).optional(),
   leftLabel: z.string().max(50).default('Mujer'),
   leftHref: z.string().default('/mujer'),
   leftImageUrl: z.string().url(),
+  rightEyebrow: z.string().max(60).optional(),
   rightLabel: z.string().max(50).default('Hombre'),
   rightHref: z.string().default('/hombre'),
   rightImageUrl: z.string().url(),
+  rightShowMark: z.boolean().default(false),
 })
 
 export const BenefitsBlockSchema = z.object({
@@ -85,7 +97,9 @@ export const BenefitsBlockSchema = z.object({
   benefits: z
     .array(
       z.object({
-        icon: z.enum(['truck', 'shield', 'refresh', 'star', 'whatsapp', 'credit-card']),
+        // Accepts named icon keys ('truck','shield','refresh','star','whatsapp','credit-card')
+        // OR any emoji character/string (e.g. '🚚', '🔒').
+        icon: z.string().min(1).max(20),
         title: z.string().max(60),
         description: z.string().max(150),
       }),
@@ -95,10 +109,25 @@ export const BenefitsBlockSchema = z.object({
 })
 
 export const NewsletterSchema = z.object({
+  eyebrow: z.string().max(60).optional(),
   headline: z.string().max(100).default('Únete a la comunidad SAVAYA'),
   subheadline: z.string().max(200).optional(),
   placeholder: z.string().max(60).default('Tu correo electrónico'),
   ctaText: z.string().max(40).default('Suscribirme'),
+})
+
+export const SocialProofGridSchema = z.object({
+  heading: z.string().max(80).default('SAVAYA EN MOVIMIENTO'),
+  images: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        alt: z.string().max(150),
+        href: z.string().optional(),
+      }),
+    )
+    .min(4)
+    .max(8),
 })
 
 // ---------------------------------------------------------------------------
@@ -115,6 +144,7 @@ export const BLOCK_SCHEMAS = {
   benefits_block: BenefitsBlockSchema,
   newsletter: NewsletterSchema,
   promo_banner: PromoBannerSchema,
+  social_proof_grid: SocialProofGridSchema,
 } as const
 
 export type BlockType = keyof typeof BLOCK_SCHEMAS

@@ -12,6 +12,7 @@ import {
   BenefitsBlockSchema,
   NewsletterSchema,
   PromoBannerSchema,
+  SocialProofGridSchema,
 } from '@/domains/cms/block-schemas'
 import type { AdminSection } from '../types'
 
@@ -123,7 +124,9 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
   const d = parsed.success
     ? parsed.data
     : {
+        eyebrow: '',
         headline: '',
+        headlineAccent: '',
         subheadline: '',
         ctaPrimaryText: '',
         ctaPrimaryHref: '/',
@@ -132,10 +135,12 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
         imageDesktopUrl: '',
         imageMobileUrl: '',
         imageAlt: '',
-        overlayOpacity: 0.3,
+        overlayOpacity: 0.45,
       }
 
+  const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
   const [headline, setHeadline] = useState(d.headline)
+  const [headlineAccent, setHeadlineAccent] = useState(d.headlineAccent ?? '')
   const [subheadline, setSubheadline] = useState(d.subheadline ?? '')
   const [ctaPrimaryText, setCtaPrimaryText] = useState(d.ctaPrimaryText)
   const [ctaPrimaryHref, setCtaPrimaryHref] = useState(d.ctaPrimaryHref)
@@ -149,7 +154,9 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     onSave({
+      eyebrow: eyebrow || undefined,
       headline,
+      headlineAccent: headlineAccent || undefined,
       subheadline: subheadline || undefined,
       ctaPrimaryText,
       ctaPrimaryHref,
@@ -158,18 +165,35 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
       imageDesktopUrl,
       imageMobileUrl,
       imageAlt,
-      overlayOpacity: parseFloat(overlayOpacity) || 0.3,
+      overlayOpacity: parseFloat(overlayOpacity) || 0.45,
     })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Eyebrow (opcional)">
+        <input
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          maxLength={80}
+          className={inputClass}
+        />
+      </Field>
       <Field label="Titular principal">
         <input
           value={headline}
           onChange={(e) => setHeadline(e.target.value)}
           maxLength={100}
           required
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Acento del titular — palabra en dorado (opcional)">
+        <input
+          value={headlineAccent}
+          onChange={(e) => setHeadlineAccent(e.target.value)}
+          maxLength={60}
+          placeholder="Ej: DORADO — debe ser parte exacta del titular"
           className={inputClass}
         />
       </Field>
@@ -241,13 +265,13 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
             className={inputClass}
           />
         </Field>
-        <Field label="Opacidad del overlay (0 – 0.8)">
+        <Field label="Opacidad del overlay (0 – 0.9)">
           <input
             type="number"
             value={overlayOpacity}
             onChange={(e) => setOverlayOpacity(e.target.value)}
             min={0}
-            max={0.8}
+            max={0.9}
             step={0.05}
             className={inputClass}
           />
@@ -264,9 +288,12 @@ function ShopByCategoryForm({ content, onSave, isPending }: SubFormProps) {
   const parsed = ShopByCategorySchema.safeParse(content)
   const d = parsed.success
     ? parsed.data
-    : { title: 'Compra por categoría', categories: [] }
+    : { eyebrow: '', title: 'Compra por categoría', ctaText: '', ctaHref: '', categories: [] }
 
+  const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
   const [title, setTitle] = useState(d.title)
+  const [ctaText, setCtaText] = useState(d.ctaText ?? '')
+  const [ctaHref, setCtaHref] = useState(d.ctaHref ?? '')
   const [categories, setCategories] = useState(d.categories)
 
   function updateCategory(idx: number, field: 'name' | 'slug' | 'imageUrl', value: string) {
@@ -283,11 +310,25 @@ function ShopByCategoryForm({ content, onSave, isPending }: SubFormProps) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    onSave({ title, categories })
+    onSave({
+      eyebrow: eyebrow || undefined,
+      title,
+      ctaText: ctaText || undefined,
+      ctaHref: ctaHref || undefined,
+      categories,
+    })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Eyebrow (opcional)">
+        <input
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          maxLength={60}
+          className={inputClass}
+        />
+      </Field>
       <Field label="Título de la sección">
         <input
           value={title}
@@ -296,6 +337,23 @@ function ShopByCategoryForm({ content, onSave, isPending }: SubFormProps) {
           className={inputClass}
         />
       </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Texto del CTA (opcional)">
+          <input
+            value={ctaText}
+            onChange={(e) => setCtaText(e.target.value)}
+            maxLength={50}
+            className={inputClass}
+          />
+        </Field>
+        <Field label="URL del CTA (opcional)">
+          <input
+            value={ctaHref}
+            onChange={(e) => setCtaHref(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+      </div>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-xs font-medium text-text-secondary uppercase tracking-wide">
@@ -360,8 +418,9 @@ function ProductCarouselForm({ content, onSave, isPending }: SubFormProps) {
   const parsed = ProductCarouselSchema.safeParse(content)
   const d = parsed.success
     ? parsed.data
-    : { title: '', source: 'new' as const, limit: 8, bgVariant: 'default' as const, subtitle: undefined, collectionSlug: undefined, ctaText: undefined, ctaHref: undefined }
+    : { eyebrow: '', title: '', source: 'new' as const, limit: 8, bgVariant: 'default' as const, subtitle: undefined, collectionSlug: undefined, ctaText: undefined, ctaHref: undefined }
 
+  const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
   const [title, setTitle] = useState(d.title)
   const [subtitle, setSubtitle] = useState(d.subtitle ?? '')
   const [source, setSource] = useState(d.source)
@@ -374,6 +433,7 @@ function ProductCarouselForm({ content, onSave, isPending }: SubFormProps) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     onSave({
+      eyebrow: eyebrow || undefined,
       title,
       subtitle: subtitle || undefined,
       source,
@@ -387,6 +447,14 @@ function ProductCarouselForm({ content, onSave, isPending }: SubFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Eyebrow (opcional)">
+        <input
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          maxLength={60}
+          className={inputClass}
+        />
+      </Field>
       <Field label="Título">
         <input
           value={title}
@@ -477,15 +545,20 @@ function EditorialBlockForm({ content, onSave, isPending }: SubFormProps) {
   const d = parsed.success
     ? parsed.data
     : {
+        variant: 'overlay' as const,
+        eyebrow: '',
         headline: '',
+        headlineAccent: '',
         body: '',
         imageUrl: '',
         imageAlt: '',
         imagePosition: 'right' as const,
       }
 
+  const [variant, setVariant] = useState<'overlay' | 'split'>(d.variant)
   const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
   const [headline, setHeadline] = useState(d.headline)
+  const [headlineAccent, setHeadlineAccent] = useState(d.headlineAccent ?? '')
   const [body, setBody] = useState(d.body)
   const [ctaText, setCtaText] = useState(d.ctaText ?? '')
   const [ctaHref, setCtaHref] = useState(d.ctaHref ?? '')
@@ -496,8 +569,10 @@ function EditorialBlockForm({ content, onSave, isPending }: SubFormProps) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     onSave({
+      variant,
       eyebrow: eyebrow || undefined,
       headline,
+      headlineAccent: headlineAccent || undefined,
       body,
       ctaText: ctaText || undefined,
       ctaHref: ctaHref || undefined,
@@ -509,6 +584,16 @@ function EditorialBlockForm({ content, onSave, isPending }: SubFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Variante de layout">
+        <select
+          value={variant}
+          onChange={(e) => setVariant(e.target.value as 'overlay' | 'split')}
+          className={inputClass}
+        >
+          <option value="overlay">Overlay (imagen de fondo con texto)</option>
+          <option value="split">Split (texto + foto en columnas)</option>
+        </select>
+      </Field>
       <Field label="Eyebrow (opcional)">
         <input
           value={eyebrow}
@@ -523,6 +608,15 @@ function EditorialBlockForm({ content, onSave, isPending }: SubFormProps) {
           onChange={(e) => setHeadline(e.target.value)}
           maxLength={100}
           required
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Acento del titular — palabra en dorado (opcional)">
+        <input
+          value={headlineAccent}
+          onChange={(e) => setHeadlineAccent(e.target.value)}
+          maxLength={60}
+          placeholder="Debe ser parte exacta del titular"
           className={inputClass}
         />
       </Field>
@@ -594,24 +688,40 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
   const d = parsed.success
     ? parsed.data
     : {
+        leftEyebrow: '',
         leftLabel: 'Mujer',
         leftHref: '/mujer',
         leftImageUrl: '',
+        rightEyebrow: '',
         rightLabel: 'Hombre',
         rightHref: '/hombre',
         rightImageUrl: '',
+        rightShowMark: false,
       }
 
+  const [leftEyebrow, setLeftEyebrow] = useState(d.leftEyebrow ?? '')
   const [leftLabel, setLeftLabel] = useState(d.leftLabel)
   const [leftHref, setLeftHref] = useState(d.leftHref)
   const [leftImageUrl, setLeftImageUrl] = useState(d.leftImageUrl)
+  const [rightEyebrow, setRightEyebrow] = useState(d.rightEyebrow ?? '')
   const [rightLabel, setRightLabel] = useState(d.rightLabel)
   const [rightHref, setRightHref] = useState(d.rightHref)
   const [rightImageUrl, setRightImageUrl] = useState(d.rightImageUrl)
+  const [rightShowMark, setRightShowMark] = useState(d.rightShowMark)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    onSave({ leftLabel, leftHref, leftImageUrl, rightLabel, rightHref, rightImageUrl })
+    onSave({
+      leftEyebrow: leftEyebrow || undefined,
+      leftLabel,
+      leftHref,
+      leftImageUrl,
+      rightEyebrow: rightEyebrow || undefined,
+      rightLabel,
+      rightHref,
+      rightImageUrl,
+      rightShowMark,
+    })
   }
 
   return (
@@ -621,6 +731,14 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
           <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">
             Panel izquierdo
           </p>
+          <Field label="Eyebrow (opcional)">
+            <input
+              value={leftEyebrow}
+              onChange={(e) => setLeftEyebrow(e.target.value)}
+              maxLength={60}
+              className={inputClass}
+            />
+          </Field>
           <Field label="Etiqueta">
             <input
               value={leftLabel}
@@ -651,6 +769,14 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
           <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">
             Panel derecho
           </p>
+          <Field label="Eyebrow (opcional)">
+            <input
+              value={rightEyebrow}
+              onChange={(e) => setRightEyebrow(e.target.value)}
+              maxLength={60}
+              className={inputClass}
+            />
+          </Field>
           <Field label="Etiqueta">
             <input
               value={rightLabel}
@@ -676,6 +802,15 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
               className={inputClass}
             />
           </Field>
+          <label className="flex items-center gap-2 cursor-pointer mt-1">
+            <input
+              type="checkbox"
+              checked={rightShowMark}
+              onChange={(e) => setRightShowMark(e.target.checked)}
+              className="accent-accent-gold"
+            />
+            <span className="text-xs text-text-secondary">Mostrar marca SVY</span>
+          </label>
         </div>
       </div>
       <Button type="submit" isLoading={isPending} size="sm">
@@ -689,11 +824,10 @@ function BenefitsBlockForm({ content, onSave, isPending }: SubFormProps) {
   const parsed = BenefitsBlockSchema.safeParse(content)
   const d = parsed.success ? parsed.data : { title: '', benefits: [] }
 
-  type BenefitIcon = 'truck' | 'shield' | 'refresh' | 'star' | 'whatsapp' | 'credit-card'
-  type Benefit = { icon: BenefitIcon; title: string; description: string }
+  type Benefit = { icon: string; title: string; description: string }
 
   const [title, setTitle] = useState(d.title ?? '')
-  const [benefits, setBenefits] = useState<Benefit[]>(d.benefits as Benefit[])
+  const [benefits, setBenefits] = useState<Benefit[]>(d.benefits)
 
   function updateBenefit(idx: number, field: keyof Benefit, value: string) {
     setBenefits((prev) => prev.map((b, i) => (i === idx ? { ...b, [field]: value } : b)))
@@ -702,7 +836,7 @@ function BenefitsBlockForm({ content, onSave, isPending }: SubFormProps) {
   function addBenefit() {
     setBenefits((prev) => [
       ...prev,
-      { icon: 'truck' as BenefitIcon, title: '', description: '' },
+      { icon: 'truck', title: '', description: '' },
     ])
   }
 
@@ -799,12 +933,14 @@ function NewsletterForm({ content, onSave, isPending }: SubFormProps) {
   const d = parsed.success
     ? parsed.data
     : {
+        eyebrow: '',
         headline: 'Únete a la comunidad SAVAYA',
         subheadline: '',
         placeholder: 'Tu correo electrónico',
         ctaText: 'Suscribirme',
       }
 
+  const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
   const [headline, setHeadline] = useState(d.headline)
   const [subheadline, setSubheadline] = useState(d.subheadline ?? '')
   const [placeholder, setPlaceholder] = useState(d.placeholder)
@@ -813,6 +949,7 @@ function NewsletterForm({ content, onSave, isPending }: SubFormProps) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     onSave({
+      eyebrow: eyebrow || undefined,
       headline,
       subheadline: subheadline || undefined,
       placeholder,
@@ -822,6 +959,14 @@ function NewsletterForm({ content, onSave, isPending }: SubFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Eyebrow (opcional)">
+        <input
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          maxLength={60}
+          className={inputClass}
+        />
+      </Field>
       <Field label="Titular">
         <input
           value={headline}
@@ -866,12 +1011,13 @@ function NewsletterForm({ content, onSave, isPending }: SubFormProps) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// PromoBannerForm
-// ---------------------------------------------------------------------------
-
 function PromoBannerForm({ content, onSave, isPending }: SubFormProps) {
-  const d = PromoBannerSchema.parse(content)
+  const parsed = PromoBannerSchema.safeParse(content)
+  const d = parsed.success
+    ? parsed.data
+    : { eyebrow: '', headline: '', subheadline: '', ctaText: '', ctaHref: '/' }
+
+  const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
   const [headline, setHeadline] = useState(d.headline)
   const [subheadline, setSubheadline] = useState(d.subheadline ?? '')
   const [ctaText, setCtaText] = useState(d.ctaText)
@@ -880,6 +1026,7 @@ function PromoBannerForm({ content, onSave, isPending }: SubFormProps) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     onSave({
+      eyebrow: eyebrow || undefined,
       headline,
       subheadline: subheadline || undefined,
       ctaText,
@@ -889,6 +1036,14 @@ function PromoBannerForm({ content, onSave, isPending }: SubFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Eyebrow (opcional)">
+        <input
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          maxLength={60}
+          className={inputClass}
+        />
+      </Field>
       <Field label="Titular">
         <input
           value={headline}
@@ -924,6 +1079,112 @@ function PromoBannerForm({ content, onSave, isPending }: SubFormProps) {
             className={inputClass}
           />
         </Field>
+      </div>
+      <Button type="submit" isLoading={isPending} size="sm">
+        Guardar bloque
+      </Button>
+    </form>
+  )
+}
+
+function SocialProofGridForm({ content, onSave, isPending }: SubFormProps) {
+  const parsed = SocialProofGridSchema.safeParse(content)
+  const d = parsed.success
+    ? parsed.data
+    : { heading: 'SAVAYA EN MOVIMIENTO', images: [] }
+
+  const [heading, setHeading] = useState(d.heading)
+  const [images, setImages] = useState(d.images)
+
+  function updateImage(idx: number, field: 'url' | 'alt' | 'href', value: string) {
+    setImages((prev) => prev.map((img, i) => (i === idx ? { ...img, [field]: value } : img)))
+  }
+
+  function addImage() {
+    setImages((prev) => [...prev, { url: '', alt: '', href: '' }])
+  }
+
+  function removeImage(idx: number) {
+    setImages((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    onSave({
+      heading,
+      images: images.map((img) => ({
+        url: img.url,
+        alt: img.alt,
+        href: img.href || undefined,
+      })),
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Encabezado de la sección">
+        <input
+          value={heading}
+          onChange={(e) => setHeading(e.target.value)}
+          maxLength={80}
+          required
+          className={inputClass}
+        />
+      </Field>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wide">
+            Imágenes ({images.length}/8) — mínimo 4
+          </label>
+          {images.length < 8 && (
+            <button
+              type="button"
+              onClick={addImage}
+              className="text-xs text-accent-gold underline"
+            >
+              + Agregar
+            </button>
+          )}
+        </div>
+        {images.map((img, idx) => (
+          <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-text-secondary">Imagen {idx + 1}</span>
+              {images.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="text-xs text-error hover:underline"
+                >
+                  Eliminar
+                </button>
+              )}
+            </div>
+            <input
+              placeholder="URL de imagen"
+              value={img.url}
+              onChange={(e) => updateImage(idx, 'url', e.target.value)}
+              required
+              className={inputClass}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                placeholder="Alt (descripción)"
+                value={img.alt}
+                onChange={(e) => updateImage(idx, 'alt', e.target.value)}
+                maxLength={150}
+                required
+                className={inputClass}
+              />
+              <input
+                placeholder="Enlace (opcional)"
+                value={img.href ?? ''}
+                onChange={(e) => updateImage(idx, 'href', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+        ))}
       </div>
       <Button type="submit" isLoading={isPending} size="sm">
         Guardar bloque
@@ -986,6 +1247,10 @@ export function BlockContentForm({ section, onSave, isPending }: Props) {
     case 'promo_banner':
       return (
         <PromoBannerForm content={section.content} onSave={onSave} isPending={isPending} />
+      )
+    case 'social_proof_grid':
+      return (
+        <SocialProofGridForm content={section.content} onSave={onSave} isPending={isPending} />
       )
     default:
       return (
