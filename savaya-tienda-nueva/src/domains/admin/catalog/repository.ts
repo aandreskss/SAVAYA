@@ -1047,3 +1047,117 @@ export async function deleteCollection(
     ip,
   })
 }
+
+// ---------------------------------------------------------------------------
+// Collection product management
+// ---------------------------------------------------------------------------
+
+export type CollectionProductSummary = {
+  id: string
+  name: string
+  slug: string
+  primaryImageUrl: string | null
+  basePrice: number
+}
+
+export async function getAdminCollectionProducts(
+  collectionId: string,
+): Promise<CollectionProductSummary[]> {
+  type Row = {
+    id: string
+    name: string
+    slug: string
+    base_price: string
+    primary_image_url: string | null
+  }
+
+  const rows = await rawQuery<Row>(sql`
+    SELECT
+      p.id,
+      p.name,
+      p.slug,
+      p.base_price,
+      (
+        SELECT m.url FROM product_media m
+        WHERE m.product_id = p.id AND m.is_primary = true
+        LIMIT 1
+      ) AS primary_image_url
+    FROM products p
+    INNER JOIN product_collections pc ON pc.product_id = p.id
+    WHERE pc.collection_id = ${collectionId}
+    AND p.is_active = true
+    ORDER BY p.name ASC
+  `)
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    basePrice: num(r.base_price),
+    primaryImageUrl: r.primary_image_url,
+  }))
+}
+
+export async function setCollectionProducts(
+  collectionId: string,
+  productIds: string[],
+  actorId: string,
+  actorEmail: string,
+  ip: string,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(productCollections).where(eq(productCollections.collectionId, collectionId))
+    if (productIds.length > 0) {
+      await tx.insert(productCollections).values(
+        productIds.map((productId) => ({ productId, collectionId })),
+      )
+    }
+    await tx.insert(auditLog).values({
+      actorId,
+      actorEmail,
+      action: 'collection.set_products',
+      resourceType: 'collection',
+      resourceId: collectionId,
+      after: { productIds },
+      ip,
+    })
+  })
+}
+
+export async function searchProductsForCollection(query: string): Promise<CollectionProductSummary[]> {
+  if (!query.trim()) return []
+
+  type Row = {
+    id: string
+    name: string
+    slug: string
+    base_price: string
+    primary_image_url: string | null
+  }
+
+  const rows = await rawQuery<Row>(sql`
+    SELECT
+      p.id,
+      p.name,
+      p.slug,
+      p.base_price,
+      (
+        SELECT m.url FROM product_media m
+        WHERE m.product_id = p.id AND m.is_primary = true
+        LIMIT 1
+      ) AS primary_image_url
+    FROM products p
+    WHERE p.is_active = true
+    AND p.name ILIKE ${'%' + query + '%'}
+    ORDER BY p.name ASC
+    LIMIT 20
+  `)
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    basePrice: num(r.base_price),
+    primaryImageUrl: r.primary_image_url,
+  }))
+}

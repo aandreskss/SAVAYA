@@ -575,6 +575,36 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
 }
 
 // ---------------------------------------------------------------------------
+// getCollectionBySlug
+// ---------------------------------------------------------------------------
+
+export type CollectionDetail = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  imageUrl: string | null
+}
+
+export async function getCollectionBySlug(slug: string): Promise<CollectionDetail | null> {
+  if (!process.env.DATABASE_URL) return null
+
+  const rows = await db
+    .select({
+      id: collections.id,
+      name: collections.name,
+      slug: collections.slug,
+      description: collections.description,
+      imageUrl: collections.imageUrl,
+    })
+    .from(collections)
+    .where(and(eq(collections.slug, slug), eq(collections.isActive, true)))
+    .limit(1)
+
+  return rows[0] ?? null
+}
+
+// ---------------------------------------------------------------------------
 // getAvailableFilters
 // ---------------------------------------------------------------------------
 

@@ -28,7 +28,7 @@ export function FilterSidebar({
   function navigate(patch: Partial<PLPSearchParams>) {
     // Reset page when any filter changes
     const qs = buildFilterUrl({ ...activeFilters, ...patch }, { pagina: 1 })
-    router.push(`${pathname}${qs}`)
+    router.push(`${pathname}${qs}`, { scroll: false })
   }
 
   function toggleColor(colorId: string) {
@@ -48,7 +48,7 @@ export function FilterSidebar({
   }
 
   function clearAll() {
-    router.push(pathname)
+    router.push(pathname, { scroll: false })
   }
 
   const activeFilterCount = [

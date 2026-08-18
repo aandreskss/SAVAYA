@@ -40,7 +40,7 @@ export function FilterBottomSheet({
 
   function applyFilters() {
     const qs = buildFilterUrl(draft, { pagina: 1 })
-    router.push(`${pathname}${qs}`)
+    router.push(`${pathname}${qs}`, { scroll: false })
     setIsOpen(false)
   }
 

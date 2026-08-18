@@ -20,6 +20,9 @@ import {
   createCollection,
   updateCollection,
   deleteCollection,
+  setCollectionProducts,
+  searchProductsForCollection,
+  type CollectionProductSummary,
 } from './repository'
 import type { SaveProductPayload, SaveCategoryPayload, SaveCollectionPayload, ActionResult } from './types'
 
@@ -312,5 +315,39 @@ export async function deleteCollectionAction(id: string): Promise<ActionResult> 
     return { success: true, data: undefined }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Error al eliminar colección' }
+  }
+}
+
+export async function setCollectionProductsAction(
+  collectionId: string,
+  productIds: string[],
+): Promise<ActionResult> {
+  const actor = await getActorContext()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!hasPermission(actor.permissions, 'catalog:write')) {
+    return { success: false, error: 'Sin permiso para editar colecciones' }
+  }
+
+  try {
+    await setCollectionProducts(collectionId, productIds, actor.actorId, actor.actorEmail, actor.ip)
+    revalidatePath('/admin/productos/colecciones')
+    revalidatePath(`/coleccion/${collectionId}`, 'page')
+    return { success: true, data: undefined }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Error al guardar productos' }
+  }
+}
+
+export async function searchProductsForCollectionAction(
+  query: string,
+): Promise<ActionResult<CollectionProductSummary[]>> {
+  const actor = await getActorContext()
+  if (!actor) return { success: false, error: 'No autenticado' }
+
+  try {
+    const results = await searchProductsForCollection(query)
+    return { success: true, data: results }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Error al buscar productos' }
   }
 }

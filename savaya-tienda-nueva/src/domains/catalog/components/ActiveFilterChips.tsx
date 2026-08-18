@@ -34,7 +34,7 @@ export function ActiveFilterChips({
 
   function navigate(patch: Partial<PLPSearchParams>) {
     const qs = buildFilterUrl({ ...activeFilters, ...patch }, { pagina: 1 })
-    router.push(`${pathname}${qs}`)
+    router.push(`${pathname}${qs}`, { scroll: false })
   }
 
   const chips: FilterChip[] = []
@@ -132,7 +132,7 @@ export function ActiveFilterChips({
       {chips.length > 1 && (
         <button
           type="button"
-          onClick={() => router.push(pathname)}
+          onClick={() => router.push(pathname, { scroll: false })}
           className="font-sans text-xs text-text-secondary hover:text-text-primary underline underline-offset-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded"
         >
           Limpiar todo

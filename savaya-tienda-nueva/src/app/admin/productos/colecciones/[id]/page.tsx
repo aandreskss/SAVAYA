@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation'
-import { getAdminCollection } from '@/domains/admin/catalog/repository'
+import {
+  getAdminCollection,
+  getAdminCollectionProducts,
+} from '@/domains/admin/catalog/repository'
 import { CollectionEditor } from '@/domains/admin/catalog/components/CollectionEditor'
 
 export default async function EditarColeccionPage({
@@ -8,7 +11,10 @@ export default async function EditarColeccionPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const collection = await getAdminCollection(id)
+  const [collection, collectionProducts] = await Promise.all([
+    getAdminCollection(id),
+    getAdminCollectionProducts(id),
+  ])
 
   if (!collection) notFound()
 
@@ -26,6 +32,7 @@ export default async function EditarColeccionPage({
           startsAt: collection.startsAt,
           endsAt: collection.endsAt,
         }}
+        initialProducts={collectionProducts}
       />
     </div>
   )

@@ -30,7 +30,7 @@ export function SortSelect({ currentSort }: SortSelectProps) {
       orden: value as PLPSearchParams['orden'],
       pagina: 1,
     })
-    router.push(`${pathname}${qs}`)
+    router.push(`${pathname}${qs}`, { scroll: false })
   }
 
   return (
