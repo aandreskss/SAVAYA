@@ -30,6 +30,7 @@ const client = postgres(process.env.DATABASE_URL!, {
   max: 1,
   idle_timeout: 20,
   connect_timeout: 10,
+  prepare: false, // required for Supabase PgBouncer (transaction mode)
 })
 
 export const db = drizzle(client, {
