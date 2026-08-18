@@ -4,10 +4,11 @@
 // Auth server actions — registration, login, logout, password reset, 2FA
 // ---------------------------------------------------------------------------
 
+import { createHash, randomBytes } from 'crypto'
 import { AuthError } from 'next-auth'
 import { signIn, signOut, auth } from '@/domains/auth/auth'
 import { db } from '@/shared/lib/db'
-import { users, twoFactorSecrets, twoFactorBackupCodes } from '@/domains/auth/schema'
+import { users, twoFactorSecrets, twoFactorBackupCodes, verificationTokens } from '@/domains/auth/schema'
 import { accounts } from '@/domains/auth/schema'
 import {
   RegisterCustomerSchema,
@@ -20,7 +21,7 @@ import type { ActionResult } from '@/shared/lib/types'
 import bcrypt from 'bcryptjs'
 import { generateSecret as totpGenerateSecret, generateURI as totpGenerateURI, verify as totpVerify } from 'otplib'
 import QRCode from 'qrcode'
-import { eq } from 'drizzle-orm'
+import { and, eq, gt } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
 // ---------------------------------------------------------------------------
@@ -250,7 +251,6 @@ export async function requestPasswordReset(
     }
   }
 
-  // Lookup user — but don't reveal existence to the caller
   const [user] = await db
     .select({ id: users.id, email: users.email })
     .from(users)
@@ -258,10 +258,39 @@ export async function requestPasswordReset(
     .limit(1)
 
   if (user) {
-    // TODO (Fase 3): generate reset token, store it, send email via Resend
-    // The token must be single-use, stored as a hash, with 1h expiry.
-    // Implementation deferred to Fase 3 (notifications/email setup).
-    console.info('[auth] Password reset requested for:', user.email)
+    const rawToken = randomBytes(32).toString('hex')
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex')
+    const expires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    const identifier = `password-reset:${email}`
+
+    // Remove any previous reset token for this email
+    await db.delete(verificationTokens).where(eq(verificationTokens.identifier, identifier))
+    await db.insert(verificationTokens).values({ identifier, token: tokenHash, expires })
+
+    const rawBase = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
+    const appUrl = rawBase.startsWith('http') ? rawBase : `https://${rawBase}`
+    const resetUrl = `${appUrl}/resetear-contrasena?token=${rawToken}&email=${encodeURIComponent(email)}`
+
+    if (process.env.RESEND_API_KEY) {
+      const { Resend } = await import('resend')
+      const { render } = await import('@react-email/render')
+      const { PasswordResetEmail } = await import('@/domains/notifications/emails/PasswordReset')
+
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        const html = await render(PasswordResetEmail({ resetUrl }))
+        await resend.emails.send({
+          from: 'SAVAYA <noreply@savayavzla.com>',
+          to: email,
+          subject: 'Recupera tu contraseña — SAVAYA',
+          html,
+        })
+      } catch (err) {
+        console.error('[auth] Password reset email failed:', err)
+      }
+    } else {
+      console.info('[auth] Password reset URL (no RESEND_API_KEY):', resetUrl)
+    }
   }
 
   // Always return success to avoid email enumeration
@@ -269,20 +298,52 @@ export async function requestPasswordReset(
 }
 
 /**
- * Validates the reset token and updates the password.
+ * Validates the reset token and sets a new password.
  */
 export async function resetPassword(
   token: string,
+  email: string,
   newPassword: string,
 ): Promise<ActionResult<void>> {
-  if (!token || newPassword.length < 8) {
-    return { success: false, error: 'Token o contraseña inválidos.' }
+  if (!token || !email || newPassword.length < 8) {
+    return { success: false, error: 'Datos inválidos.' }
   }
 
-  // TODO (Fase 3): validate token from DB, find user, update password hash, invalidate token
-  // Deferred to Fase 3 alongside the email verification token infrastructure.
+  const tokenHash = createHash('sha256').update(token).digest('hex')
+  const identifier = `password-reset:${email}`
 
-  return { success: false, error: 'Restablecimiento de contraseña no disponible aún.' }
+  const [record] = await db
+    .select()
+    .from(verificationTokens)
+    .where(
+      and(
+        eq(verificationTokens.identifier, identifier),
+        eq(verificationTokens.token, tokenHash),
+        gt(verificationTokens.expires, new Date()),
+      ),
+    )
+    .limit(1)
+
+  if (!record) {
+    return { success: false, error: 'El enlace de recuperación es inválido o ya expiró.' }
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+  if (!user) {
+    return { success: false, error: 'Usuario no encontrado.' }
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12)
+
+  await db
+    .update(accounts)
+    .set({ access_token: passwordHash })
+    .where(and(eq(accounts.userId, user.id), eq(accounts.provider, 'credentials')))
+
+  // Invalidate the token — single-use
+  await db.delete(verificationTokens).where(eq(verificationTokens.identifier, identifier))
+
+  return { success: true, data: undefined }
 }
 
 // ---------------------------------------------------------------------------
