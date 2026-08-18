@@ -18,7 +18,8 @@ const archivo = Archivo({
   display: 'swap',
 })
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
+const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
+const BASE_URL = rawBaseUrl.startsWith('http') ? rawBaseUrl : `https://${rawBaseUrl}`
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
