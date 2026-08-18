@@ -47,5 +47,14 @@ export const PopupFormSchema = z.object({
   endsAt: z.string().nullable().optional(),
 })
 
+export const CreateSectionSchema = z.object({
+  pageSlug: z.string().min(1),
+  type: z.string().min(1),
+})
+
+export const DeleteSectionSchema = z.object({
+  sectionId: z.string().uuid(),
+})
+
 export type BannerFormPayload = z.infer<typeof BannerFormSchema>
 export type PopupFormPayload = z.infer<typeof PopupFormSchema>

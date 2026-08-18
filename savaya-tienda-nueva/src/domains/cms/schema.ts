@@ -25,6 +25,8 @@ export const pageSectionTypeEnum = pgEnum('page_section_type', [
   'benefits_block',
   'newsletter',
   'banner_row',
+  'promo_banner',
+  'social_proof_grid',
 ])
 
 // ---------------------------------------------------------------------------

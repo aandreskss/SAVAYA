@@ -9,6 +9,8 @@ import {
   updateSectionContent,
   updateSectionsOrder,
   toggleSectionActive,
+  createSection,
+  deleteSection,
   createAdminBanner,
   updateAdminBanner,
   deleteAdminBanner,
@@ -20,12 +22,14 @@ import {
   ReorderSectionsSchema,
   ToggleSectionSchema,
   UpdateSectionContentSchema,
+  CreateSectionSchema,
+  DeleteSectionSchema,
   BannerFormSchema,
   PopupFormSchema,
   type BannerFormPayload,
   type PopupFormPayload,
 } from './validators'
-import type { ActionResult, AdminBanner, AdminPopup } from './types'
+import type { ActionResult, AdminBanner, AdminPopup, AdminSection } from './types'
 
 async function getActor() {
   const session = await auth()
@@ -131,6 +135,68 @@ export async function toggleSectionActiveAction(payload: {
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Error al actualizar el bloque' }
+  }
+}
+
+export async function createSectionAction(payload: {
+  pageSlug: string
+  type: string
+  currentMaxSortOrder: number
+}): Promise<ActionResult<AdminSection>> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para agregar bloques' }
+  }
+
+  const parsed = CreateSectionSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' }
+  }
+
+  const schema = BLOCK_SCHEMAS[parsed.data.type as BlockType]
+  if (!schema) {
+    return { success: false, error: 'Tipo de bloque no reconocido' }
+  }
+
+  const defaultContent = schema.parse({})
+
+  try {
+    const section = await createSection(
+      parsed.data.pageSlug,
+      parsed.data.type,
+      defaultContent,
+      payload.currentMaxSortOrder + 1,
+    )
+    revalidatePath('/')
+    revalidatePath('/admin/contenido')
+    return { success: true, data: section as AdminSection }
+  } catch {
+    return { success: false, error: 'Error al crear el bloque' }
+  }
+}
+
+export async function deleteSectionAction(payload: {
+  sectionId: string
+}): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para eliminar bloques' }
+  }
+
+  const parsed = DeleteSectionSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' }
+  }
+
+  try {
+    await deleteSection(parsed.data.sectionId)
+    revalidatePath('/')
+    revalidatePath('/admin/contenido')
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al eliminar el bloque' }
   }
 }
 

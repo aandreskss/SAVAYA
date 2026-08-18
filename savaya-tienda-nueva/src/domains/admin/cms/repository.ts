@@ -1,6 +1,6 @@
 import { eq, asc, desc } from 'drizzle-orm'
 import { db } from '@/shared/lib/db'
-import { pages, pageSections, banners, popups } from '@/domains/cms/schema'
+import { pages, pageSections, pageSectionTypeEnum, banners, popups } from '@/domains/cms/schema'
 import type { AdminSection, AdminBanner, AdminPopup } from './types'
 
 // ---------------------------------------------------------------------------
@@ -63,6 +63,40 @@ export async function toggleSectionActive(
     .update(pageSections)
     .set({ isActive, updatedAt: new Date() })
     .where(eq(pageSections.id, sectionId))
+}
+
+export async function createSection(
+  pageSlug: string,
+  type: string,
+  content: unknown,
+  sortOrder: number,
+): Promise<AdminSection> {
+  const [page] = await db
+    .select({ id: pages.id })
+    .from(pages)
+    .where(eq(pages.slug, pageSlug))
+    .limit(1)
+
+  if (!page) throw new Error(`Page not found: ${pageSlug}`)
+
+  const validType = type as typeof pageSectionTypeEnum.enumValues[number]
+
+  const [row] = await db
+    .insert(pageSections)
+    .values({
+      pageId: page.id,
+      type: validType,
+      content: content as Record<string, unknown>,
+      sortOrder,
+      isActive: true,
+    })
+    .returning()
+
+  return row as AdminSection
+}
+
+export async function deleteSection(sectionId: string): Promise<void> {
+  await db.delete(pageSections).where(eq(pageSections.id, sectionId))
 }
 
 // ---------------------------------------------------------------------------

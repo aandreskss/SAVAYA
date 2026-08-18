@@ -7,9 +7,9 @@
   --color-brand-offwhite: #FAF7F2;
 
   /* Surfaces — light-first (default: women's store) */
-  --color-surface: #FAF7F2;
-  --color-surface-2: #F1EFEA;
-  --color-surface-3: #E8E4DC;
+  --color-surface: #F8F4EE;
+  --color-surface-2: #EDE6D8;
+  --color-surface-3: #E0D7C8;
 
   /* Accent gold */
   --color-accent-gold: #C9A227;
@@ -23,8 +23,8 @@
   --color-text-muted: #9B9691;
 
   /* Borders — light mode */
-  --color-border: #E4E0D9;
-  --color-border-hover: #CEC9C1;
+  --color-border: #D4CCBF;
+  --color-border-hover: #B8B1A6;
 
   /* States */
   --color-success: #1D9B5F;
@@ -43,10 +43,10 @@
   --radius-xl: 28px;
   --radius-pill: 9999px;
 
-  /* ─── Sombras (claras) ─── */
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 12px 0 rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.08);
-  --shadow-lg: 0 8px 30px 0 rgb(0 0 0 / 0.14), 0 4px 8px -4px rgb(0 0 0 / 0.1);
+  /* ─── Sombras ─── */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.12), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  --shadow-md: 0 4px 14px 0 rgb(0 0 0 / 0.14), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 8px 32px 0 rgb(0 0 0 / 0.18), 0 4px 8px -4px rgb(0 0 0 / 0.12);
 
   /* ─── Spacing ─── */
   --spacing-1: 4px;
