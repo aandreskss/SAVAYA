@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
-import { logout } from '@/domains/auth/actions'
+import { logoutAdmin } from '@/domains/auth/actions'
 import { AdminSidebar, type NavItem } from '@/shared/ui/AdminSidebar'
 import { AdminHeader } from '@/shared/ui/AdminHeader'
 
@@ -21,8 +21,7 @@ export function AdminShell({ navItems, userPermissions, userName, children }: Pr
   const closeMobile = useCallback(() => setIsMobileOpen(false), [])
 
   async function handleLogout() {
-    await logout()
-    window.location.href = '/admin/login'
+    await logoutAdmin()
   }
 
   return (

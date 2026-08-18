@@ -226,7 +226,11 @@ export async function loginAdmin(data: LoginInput): Promise<ActionResult<void>> 
 // ---------------------------------------------------------------------------
 
 export async function logout(): Promise<void> {
-  await signOut({ redirect: false })
+  await signOut({ redirectTo: '/' })
+}
+
+export async function logoutAdmin(): Promise<void> {
+  await signOut({ redirectTo: '/admin/login' })
 }
 
 // ---------------------------------------------------------------------------

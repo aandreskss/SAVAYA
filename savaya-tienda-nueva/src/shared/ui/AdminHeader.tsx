@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/shared/lib/utils'
 
 export type AdminHeaderProps = {
@@ -44,6 +45,7 @@ export function AdminHeader({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const initials = getInitials(userName)
+  const router = useRouter()
 
   // Cierre al hacer clic fuera
   useEffect(() => {
@@ -125,7 +127,10 @@ export function AdminHeader({
             <button
               type="button"
               role="menuitem"
-              onClick={() => setIsDropdownOpen(false)}
+              onClick={() => {
+                setIsDropdownOpen(false)
+                router.push('/admin/perfil')
+              }}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-3',
                 'font-sans text-sm text-text-primary text-left',
