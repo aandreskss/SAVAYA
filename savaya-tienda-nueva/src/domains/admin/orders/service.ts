@@ -1,5 +1,3 @@
-'use server'
-
 import { db, rawQuery } from '@/shared/lib/db'
 import { sql } from 'drizzle-orm'
 import { orders, orderStatusHistory } from '@/domains/orders/schema'
