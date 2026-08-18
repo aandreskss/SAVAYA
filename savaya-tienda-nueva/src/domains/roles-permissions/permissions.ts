@@ -13,6 +13,7 @@ export const PERMISSIONS = {
   // Pedidos
   ORDERS_READ: 'orders:read',
   ORDERS_WRITE: 'orders:write',
+  ORDERS_DELETE: 'orders:delete',
   // Pagos
   PAYMENTS_READ: 'payments:read',
   PAYMENTS_APPROVE: 'payments:approve',

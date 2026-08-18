@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/shared/ui/Button'
 import { Modal } from '@/shared/ui/Modal'
 import { OrderStatusBadge } from './OrderStatusBadge'
 import { PaymentProofViewer } from './PaymentProofViewer'
-import { transitionOrderStatusAction } from '../actions'
+import { transitionOrderStatusAction, deleteOrderAction } from '../actions'
 import { toast } from '@/shared/ui/toast-store'
 import { VALID_TRANSITIONS } from '@/domains/orders/state-machine'
 import type { AdminOrderDetail } from '../types'
@@ -25,8 +26,10 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 }
 
 export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [confirmTransition, setConfirmTransition] = useState<OrderStatus | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [reason, setReason] = useState('')
 
   const availableTransitions = VALID_TRANSITIONS[order.status] ?? []
@@ -86,21 +89,28 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
           </p>
         </div>
 
-        {availableTransitions.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {availableTransitions.map((ts) => (
-              <Button
-                key={ts}
-                variant={ts === 'cancelled' || ts === 'refunded' ? 'ghost' : 'secondary'}
-                size="sm"
-                isLoading={isPending}
-                onClick={() => handleTransition(ts)}
-              >
-                {STATUS_LABELS[ts]}
-              </Button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {availableTransitions.map((ts) => (
+            <Button
+              key={ts}
+              variant={ts === 'cancelled' || ts === 'refunded' ? 'ghost' : 'secondary'}
+              size="sm"
+              isLoading={isPending}
+              onClick={() => handleTransition(ts)}
+            >
+              {STATUS_LABELS[ts]}
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            isLoading={isPending}
+            onClick={() => setConfirmDelete(true)}
+            className="text-error hover:bg-error/10 border-error/30"
+          >
+            Eliminar pedido
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -273,6 +283,49 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
             </Button>
             <Button variant="primary" size="sm" isLoading={isPending} onClick={confirmDestructive}>
               Confirmar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Confirm delete modal */}
+      <Modal
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Eliminar pedido"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            Vas a eliminar el pedido <span className="font-medium text-text-primary">{order.orderNumber}</span> de forma permanente.
+            Esta acción libera el inventario reservado y ajusta el total del cliente.
+          </p>
+          <div className="p-3 bg-error/5 border border-error/20 rounded-lg text-sm text-error">
+            Esta acción no se puede deshacer.
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              isLoading={isPending}
+              className="text-error hover:bg-error/10"
+              onClick={() => {
+                setConfirmDelete(false)
+                startTransition(async () => {
+                  const result = await deleteOrderAction(order.id)
+                  if (result.success) {
+                    toast.success('Pedido eliminado')
+                    router.push('/admin/pedidos')
+                  } else {
+                    toast.error(result.error)
+                  }
+                })
+              }}
+            >
+              Eliminar permanentemente
             </Button>
           </div>
         </div>

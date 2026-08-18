@@ -1,5 +1,10 @@
 import { db, rawQuery } from '@/shared/lib/db'
-import { sql } from 'drizzle-orm'
+import { sql, eq } from 'drizzle-orm'
+import { orders, orderItems, orderStatusHistory } from '@/domains/orders/schema'
+import { paymentProofs } from '@/domains/payment-proofs/schema'
+import { inventory, inventoryMovements } from '@/domains/inventory/schema'
+import { customers } from '@/domains/customers/schema'
+import { auditLog } from '@/domains/audit-log/schema'
 import type {
   AdminOrderListItem,
   AdminOrderDetail,
@@ -371,4 +376,80 @@ export async function getPaymentProofById(
   `)
   if (!row) return null
   return { cloudinaryPublicId: row.cloudinary_public_id }
+}
+
+// ---------------------------------------------------------------------------
+// deleteOrder — hard delete. Releases reserved inventory and updates customer
+// totals. Only callable by actors with orders:delete permission.
+// ---------------------------------------------------------------------------
+
+export async function deleteOrder(
+  orderId: string,
+  actorId: string,
+  actorEmail: string,
+  ip: string,
+): Promise<void> {
+  // Load order before deletion so we can update related data
+  const [order] = await db
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      customerId: orders.customerId,
+      totalUsd: orders.totalUsd,
+      status: orders.status,
+    })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1)
+
+  if (!order) throw new Error('Pedido no encontrado')
+
+  // Load items to know which variants to un-reserve
+  const items = await db
+    .select({ variantId: orderItems.variantId, quantity: orderItems.quantity })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId))
+
+  // Release reserved inventory only for orders that haven't been delivered/cancelled
+  // (delivered orders have already decremented stock; cancelled orders have already released)
+  const reservedStatuses = ['pending_payment', 'payment_under_review', 'payment_rejected', 'paid', 'preparing', 'shipped']
+  if (reservedStatuses.includes(order.status)) {
+    for (const item of items) {
+      if (item.variantId) {
+        await db
+          .update(inventory)
+          .set({ reserved: sql`GREATEST(0, ${inventory.reserved} - ${item.quantity})` })
+          .where(eq(inventory.variantId, item.variantId))
+      }
+    }
+  }
+
+  // Delete inventory movements (no cascade on FK)
+  await db.delete(inventoryMovements).where(eq(inventoryMovements.orderId, orderId))
+
+  // Delete the order — cascades to order_items, order_status_history, payment_proofs
+  await db.delete(orders).where(eq(orders.id, orderId))
+
+  // Decrement customer denormalized counters
+  if (order.customerId) {
+    await db
+      .update(customers)
+      .set({
+        totalOrders: sql`GREATEST(0, ${customers.totalOrders} - 1)`,
+        totalSpentUsd: sql`GREATEST(0::numeric, ${customers.totalSpentUsd} - ${order.totalUsd})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(customers.id, order.customerId))
+  }
+
+  // Audit trail
+  await db.insert(auditLog).values({
+    actorId,
+    actorEmail,
+    action: 'order.delete',
+    resourceType: 'order',
+    resourceId: orderId,
+    before: { orderNumber: order.orderNumber, status: order.status, totalUsd: order.totalUsd },
+    ip,
+  })
 }

@@ -14,6 +14,7 @@ import {
   transitionOrderStatus,
   OrderTransitionError,
 } from './service'
+import { deleteOrder } from './repository'
 import type {
   ApprovePaymentPayload,
   RejectPaymentPayload,
@@ -123,5 +124,21 @@ export async function transitionOrderStatusAction(
         ? err.message
         : 'Error al actualizar el estado del pedido'
     return { success: false, error: message }
+  }
+}
+
+export async function deleteOrderAction(orderId: string): Promise<ActionResult> {
+  const actor = await getActorContext()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('orders:delete')) {
+    return { success: false, error: 'Sin permiso para eliminar pedidos' }
+  }
+
+  try {
+    await deleteOrder(orderId, actor.actorId, actor.actorEmail, actor.ip)
+    revalidatePath('/admin/pedidos')
+    return { success: true, data: undefined }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Error al eliminar el pedido' }
   }
 }
