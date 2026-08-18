@@ -295,7 +295,7 @@ function sendPurchaseToMeta(data) {
     event_name:       'Purchase',
     event_time:       data.eventTime,
     action_source:    'website',
-    event_source_url: 'https://www.savayavzla.com/cp/colegiales',
+    event_source_url: 'https://campanas.savayavzla.com/cp/colegiales',
     user_data:        userData,
     custom_data: {
       value:            parseFloat(data.monto) || 0,

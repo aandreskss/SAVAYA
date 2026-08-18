@@ -33,11 +33,11 @@ No hay build step — HTML/CSS/JS plano más una función Node en `api/lead.js`.
 
 - **Proyecto:** `savaya-landing`
 - **Organización:** `aandreskss-projects`
-- **Dominio producción:** `www.savayavzla.com`
+- **Dominio producción:** `campanas.savayavzla.com`
 - **URL directa (sin dominio):** `savaya-landing.vercel.app`
 - **Project ID:** `prj_6JZwIeAsCeLuDa7BOBIUanv683G4`
 
-Las rutas `/cp/*` y `/api/*` de `www.savayavzla.com` son servidas por este proyecto. Cuando la tienda exista, el proxy lo hacen los rewrites de Vercel en `savaya-tienda/vercel.json`.
+Las rutas `/cp/*` y `/api/*` son servidas desde `campanas.savayavzla.com`. La tienda ocupa `www.savayavzla.com`.
 
 ---
 
