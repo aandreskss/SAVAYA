@@ -1,13 +1,8 @@
 import { db, rawQuery } from '@/shared/lib/db'
 import { sql, eq, desc } from 'drizzle-orm'
-import type { NeonHttpQueryResultHKT } from 'drizzle-orm/neon-http'
-import type { PgTransaction } from 'drizzle-orm/pg-core'
 import { discounts, couponUsages } from './schema'
 import type { Discount, DiscountType, DiscountAppliesToType } from './types'
 import type { DiscountFormPayload } from './validators'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyTx = PgTransaction<NeonHttpQueryResultHKT, any, any>
 
 // ---------------------------------------------------------------------------
 // Read
@@ -122,19 +117,17 @@ export async function deleteDiscount(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Coupon usage recording (called inside createOrder transaction)
+// ---------------------------------------------------------------------------
+// Coupon usage recording
 // ---------------------------------------------------------------------------
 
-export async function recordCouponUsage(
-  tx: AnyTx,
-  {
-    discountId,
-    customerId,
-    orderId,
-  }: { discountId: string; customerId: string; orderId: string },
-): Promise<void> {
-  await tx.insert(couponUsages).values({ discountId, customerId, orderId })
-  await tx
+export async function recordCouponUsage({
+  discountId,
+  customerId,
+  orderId,
+}: { discountId: string; customerId: string; orderId: string }): Promise<void> {
+  await db.insert(couponUsages).values({ discountId, customerId, orderId })
+  await db
     .update(discounts)
     .set({ usedCount: sql`${discounts.usedCount} + 1`, updatedAt: new Date() })
     .where(eq(discounts.id, discountId))

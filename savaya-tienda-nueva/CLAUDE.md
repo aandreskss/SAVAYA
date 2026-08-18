@@ -126,13 +126,13 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
 
 | Servicio | Referencia |
 |---|---|
-| **Neon** | Endpoint `ep-round-cherry-ay3dqlqz.c-5.us-east-2.aws.neon.tech` · base `neondb` · usuario `neondb_owner` · una sola var `DATABASE_URL` (sin `DIRECT_URL`) |
+| **Neon** | Endpoint `ep-round-cherry-ay3dqlqz.c-5.us-east-2.aws.neon.tech` · base `neondb` · usuario `neondb_owner` · una sola var `DATABASE_URL` (sin `DIRECT_URL`) · **cuenta:** `aandreskss@gmail.com` (Google login) |
 | **Supabase** (inactivo) | Proyecto `fytegzrfsirbtyekncrn` — ya no se usa como DB principal; migrado a Neon en 2026-08-17 |
-| **Cloudinary** | Cuenta Savaya (distinta a `dckobjcbj` de Tuluoshop) · carpetas bajo `savaya/` |
-| **Upstash Redis** | Creado · `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` en `.env.local` |
+| **Cloudinary** | Cloud name `jjtrnxe0` · carpetas bajo `savaya/` · **cuenta:** `arnaldocursosautomaticos` |
+| **Upstash Redis** | DB `savaya-tienda` · región `us-east-1` · `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` en `.env.local` · **cuenta:** `aandreskss@gmail.com` |
 | **Meta Pixel** | `27355395054120748` (mismo que campanas) |
 | **WhatsApp tienda** | `584141100100` |
-| **Vercel monorepo** | `aandreskss/SAVAYA` · root `savaya-tienda-nueva/` |
+| **Vercel monorepo** | `aandreskss/SAVAYA` · root `savaya-tienda-nueva/` · **cuenta:** `aandreskss` |
 | **Dominio** | `www.savayavzla.com` → actualmente apunta a `campanas`; se mueve en el corte |
 | **Resend** | Pendiente verificar dominio `savayavzla.com` para enviar desde `noreply@savayavzla.com` |
 | **Sentry** | Pendiente crear proyecto `savaya-tienda-nueva` |

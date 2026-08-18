@@ -1,5 +1,7 @@
+'use server'
+
 import { db, rawQuery } from '@/shared/lib/db'
-import { sql, eq, inArray } from 'drizzle-orm'
+import { sql, eq, inArray, and } from 'drizzle-orm'
 import { orders, orderItems, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
@@ -15,7 +17,6 @@ import type { OrderResult } from './types'
 // ── Order number generation ───────────────────────────────────────────────────
 
 async function generateOrderNumber(): Promise<string> {
-  // Uses a sequence count derived from the current orders count to produce SAV-XXXXXX
   const [{ count }] = await rawQuery<{ count: string }>(
     sql`SELECT COUNT(*) as count FROM orders`,
   )
@@ -30,13 +31,13 @@ function getPartialMultiplier(type: string): number {
     case 'partial_20': return 0.20
     case 'partial_35': return 0.35
     case 'partial_50': return 0.50
-    default: return 1.00 // 'full'
+    default: return 1.00
   }
 }
 
 // ── createOrder ───────────────────────────────────────────────────────────────
-// The only place where an Order is created. Runs inside a transaction with
-// SELECT ... FOR UPDATE to prevent overselling.
+// Uses sequential operations + atomic conditional UPDATE for inventory reservation
+// because neon-http driver does not support BEGIN/COMMIT transactions or FOR UPDATE.
 
 export type CreateOrderResult =
   | { success: true; data: OrderResult }
@@ -47,7 +48,6 @@ export async function createOrder(
   reservationExpiryHours: number,
 ): Promise<CreateOrderResult> {
   if (!process.env.DATABASE_URL) {
-    // Dev fallback — no DB
     const mockNumber = `SAV-${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`
     return {
       success: true,
@@ -125,7 +125,6 @@ export async function createOrder(
 
   const variantMap = new Map(variantRows.map((v) => [v.id, v]))
 
-  // Ensure all variants still active
   for (const cartRow of cartRows) {
     const variant = variantMap.get(cartRow.variantId)
     if (!variant || !variant.isActive) {
@@ -143,7 +142,6 @@ export async function createOrder(
   let customerId: string
   if (existingCustomer[0]) {
     customerId = existingCustomer[0].id
-    // Update contact info if changed
     await db
       .update(customers)
       .set({
@@ -168,12 +166,10 @@ export async function createOrder(
 
   // ── 5. Validate coupon (server-side) ─────────────────────────────────────
   let validatedCouponId: string | null = null
-  // Store discount params for recalculation inside transaction
   let couponDiscountType: 'percentage' | 'fixed_usd' | null = null
   let couponDiscountValue = 0
 
   if (couponCode) {
-    // Pre-calculate subtotal for min_order_usd check (best-effort; real amounts inside tx)
     const preSubtotal = cartRows.reduce((sum, r) => {
       const v = variantMap.get(r.variantId)
       return sum + (v ? Number(v.price) * r.quantity : 0)
@@ -188,231 +184,242 @@ export async function createOrder(
     couponDiscountValue = couponResult.value
   }
 
-  // ── 6. Transaction: lock stock, create order ──────────────────────────────
+  // ── 6. Pre-check stock availability ──────────────────────────────────────
+  const stockRows = await db
+    .select({
+      variantId: inventory.variantId,
+      quantity: inventory.quantity,
+      reserved: inventory.reserved,
+    })
+    .from(inventory)
+    .where(inArray(inventory.variantId, variantIds))
+
+  const stockMap = new Map(stockRows.map((s) => [s.variantId, s]))
+
+  for (const cartRow of cartRows) {
+    const stock = stockMap.get(cartRow.variantId)
+    const available = stock ? Math.max(0, stock.quantity - stock.reserved) : 0
+    if (available < cartRow.quantity) {
+      const variant = variantMap.get(cartRow.variantId)
+      const name = variant ? `${variant.productName} (${variant.sizeName})` : 'una variante'
+      return { success: false, error: `Sin stock suficiente para ${name}. Disponible: ${available}.` }
+    }
+  }
+
+  // ── 7. Calculate totals ───────────────────────────────────────────────────
+  let subtotalUsd = 0
+  for (const cartRow of cartRows) {
+    const variant = variantMap.get(cartRow.variantId)!
+    subtotalUsd += Number(variant.price) * cartRow.quantity
+  }
+
+  const couponDiscountUsd =
+    validatedCouponId && couponDiscountType
+      ? calculateDiscount(couponDiscountType, couponDiscountValue, subtotalUsd)
+      : 0
+
+  const discountedSubtotal = Math.max(0, subtotalUsd - couponDiscountUsd)
+  const totalUsd = discountedSubtotal + shippingCostUsd
+  const totalBs = totalUsd * exchangeRate
+
+  const orderNumber = await generateOrderNumber()
+
+  const reservedUntil = new Date(Date.now() + reservationExpiryHours * 60 * 60 * 1000)
+
+  const hasProof = paymentData.methodType !== 'cash' && !!paymentData.cloudinaryPublicId
+  const initialStatus = hasProof ? 'payment_under_review' : 'pending_payment'
+  const partialMultiplier = getPartialMultiplier(paymentData.partialPaymentType)
+
   try {
-    const result = await db.transaction(async (tx) => {
-      // Lock inventory rows to prevent race condition (UUIDs come from our DB, not user input)
-      const uuidsLiteral = `{${variantIds.join(',')}}`
-      await tx.execute(
-        sql`SELECT id FROM inventory WHERE variant_id = ANY(${uuidsLiteral}::uuid[]) FOR UPDATE`,
-      )
-
-      // Re-read stock inside transaction
-      const stockRows = await tx
-        .select({
-          variantId: inventory.variantId,
-          quantity: inventory.quantity,
-          reserved: inventory.reserved,
-        })
-        .from(inventory)
-        .where(inArray(inventory.variantId, variantIds))
-
-      const stockMap = new Map(stockRows.map((s) => [s.variantId, s]))
-
-      // Verify stock for each cart item
-      for (const cartRow of cartRows) {
-        const stock = stockMap.get(cartRow.variantId)
-        const available = stock ? Math.max(0, stock.quantity - stock.reserved) : 0
-        if (available < cartRow.quantity) {
-          const variant = variantMap.get(cartRow.variantId)
-          const name = variant ? `${variant.productName} (${variant.sizeName})` : 'una variante'
-          throw new Error(`Sin stock suficiente para ${name}. Disponible: ${available}.`)
-        }
-      }
-
-      // Calculate totals from DB prices (server is source of truth)
-      let subtotalUsd = 0
-      for (const cartRow of cartRows) {
-        const variant = variantMap.get(cartRow.variantId)!
-        subtotalUsd += Number(variant.price) * cartRow.quantity
-      }
-
-      // Apply coupon discount to subtotal (shipping excluded from discount)
-      const couponDiscountUsd =
-        validatedCouponId && couponDiscountType
-          ? calculateDiscount(couponDiscountType, couponDiscountValue, subtotalUsd)
-          : 0
-
-      const discountedSubtotal = Math.max(0, subtotalUsd - couponDiscountUsd)
-      const totalUsd = discountedSubtotal + shippingCostUsd
-      const totalBs = totalUsd * exchangeRate
-
-      const orderNumber = await generateOrderNumber()
-
-      const reservedUntil = new Date(
-        Date.now() + reservationExpiryHours * 60 * 60 * 1000,
-      )
-
-      const hasProof =
-        paymentData.methodType !== 'cash' && !!paymentData.cloudinaryPublicId
-
-      const initialStatus = hasProof ? 'payment_under_review' : 'pending_payment'
-
-      const partialMultiplier = getPartialMultiplier(paymentData.partialPaymentType)
-
-      // Insert order
-      const [newOrder] = await tx
-        .insert(orders)
-        .values({
-          orderNumber,
-          customerId,
-          status: initialStatus as typeof orders.$inferInsert['status'],
-          subtotalUsd: subtotalUsd.toFixed(2),
-          discountUsd: couponDiscountUsd.toFixed(2),
-          shippingCostUsd: shippingCostUsd.toFixed(2),
-          totalUsd: totalUsd.toFixed(2),
-          exchangeRateSnapshot: exchangeRate.toFixed(4),
-          totalBs: totalBs.toFixed(2),
-          reservationPaymentType:
-            paymentData.partialPaymentType as typeof orders.$inferInsert['reservationPaymentType'],
-          paymentMethodId: paymentData.methodId,
-          shippingSnapshot: {
-            zoneId: shippingData.zoneId,
-            zoneType: shippingData.zoneType,
-            methodId: shippingData.methodId,
-            cityId: shippingData.cityId,
-            recipientName: shippingData.recipientName,
-            state: shippingData.state,
-            city: shippingData.city,
-            municipality: shippingData.municipality,
-            parish: shippingData.parish,
-            address: shippingData.address,
-            reference: shippingData.reference,
-          },
-          reservedUntil,
-          idempotencyKey,
-        })
-        .returning({ id: orders.id })
-
-      const orderId = newOrder.id
-
-      // Insert order items (snapshot product info at order time)
-      const orderItemsData = cartRows.map((cartRow) => {
-        const variant = variantMap.get(cartRow.variantId)!
-        const unitPrice = Number(variant.price)
-        return {
-          orderId,
-          variantId: cartRow.variantId,
-          quantity: cartRow.quantity,
-          unitPriceUsd: unitPrice.toFixed(2),
-          totalUsd: (unitPrice * cartRow.quantity).toFixed(2),
-          productSnapshot: {
-            productName: variant.productName,
-            sku: variant.sku,
-            color: variant.colorName,
-            size: variant.sizeName,
-            unitPriceUsd: unitPrice,
-          },
-        }
+    // ── 8. Insert order ───────────────────────────────────────────────────
+    const [newOrder] = await db
+      .insert(orders)
+      .values({
+        orderNumber,
+        customerId,
+        status: initialStatus as typeof orders.$inferInsert['status'],
+        subtotalUsd: subtotalUsd.toFixed(2),
+        discountUsd: couponDiscountUsd.toFixed(2),
+        shippingCostUsd: shippingCostUsd.toFixed(2),
+        totalUsd: totalUsd.toFixed(2),
+        exchangeRateSnapshot: exchangeRate.toFixed(4),
+        totalBs: totalBs.toFixed(2),
+        reservationPaymentType:
+          paymentData.partialPaymentType as typeof orders.$inferInsert['reservationPaymentType'],
+        paymentMethodId: paymentData.methodId,
+        shippingSnapshot: {
+          zoneId: shippingData.zoneId,
+          zoneType: shippingData.zoneType,
+          methodId: shippingData.methodId,
+          cityId: shippingData.cityId,
+          recipientName: shippingData.recipientName,
+          state: shippingData.state,
+          city: shippingData.city,
+          municipality: shippingData.municipality,
+          parish: shippingData.parish,
+          address: shippingData.address,
+          reference: shippingData.reference,
+        },
+        reservedUntil,
+        idempotencyKey,
       })
-      await tx.insert(orderItems).values(orderItemsData)
+      .returning({ id: orders.id })
 
-      // Reserve inventory: insert movement + update reserved count
-      for (const cartRow of cartRows) {
-        await tx.insert(inventoryMovements).values({
-          variantId: cartRow.variantId,
-          type: 'reservation',
-          quantity: cartRow.quantity,
-          reason: `Reserva automática para pedido ${orderNumber}`,
-          orderId,
-        })
+    const orderId = newOrder.id
 
-        await tx
-          .update(inventory)
-          .set({ reserved: sql`${inventory.reserved} + ${cartRow.quantity}` })
-          .where(eq(inventory.variantId, cartRow.variantId))
-      }
-
-      // Insert payment proof (if not cash)
-      if (hasProof) {
-        const amountPaid = Number(paymentData.amountPaid ?? '0') * partialMultiplier
-
-        const methodSpecificMeta: Record<string, string> = {}
-        if (paymentData.bankName) methodSpecificMeta.bankName = paymentData.bankName
-        if (paymentData.bankPhone) methodSpecificMeta.bankPhone = paymentData.bankPhone
-        if (paymentData.clientId) methodSpecificMeta.clientId = paymentData.clientId
-        if (paymentData.transactionHash) methodSpecificMeta.transactionHash = paymentData.transactionHash
-
-        await tx.insert(paymentProofs).values({
-          orderId,
-          paymentMethodId: paymentData.methodId,
-          amountPaid: amountPaid.toFixed(2),
-          currency: paymentData.methodCurrency as typeof paymentProofs.$inferInsert['currency'],
-          reference: paymentData.reference ?? '',
-          paymentDate: paymentData.paymentDate ?? new Date().toISOString().split('T')[0],
-          holderName: paymentData.holderName ?? '',
-          cloudinaryPublicId: paymentData.cloudinaryPublicId ?? null,
-          cloudinaryUrl: paymentData.cloudinaryUrl ?? null,
-          metadata: Object.keys(methodSpecificMeta).length > 0 ? methodSpecificMeta : null,
-          status: 'pending',
-        })
-      }
-
-      // Record coupon usage (inside transaction so it's atomic with order creation)
-      if (validatedCouponId) {
-        await recordCouponUsage(tx, {
-          discountId: validatedCouponId,
-          customerId,
-          orderId,
-        })
-      }
-
-      // Order status history
-      await tx.insert(orderStatusHistory).values({
-        orderId,
-        fromStatus: null,
-        toStatus: 'pending_payment',
-        reason: 'Pedido creado por el cliente',
-      })
-
-      if (hasProof) {
-        await tx.insert(orderStatusHistory).values({
-          orderId,
-          fromStatus: 'pending_payment',
-          toStatus: 'payment_under_review',
-          reason: 'Comprobante enviado por el cliente',
-        })
-      }
-
-      // Clear cart
-      await tx.delete(cartItems).where(eq(cartItems.cartId, cartId))
-
+    // ── 9. Insert order items ─────────────────────────────────────────────
+    const orderItemsData = cartRows.map((cartRow) => {
+      const variant = variantMap.get(cartRow.variantId)!
+      const unitPrice = Number(variant.price)
       return {
-        success: true as const,
-        data: {
-          orderId,
-          orderNumber,
-          totalUsd,
-          totalBs,
-          status: initialStatus,
+        orderId,
+        variantId: cartRow.variantId,
+        quantity: cartRow.quantity,
+        unitPriceUsd: unitPrice.toFixed(2),
+        totalUsd: (unitPrice * cartRow.quantity).toFixed(2),
+        productSnapshot: {
+          productName: variant.productName,
+          sku: variant.sku,
+          color: variant.colorName,
+          size: variant.sizeName,
+          unitPriceUsd: unitPrice,
         },
       }
     })
+    await db.insert(orderItems).values(orderItemsData)
 
-    // Fire-and-forget order confirmation email (outside transaction — failure must not rollback the order)
-    if (result.success && result.data) {
-      const { orderId, orderNumber: on, totalUsd: tu, totalBs: tb } = result.data
-      const customerEmail = input.personalData.email
-      const customerName = `${input.personalData.firstName} ${input.personalData.lastName}`
-      const items = (await rawQuery<{ name: string; sku: string; qty: number; unit: number }>(
-        sql`SELECT ps->>'productName' as name, ps->>'sku' as sku,
-                   quantity as qty, unit_price_usd::float as unit
-            FROM order_items WHERE order_id = ${orderId}`,
-      )).map((r) => ({ name: r.name, sku: r.sku, qty: Number(r.qty), unitPriceUsd: Number(r.unit) }))
+    // ── 10. Reserve inventory (atomic conditional UPDATE per variant) ──────
+    // Uses WHERE (quantity - reserved) >= needed to prevent overselling without FOR UPDATE.
+    const reservedVariantIds: string[] = []
 
-      sendOrderConfirmation({
-        orderId,
-        orderNumber: on,
-        customerName,
-        customerEmail,
-        totalUsd: tu,
-        totalBs: tb,
-        items,
-        hasProof: !!input.paymentData.cloudinaryPublicId,
-      }).catch((e) => console.error('[checkout] notification failed silently:', e))
+    for (const cartRow of cartRows) {
+      const updated = await db
+        .update(inventory)
+        .set({ reserved: sql`${inventory.reserved} + ${cartRow.quantity}` })
+        .where(
+          and(
+            eq(inventory.variantId, cartRow.variantId),
+            sql`(${inventory.quantity} - ${inventory.reserved}) >= ${cartRow.quantity}`,
+          ),
+        )
+        .returning({ variantId: inventory.variantId })
+
+      if (updated.length === 0) {
+        // Race condition: stock ran out between pre-check and reservation.
+        // Undo reservations already made in this loop.
+        for (const vid of reservedVariantIds) {
+          const qty = cartRows.find((r) => r.variantId === vid)!.quantity
+          await db
+            .update(inventory)
+            .set({ reserved: sql`${inventory.reserved} - ${qty}` })
+            .where(eq(inventory.variantId, vid))
+        }
+        // Delete the order (order items cascade via FK)
+        await db.delete(orders).where(eq(orders.id, orderId))
+
+        const variant = variantMap.get(cartRow.variantId)
+        const name = variant ? `${variant.productName} (${variant.sizeName})` : 'una variante'
+        return { success: false, error: `Sin stock suficiente para ${name}. Intenta de nuevo.` }
+      }
+
+      reservedVariantIds.push(cartRow.variantId)
     }
 
-    return result
+    // ── 11. Insert inventory movements ────────────────────────────────────
+    for (const cartRow of cartRows) {
+      await db.insert(inventoryMovements).values({
+        variantId: cartRow.variantId,
+        type: 'reservation',
+        quantity: cartRow.quantity,
+        reason: `Reserva automática para pedido ${orderNumber}`,
+        orderId,
+      })
+    }
+
+    // ── 12. Insert payment proof (if not cash) ────────────────────────────
+    if (hasProof) {
+      const amountPaid = Number(paymentData.amountPaid ?? '0') * partialMultiplier
+
+      const methodSpecificMeta: Record<string, string> = {}
+      if (paymentData.bankName) methodSpecificMeta.bankName = paymentData.bankName
+      if (paymentData.bankPhone) methodSpecificMeta.bankPhone = paymentData.bankPhone
+      if (paymentData.clientId) methodSpecificMeta.clientId = paymentData.clientId
+      if (paymentData.transactionHash) methodSpecificMeta.transactionHash = paymentData.transactionHash
+
+      await db.insert(paymentProofs).values({
+        orderId,
+        paymentMethodId: paymentData.methodId,
+        amountPaid: amountPaid.toFixed(2),
+        currency: paymentData.methodCurrency as typeof paymentProofs.$inferInsert['currency'],
+        reference: paymentData.reference ?? '',
+        paymentDate: paymentData.paymentDate ?? new Date().toISOString().split('T')[0],
+        holderName: paymentData.holderName ?? '',
+        cloudinaryPublicId: paymentData.cloudinaryPublicId ?? null,
+        cloudinaryUrl: paymentData.cloudinaryUrl ?? null,
+        metadata: Object.keys(methodSpecificMeta).length > 0 ? methodSpecificMeta : null,
+        status: 'pending',
+      })
+    }
+
+    // ── 13. Record coupon usage ───────────────────────────────────────────
+    if (validatedCouponId) {
+      await recordCouponUsage({
+        discountId: validatedCouponId,
+        customerId,
+        orderId,
+      })
+    }
+
+    // ── 14. Order status history ──────────────────────────────────────────
+    await db.insert(orderStatusHistory).values({
+      orderId,
+      fromStatus: null,
+      toStatus: 'pending_payment',
+      reason: 'Pedido creado por el cliente',
+    })
+
+    if (hasProof) {
+      await db.insert(orderStatusHistory).values({
+        orderId,
+        fromStatus: 'pending_payment',
+        toStatus: 'payment_under_review',
+        reason: 'Comprobante enviado por el cliente',
+      })
+    }
+
+    // ── 15. Clear cart ────────────────────────────────────────────────────
+    await db.delete(cartItems).where(eq(cartItems.cartId, cartId))
+
+    // Fire-and-forget confirmation email (failure must not fail the order)
+    const customerEmail = input.personalData.email
+    const customerName = `${input.personalData.firstName} ${input.personalData.lastName}`
+    rawQuery<{ name: string; sku: string; qty: number; unit: number }>(
+      sql`SELECT ps->>'productName' as name, ps->>'sku' as sku,
+               quantity as qty, unit_price_usd::float as unit
+          FROM order_items WHERE order_id = ${orderId}`,
+    ).then((items) => {
+      sendOrderConfirmation({
+        orderId,
+        orderNumber,
+        customerName,
+        customerEmail,
+        totalUsd,
+        totalBs,
+        items: items.map((r) => ({ name: r.name, sku: r.sku, qty: Number(r.qty), unitPriceUsd: Number(r.unit) })),
+        hasProof,
+      }).catch((e) => console.error('[checkout] notification failed silently:', e))
+    }).catch(() => {/* non-critical */})
+
+    return {
+      success: true,
+      data: {
+        orderId,
+        orderNumber,
+        totalUsd,
+        totalBs,
+        status: initialStatus,
+      },
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error al crear el pedido.'
     return { success: false, error: message }
