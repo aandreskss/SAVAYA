@@ -124,6 +124,10 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
             <ul className="divide-y divide-border">
               {order.items.map((item) => {
                 const snap = item.productSnapshot
+                // Support both new keys (name/colorName/sizeName) and legacy keys (productName/color/size)
+                const displayName = (snap.name ?? snap.productName) as string | undefined
+                const displayColor = (snap.colorName ?? snap.color) as string | undefined
+                const displaySize = (snap.sizeName ?? snap.size) as string | undefined
                 return (
                   <li key={item.id} className="px-5 py-4 flex gap-4">
                     {Boolean(snap.imageUrl) && (
@@ -131,15 +135,15 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={snap.imageUrl as string}
-                        alt={snap.name as string}
+                        alt={displayName ?? ''}
                         className="w-14 h-14 object-cover rounded-lg shrink-0 border border-border"
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{snap.name as string}</p>
-                      {Boolean(snap.colorName || snap.sizeName) && (
+                      <p className="font-medium text-sm truncate">{displayName ?? '—'}</p>
+                      {Boolean(displayColor || displaySize) && (
                         <p className="text-xs text-text-secondary">
-                          {[snap.colorName as string | undefined, snap.sizeName as string | undefined].filter(Boolean).join(' · ')}
+                          {[displayColor, displaySize].filter(Boolean).join(' · ')}
                         </p>
                       )}
                       <p className="text-xs text-text-secondary mt-0.5">SKU: {snap.sku as string}</p>

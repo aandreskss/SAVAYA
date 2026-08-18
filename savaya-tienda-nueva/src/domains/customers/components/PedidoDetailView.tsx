@@ -55,26 +55,29 @@ export function PedidoDetailView({ order }: Props) {
           <ul className="space-y-3">
             {order.items.map((item) => {
               const snap = item.productSnapshot as {
-                name?: string
-                colorName?: string
-                sizeName?: string
+                name?: string; productName?: string
+                colorName?: string; color?: string
+                sizeName?: string; size?: string
                 imageUrl?: string
               }
+              const displayName = snap.name ?? snap.productName
+              const displayColor = snap.colorName ?? snap.color
+              const displaySize = snap.sizeName ?? snap.size
               return (
                 <li key={item.id} className="flex items-center gap-3">
                   {snap.imageUrl ? (
                     <img
                       src={snap.imageUrl}
-                      alt={snap.name ?? ''}
+                      alt={displayName ?? ''}
                       className="w-12 h-12 object-cover rounded-md bg-surface shrink-0"
                     />
                   ) : (
                     <div className="w-12 h-12 bg-surface rounded-md shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{snap.name ?? '—'}</p>
+                    <p className="text-sm font-medium truncate">{displayName ?? '—'}</p>
                     <p className="text-xs text-text-secondary">
-                      {[snap.colorName, snap.sizeName].filter(Boolean).join(' · ')} · ×
+                      {[displayColor, displaySize].filter(Boolean).join(' · ')} · ×
                       {item.quantity}
                     </p>
                   </div>
