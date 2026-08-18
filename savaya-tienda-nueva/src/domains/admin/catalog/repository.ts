@@ -1105,22 +1105,22 @@ export async function setCollectionProducts(
   actorEmail: string,
   ip: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx.delete(productCollections).where(eq(productCollections.collectionId, collectionId))
-    if (productIds.length > 0) {
-      await tx.insert(productCollections).values(
-        productIds.map((productId) => ({ productId, collectionId })),
-      )
-    }
-    await tx.insert(auditLog).values({
-      actorId,
-      actorEmail,
-      action: 'collection.set_products',
-      resourceType: 'collection',
-      resourceId: collectionId,
-      after: { productIds },
-      ip,
-    })
+  await db.delete(productCollections).where(eq(productCollections.collectionId, collectionId))
+
+  if (productIds.length > 0) {
+    await db.insert(productCollections).values(
+      productIds.map((productId) => ({ productId, collectionId })),
+    )
+  }
+
+  await db.insert(auditLog).values({
+    actorId,
+    actorEmail,
+    action: 'collection.set_products',
+    resourceType: 'collection',
+    resourceId: collectionId,
+    after: { productIds },
+    ip,
   })
 }
 

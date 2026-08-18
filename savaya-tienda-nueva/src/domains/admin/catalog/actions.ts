@@ -331,7 +331,8 @@ export async function setCollectionProductsAction(
   try {
     await setCollectionProducts(collectionId, productIds, actor.actorId, actor.actorEmail, actor.ip)
     revalidatePath('/admin/productos/colecciones')
-    revalidatePath(`/coleccion/${collectionId}`, 'page')
+    revalidatePath(`/admin/productos/colecciones/${collectionId}`)
+    revalidatePath('/coleccion', 'layout')
     return { success: true, data: undefined }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Error al guardar productos' }
