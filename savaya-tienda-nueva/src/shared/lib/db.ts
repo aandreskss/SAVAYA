@@ -27,7 +27,7 @@ import * as wholesaleSchema from '@/domains/wholesale/schema'
 // ---------------------------------------------------------------------------
 
 const client = postgres(process.env.DATABASE_URL!, {
-  max: 5,          // allows parallel queries per Lambda invocation (PgBouncer multiplexes)
+  max: 1,          // 1 connection per Lambda invocation — prevents PgBouncer pool exhaustion
   idle_timeout: 20,
   connect_timeout: 10,
   prepare: false,  // required for Supabase PgBouncer (transaction mode)
