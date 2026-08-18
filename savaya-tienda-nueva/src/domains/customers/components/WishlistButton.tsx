@@ -22,12 +22,10 @@ export function WishlistButton({ variantId, initialIsInWishlist }: Props) {
 
   function handleClick() {
     if (!variantId) {
-      // No variant selected — redirect to login to keep UX simple
-      router.push('/login')
+      router.push('/iniciar-sesion')
       return
     }
 
-    // Optimistic update
     const optimistic = !isInWishlist
     setIsInWishlist(optimistic)
 
@@ -35,10 +33,9 @@ export function WishlistButton({ variantId, initialIsInWishlist }: Props) {
       const result = await toggleWishlist(variantId)
 
       if (!result.success) {
-        // Revert optimistic update and redirect to login
         setIsInWishlist(isInWishlist)
         if (result.error?.includes('iniciar sesión')) {
-          router.push('/login')
+          router.push('/iniciar-sesion')
         }
         return
       }

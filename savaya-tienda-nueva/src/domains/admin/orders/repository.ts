@@ -216,7 +216,7 @@ export async function getAdminOrderByNumber(
         pp.metadata,
         pm.name AS payment_method_name
       FROM payment_proofs pp
-      JOIN payment_methods pm ON pm.id = pp.payment_method_id
+      LEFT JOIN payment_methods pm ON pm.id = pp.payment_method_id
       WHERE pp.order_id = ${order.id}
       ORDER BY pp.created_at DESC
       LIMIT 1

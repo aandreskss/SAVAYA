@@ -1,6 +1,7 @@
 'use server'
 
 import { db, rawQuery } from '@/shared/lib/db'
+import { auth } from '@/domains/auth/auth'
 import { sql, eq, inArray, and } from 'drizzle-orm'
 import { orders, orderItems, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
@@ -62,6 +63,12 @@ export async function createOrder(
   }
 
   const { personalData, shippingData, paymentData, cartId, idempotencyKey, exchangeRate, shippingCostUsd, couponCode } = input
+
+  // If the buyer is logged in, their session email is the canonical customer identity.
+  // This ensures orders are always visible in /mi-cuenta regardless of what email
+  // the user fills in the form, and avoids creating duplicate customer records.
+  const session = await auth()
+  const customerEmail = session?.user?.email ?? personalData.email
 
   // ── 1. Idempotency check ──────────────────────────────────────────────────
   const existing = await db
@@ -133,10 +140,11 @@ export async function createOrder(
   }
 
   // ── 4. Find or create customer ────────────────────────────────────────────
+  // customerEmail is session email (logged-in) or form email (guest).
   const existingCustomer = await db
     .select({ id: customers.id })
     .from(customers)
-    .where(eq(customers.email, personalData.email))
+    .where(eq(customers.email, customerEmail))
     .limit(1)
 
   let customerId: string
@@ -155,7 +163,7 @@ export async function createOrder(
     const [newCustomer] = await db
       .insert(customers)
       .values({
-        email: personalData.email,
+        email: customerEmail,
         firstName: personalData.firstName,
         lastName: personalData.lastName,
         whatsapp: personalData.whatsapp,

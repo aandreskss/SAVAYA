@@ -92,14 +92,12 @@ export async function setDefaultAddress(
   customerId: string,
 ): Promise<void> {
   await assertAddressOwner(addressId, customerId)
-  await db.transaction(async (tx) => {
-    await tx
-      .update(addresses)
-      .set({ isDefault: false, updatedAt: new Date() })
-      .where(eq(addresses.customerId, customerId))
-    await tx
-      .update(addresses)
-      .set({ isDefault: true, updatedAt: new Date() })
-      .where(and(eq(addresses.id, addressId), eq(addresses.customerId, customerId)))
-  })
+  await db
+    .update(addresses)
+    .set({ isDefault: false, updatedAt: new Date() })
+    .where(eq(addresses.customerId, customerId))
+  await db
+    .update(addresses)
+    .set({ isDefault: true, updatedAt: new Date() })
+    .where(and(eq(addresses.id, addressId), eq(addresses.customerId, customerId)))
 }
