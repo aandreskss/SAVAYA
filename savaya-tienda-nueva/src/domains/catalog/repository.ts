@@ -1254,17 +1254,22 @@ export async function listActiveCategories(): Promise<CategoryPill[]> {
     ]
   }
 
-  const rows = await db
-    .select({
-      id: categories.id,
-      name: categories.name,
-      slug: categories.slug,
-      sortOrder: categories.sortOrder,
-    })
-    .from(categories)
-    .where(and(eq(categories.isActive, true), sql`${categories.parentId} IS NULL`))
-    .orderBy(asc(categories.sortOrder), asc(categories.name))
-    .limit(12)
+  try {
+    const rows = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        sortOrder: categories.sortOrder,
+      })
+      .from(categories)
+      .where(and(eq(categories.isActive, true), sql`${categories.parentId} IS NULL`))
+      .orderBy(asc(categories.sortOrder), asc(categories.name))
+      .limit(12)
 
-  return rows
+    return rows
+  } catch (error) {
+    console.error('[catalog/repository] listActiveCategories failed:', error)
+    return []
+  }
 }
