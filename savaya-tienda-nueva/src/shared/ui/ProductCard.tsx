@@ -124,6 +124,21 @@ export function ProductCard({
               )}
             />
           )}
+
+          {/* "Ver producto" overlay — slides up on hover */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out hidden md:block"
+          >
+            <div className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-[14px] bg-surface/88 backdrop-blur-sm border border-border/50">
+              <span className="font-sans text-[11px] font-bold uppercase tracking-[0.12em] text-text-primary">
+                Ver Producto
+              </span>
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M1 6.5h11M7 1.5l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent-gold" />
+              </svg>
+            </div>
+          </div>
         </div>
       </Link>
 

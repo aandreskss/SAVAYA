@@ -4,6 +4,7 @@ import { NavDesktop } from './NavDesktop'
 import { NavMobile } from './NavMobile'
 import { NavActions } from './NavActions'
 import { NavMobileToggle } from './NavMobileToggle'
+import { NavScrollWrapper } from './NavScrollWrapper'
 import { SavayaLogo } from './SavayaLogo'
 
 export async function Navbar() {
@@ -11,7 +12,7 @@ export async function Navbar() {
   const cartCount = 0
 
   return (
-    <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-border">
+    <NavScrollWrapper>
       <nav
         aria-label="Navegación principal"
         className="max-w-screen-xl mx-auto px-6 md:px-10 h-[68px] flex items-center gap-4"
@@ -22,7 +23,7 @@ export async function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex-shrink-0 focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded-sm"
+          className="flex-shrink-0 opacity-100 hover:opacity-80 transition-opacity duration-200 focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded-sm"
           aria-label="SAVAYA — Inicio"
         >
           <SavayaLogo variant="full" />
@@ -39,6 +40,6 @@ export async function Navbar() {
 
       {/* Menú mobile */}
       <NavMobile categories={NAV_CATEGORIES} />
-    </header>
+    </NavScrollWrapper>
   )
 }
