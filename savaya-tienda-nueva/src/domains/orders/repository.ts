@@ -1,6 +1,7 @@
 import { db } from '@/shared/lib/db'
 import { orders, orderItems, orderStatusHistory } from './schema'
 import { paymentMethods } from '@/domains/payment-methods/schema'
+import { productVariants, productMedia } from '@/domains/catalog/schema'
 import { eq, and, desc, inArray } from 'drizzle-orm'
 import type {
   OrderListItem,
@@ -119,10 +120,11 @@ export async function getOrderByNumberForCustomer(
 
   if (!order) return null
 
-  const [items, history, pmRows] = await Promise.all([
+  const [rawItems, history, pmRows] = await Promise.all([
     db
       .select({
         id: orderItems.id,
+        variantId: orderItems.variantId,
         quantity: orderItems.quantity,
         unitPriceUsd: orderItems.unitPriceUsd,
         totalUsd: orderItems.totalUsd,
@@ -150,6 +152,49 @@ export async function getOrderByNumberForCustomer(
       : Promise.resolve([]),
   ])
 
+  // Fetch current primary images as fallback for old orders that lack imageUrl in snapshot.
+  let imageMap = new Map<string, string>()
+  const variantIds = rawItems.map((i) => i.variantId).filter((v): v is string => !!v)
+  if (variantIds.length > 0) {
+    const pvRows = await db
+      .select({ variantId: productVariants.id, productId: productVariants.productId })
+      .from(productVariants)
+      .where(inArray(productVariants.id, variantIds))
+
+    const productIds = [...new Set(pvRows.map((r) => r.productId))]
+
+    if (productIds.length > 0) {
+      const mediaRows = await db
+        .select({ productId: productMedia.productId, url: productMedia.url })
+        .from(productMedia)
+        .where(and(inArray(productMedia.productId, productIds), eq(productMedia.isPrimary, true)))
+
+      const productToImage = new Map(mediaRows.map((m) => [m.productId, m.url]))
+      imageMap = new Map(
+        pvRows
+          .map((r) => [r.variantId, productToImage.get(r.productId) ?? ''] as [string, string])
+          .filter(([, v]) => v),
+      )
+    }
+  }
+
+  const items: OrderDetailItem[] = rawItems.map((item) => {
+    const snap = (item.productSnapshot ?? {}) as Record<string, unknown>
+    const snapshotImageUrl = snap.imageUrl as string | undefined
+    const fallbackImageUrl = item.variantId ? imageMap.get(item.variantId) : undefined
+    return {
+      id: item.id,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      unitPriceUsd: item.unitPriceUsd,
+      totalUsd: item.totalUsd,
+      productSnapshot: {
+        ...snap,
+        imageUrl: snapshotImageUrl ?? fallbackImageUrl ?? null,
+      },
+    } as OrderDetailItem
+  })
+
   return {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -165,7 +210,7 @@ export async function getOrderByNumberForCustomer(
     notes: order.notes,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
-    items: items as OrderDetailItem[],
+    items,
     statusHistory: history as OrderStatusEvent[],
     paymentMethodName: pmRows[0]?.name ?? null,
   }

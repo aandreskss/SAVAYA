@@ -66,6 +66,7 @@ export type OrderStatusEvent = {
 
 export type OrderDetailItem = {
   id: string
+  variantId: string | null
   quantity: number
   unitPriceUsd: string
   totalUsd: string

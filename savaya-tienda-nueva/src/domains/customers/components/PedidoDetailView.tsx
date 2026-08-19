@@ -16,6 +16,7 @@ export function PedidoDetailView({ order }: Props) {
     city?: string
     state?: string
     municipality?: string
+    parish?: string
     reference?: string
   } | null
 
@@ -168,6 +169,12 @@ export function PedidoDetailView({ order }: Props) {
                 <div className="flex gap-2">
                   <dt className="w-24 shrink-0">Municipio</dt>
                   <dd>{shipping.municipality}</dd>
+                </div>
+              )}
+              {shipping.parish && (
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0">Parroquia</dt>
+                  <dd>{shipping.parish}</dd>
                 </div>
               )}
               {(shipping.city || shipping.state) && (

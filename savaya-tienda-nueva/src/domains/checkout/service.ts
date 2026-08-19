@@ -7,7 +7,7 @@ import { orders, orderItems, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { cartItems } from '@/domains/cart/schema'
-import { productVariants, products, colors, sizes } from '@/domains/catalog/schema'
+import { productVariants, products, colors, sizes, productMedia } from '@/domains/catalog/schema'
 import { customers } from '@/domains/customers/schema'
 import { shippingMethods } from '@/domains/shipping/schema'
 import { validateCoupon, calculateDiscount } from '@/domains/discounts-promotions/service'
@@ -286,6 +286,13 @@ export async function createOrder(
     const orderId = newOrder.id
 
     // ── 9. Insert order items ─────────────────────────────────────────────
+    const productIds = [...new Set(variantRows.map((v) => v.productId))]
+    const imageRows = await db
+      .select({ productId: productMedia.productId, url: productMedia.url })
+      .from(productMedia)
+      .where(and(inArray(productMedia.productId, productIds), eq(productMedia.isPrimary, true)))
+    const imageMap = new Map(imageRows.map((i) => [i.productId, i.url]))
+
     const orderItemsData = cartRows.map((cartRow) => {
       const variant = variantMap.get(cartRow.variantId)!
       const unitPrice = Number(variant.price)
@@ -301,6 +308,7 @@ export async function createOrder(
           colorName: variant.colorName,
           sizeName: variant.sizeName,
           unitPriceUsd: unitPrice,
+          imageUrl: imageMap.get(variant.productId) ?? null,
         },
       }
     })
