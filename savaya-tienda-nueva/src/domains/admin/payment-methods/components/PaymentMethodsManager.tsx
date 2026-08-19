@@ -476,25 +476,30 @@ function MethodModal({
     if (!name.trim()) { toast.error('El nombre es requerido'); return }
 
     startTransition(async () => {
-      const payload = {
-        name: name.trim(),
-        type,
-        currency,
-        instructions: instructions.trim() || null,
-        accountDetails: Object.keys(accountDetails).length > 0 ? accountDetails : null,
-        sortOrder,
-      }
+      try {
+        const payload = {
+          name: name.trim(),
+          type,
+          currency,
+          instructions: instructions.trim() || null,
+          accountDetails: Object.keys(accountDetails).length > 0 ? accountDetails : null,
+          sortOrder,
+        }
 
-      const res = isEdit
-        ? await updatePaymentMethodAction(method.id, payload)
-        : await createPaymentMethodAction(payload)
+        const res = isEdit
+          ? await updatePaymentMethodAction(method.id, payload)
+          : await createPaymentMethodAction(payload)
 
-      if (res.success) {
-        onSaved(res.data)
-        onClose()
-        toast.success(isEdit ? 'Método actualizado' : 'Método de pago creado')
-      } else {
-        toast.error(res.error)
+        if (res.success) {
+          onSaved(res.data)
+          onClose()
+          toast.success(isEdit ? 'Método actualizado' : 'Método de pago creado')
+        } else {
+          toast.error(res.error)
+        }
+      } catch (err) {
+        console.error('[PaymentMethodsManager] handleSubmit error:', err)
+        toast.error('Error inesperado al guardar. Intenta de nuevo.')
       }
     })
   }
@@ -631,25 +636,35 @@ export function PaymentMethodsManager({ initialMethods, canEdit }: Props) {
 
   function handleToggle(id: string, isActive: boolean) {
     startTransition(async () => {
-      const res = await togglePaymentMethodAction(id, isActive)
-      if (res.success) {
-        setMethods((prev) => prev.map((m) => m.id === id ? { ...m, isActive } : m))
-        toast.success(isActive ? 'Método activado' : 'Método desactivado')
-      } else {
-        toast.error(res.error)
+      try {
+        const res = await togglePaymentMethodAction(id, isActive)
+        if (res.success) {
+          setMethods((prev) => prev.map((m) => m.id === id ? { ...m, isActive } : m))
+          toast.success(isActive ? 'Método activado' : 'Método desactivado')
+        } else {
+          toast.error(res.error)
+        }
+      } catch (err) {
+        console.error('[PaymentMethodsManager] handleToggle error:', err)
+        toast.error('Error al actualizar el estado.')
       }
     })
   }
 
   function handleDelete(id: string) {
     startTransition(async () => {
-      const res = await deletePaymentMethodAction(id)
-      if (res.success) {
-        setMethods((prev) => prev.filter((m) => m.id !== id))
-        setDeleteConfirmId(null)
-        toast.success('Método eliminado')
-      } else {
-        toast.error(res.error)
+      try {
+        const res = await deletePaymentMethodAction(id)
+        if (res.success) {
+          setMethods((prev) => prev.filter((m) => m.id !== id))
+          setDeleteConfirmId(null)
+          toast.success('Método eliminado')
+        } else {
+          toast.error(res.error)
+        }
+      } catch (err) {
+        console.error('[PaymentMethodsManager] handleDelete error:', err)
+        toast.error('Error al eliminar el método.')
       }
     })
   }
