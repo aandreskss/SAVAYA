@@ -19,6 +19,7 @@ import type { AdminPaymentMethod, PaymentMethodType, PaymentCurrency } from '../
 const TYPE_LABELS: Record<PaymentMethodType, string> = {
   zelle: 'Zelle',
   pago_movil: 'Pago Móvil',
+  pago_movil_qr: 'Pago Móvil QR',
   bank_transfer: 'Transferencia',
   usdt_trc20: 'USDT TRC-20',
   binance_pay: 'Binance Pay',
@@ -28,6 +29,7 @@ const TYPE_LABELS: Record<PaymentMethodType, string> = {
 const TYPE_COLORS: Record<PaymentMethodType, string> = {
   zelle: 'bg-purple-500/20 text-purple-300',
   pago_movil: 'bg-blue-500/20 text-blue-300',
+  pago_movil_qr: 'bg-indigo-500/20 text-indigo-300',
   bank_transfer: 'bg-surface-2 text-text-secondary',
   usdt_trc20: 'bg-teal-500/20 text-teal-300',
   binance_pay: 'bg-yellow-500/20 text-yellow-300',
@@ -83,6 +85,7 @@ function accountSummary(method: AdminPaymentMethod): string {
   switch (method.type) {
     case 'zelle': return d.email ?? '—'
     case 'pago_movil': return d.phone ?? '—'
+    case 'pago_movil_qr': return d.qrImageUrl ? 'QR cargado' : (d.phone ?? '—')
     case 'bank_transfer': {
       const num = d.accountNumber ?? ''
       return num.length > 4 ? `••• ${num.slice(-4)}` : num || '—'
@@ -156,6 +159,43 @@ function BankSelector({
 }
 
 // ---------------------------------------------------------------------------
+// QR image upload helper
+// ---------------------------------------------------------------------------
+
+async function uploadQrToCloudinary(file: File): Promise<string> {
+  const res = await fetch('/api/admin/payment-methods/upload-qr-signature')
+  if (!res.ok) throw new Error('Error al obtener firma de upload')
+  const { signature, timestamp, cloudName, apiKey, folder, publicId, isDev } =
+    (await res.json()) as {
+      signature: string
+      timestamp: number
+      cloudName: string
+      apiKey: string
+      folder: string
+      publicId: string
+      isDev?: boolean
+    }
+
+  if (isDev) return URL.createObjectURL(file)
+
+  const body = new FormData()
+  body.append('file', file)
+  body.append('api_key', apiKey)
+  body.append('timestamp', String(timestamp))
+  body.append('signature', signature)
+  body.append('folder', folder)
+  body.append('public_id', publicId)
+
+  const upload = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    { method: 'POST', body },
+  )
+  if (!upload.ok) throw new Error('Error al subir la imagen')
+  const data = (await upload.json()) as { secure_url: string }
+  return data.secure_url
+}
+
+// ---------------------------------------------------------------------------
 // AccountDetailsForm — dynamic fields per type
 // ---------------------------------------------------------------------------
 
@@ -206,6 +246,104 @@ function AccountDetailsForm({
           />
         </div>
         {field('accountHolder', 'Titular', 'Juan Pérez')}
+      </div>
+    )
+  }
+
+  if (type === 'pago_movil_qr') {
+    const [uploading, setUploading] = useState(false)
+
+    async function handleQrFile(e: React.ChangeEvent<HTMLInputElement>) {
+      const file = e.target.files?.[0]
+      if (!file) return
+      setUploading(true)
+      try {
+        const url = await uploadQrToCloudinary(file)
+        onChange({ ...value, qrImageUrl: url })
+      } catch (err) {
+        // propagate error as toast from the parent (MethodModal)
+        throw err
+      } finally {
+        setUploading(false)
+        e.target.value = ''
+      }
+    }
+
+    return (
+      <div className="flex flex-col gap-4">
+        {/* QR image upload — primary field */}
+        <div>
+          <label className={labelCls}>Imagen del código QR<span className="text-red-400 ml-0.5">*</span></label>
+          {value.qrImageUrl ? (
+            <div className="flex items-start gap-3">
+              <div className="border border-border rounded-lg overflow-hidden bg-white p-2 shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={value.qrImageUrl}
+                  alt="QR de pago"
+                  className="w-32 h-32 object-contain"
+                />
+              </div>
+              <div className="flex flex-col gap-2 pt-1">
+                <p className="text-xs text-text-secondary">QR cargado correctamente.</p>
+                <label className="cursor-pointer text-xs text-accent-gold hover:text-accent-gold/80 underline underline-offset-2">
+                  Cambiar imagen
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleQrFile} disabled={uploading} />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...value, qrImageUrl: '' })}
+                  className="text-xs text-red-400 hover:text-red-300 text-left"
+                >
+                  Eliminar QR
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${uploading ? 'border-accent-gold/50 bg-accent-gold/5' : 'border-border hover:border-accent-gold/40 hover:bg-surface-2'}`}>
+              {uploading ? (
+                <>
+                  <svg className="animate-spin w-6 h-6 text-accent-gold" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span className="text-xs text-text-secondary">Subiendo imagen…</span>
+                </>
+              ) : (
+                <>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-text-secondary" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M14 14h2v2h-2v2h2v2h2v-2h2v-2h-2v-2h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <p className="text-xs text-text-secondary text-center">
+                    <span className="text-accent-gold font-medium">Seleccionar imagen</span> o arrastra aquí
+                    <br />PNG, JPG — captura del QR de tu banco
+                  </p>
+                </>
+              )}
+              <input type="file" accept="image/*" className="sr-only" onChange={handleQrFile} disabled={uploading} />
+            </label>
+          )}
+        </div>
+
+        {/* Account details (for reference / manual payment if QR fails) */}
+        <div>
+          <p className="text-xs text-text-secondary mb-2">Datos de cuenta (referencia)</p>
+          <div className="grid grid-cols-2 gap-3">
+            {field('phone', 'Teléfono', '04141234567')}
+            {field('cedula', 'Cédula', 'V-12345678')}
+            <div>
+              <label className={labelCls}>Banco</label>
+              <BankSelector
+                value={value.bank ?? ''}
+                onChange={(v) => onChange({ ...value, bank: v })}
+              />
+            </div>
+            {field('accountHolder', 'Titular', 'Juan Pérez')}
+          </div>
+        </div>
       </div>
     )
   }
@@ -297,7 +435,7 @@ function MethodModal({
   function handleTypeChange(newType: PaymentMethodType) {
     setType(newType)
     setAccountDetails({})
-    if (newType === 'pago_movil' || newType === 'bank_transfer') setCurrency('ves')
+    if (newType === 'pago_movil' || newType === 'pago_movil_qr' || newType === 'bank_transfer') setCurrency('ves')
     else setCurrency('usd')
   }
 

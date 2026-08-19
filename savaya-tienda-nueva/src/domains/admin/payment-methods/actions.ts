@@ -48,6 +48,14 @@ const BANK_TRANSFER_SCHEMA = z.object({
   rif: z.string().min(8, 'RIF inválido'),
 })
 
+const PAGO_MOVIL_QR_SCHEMA = z.object({
+  phone: z.string().min(10, 'Teléfono inválido'),
+  cedula: z.string().min(5, 'Cédula inválida'),
+  bank: z.string().min(2, 'Banco requerido'),
+  accountHolder: z.string().min(1, 'Titular requerido'),
+  qrImageUrl: z.string().url('URL de imagen QR inválida').optional().or(z.literal('')),
+})
+
 const USDT_SCHEMA = z.object({
   walletAddress: z.string().min(20, 'Dirección wallet inválida'),
 })
@@ -71,6 +79,7 @@ function parseAccountDetails(
   const schemas: Partial<Record<PaymentMethodType, z.ZodTypeAny>> = {
     zelle: ZELLE_SCHEMA,
     pago_movil: PAGO_MOVIL_SCHEMA,
+    pago_movil_qr: PAGO_MOVIL_QR_SCHEMA,
     bank_transfer: BANK_TRANSFER_SCHEMA,
     usdt_trc20: USDT_SCHEMA,
     binance_pay: BINANCE_SCHEMA,
@@ -92,7 +101,7 @@ function parseAccountDetails(
 
 const BaseSchema = z.object({
   name: z.string().min(2, 'Nombre muy corto').max(100),
-  type: z.enum(['zelle', 'pago_movil', 'bank_transfer', 'usdt_trc20', 'binance_pay', 'cash']),
+  type: z.enum(['zelle', 'pago_movil', 'pago_movil_qr', 'bank_transfer', 'usdt_trc20', 'binance_pay', 'cash']),
   currency: z.enum(['usd', 'ves']),
   instructions: z.string().max(1000).optional().nullable(),
   accountDetails: z.record(z.string(), z.unknown()).optional().nullable(),

@@ -18,6 +18,7 @@ import { relations } from 'drizzle-orm'
 export const paymentMethodTypeEnum = pgEnum('payment_method_type', [
   'zelle',
   'pago_movil',
+  'pago_movil_qr',
   'bank_transfer',
   'usdt_trc20',
   'binance_pay',
