@@ -140,9 +140,9 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
 
 ---
 
-## 9. Estado del proyecto (actualizado 2026-08-17)
+## 9. Estado del proyecto (actualizado 2026-08-19)
 
-**Estado: Fases 0–9 completas. En producción sobre Neon. DB migrada, tema oscuro admin corregido, 18 productos de ejemplo activos.**
+**Estado: Fases 0–9 completas + mejoras post-lanzamiento activas. Módulo de métodos de pago admin completo con Pago Móvil QR y upload Cloudinary.**
 
 | Fase | Estado |
 |---|---|
@@ -422,3 +422,16 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - `src/domains/admin/catalog/repository.ts` — 7 funciones reescritas sin transacciones: `createProduct`, `updateProduct`, `archiveProduct`, `restoreProduct`, `publishProduct`, `unpublishProduct`, `duplicateProduct`; todas usan `await db.*` secuenciales
   - `src/app/api/cron/expire-reservations/route.ts` — reescrito con `await` secuenciales por orden (eliminado `db.transaction()`); response ahora incluye `failed` array si algún pedido falla
   - **Resultado**: `await db.transaction` = 0 ocurrencias en el codebase; `FOR UPDATE` = 0 en queries SQL
+
+- **Módulo métodos de pago admin (2026-08-19):**
+  - **Tipos soportados**: `zelle`, `pago_movil`, `pago_movil_qr`, `bank_transfer`, `usdt_trc20`, `binance_pay`, `cash` — enum en `src/domains/payment-methods/schema.ts`
+  - **`drizzle/migrations/0005_pago_movil_qr_type.sql`** — `ALTER TYPE payment_method_type ADD VALUE IF NOT EXISTS 'pago_movil_qr'` — debe correrse manualmente en Neon console
+  - **`src/domains/admin/payment-methods/`** — dominio completo: `types.ts`, `repository.ts` (CRUD + mapeo a `AdminPaymentMethod`), `actions.ts` (server actions con Zod por tipo + permiso `settings:write`), `components/PaymentMethodsManager.tsx`
+  - **`src/app/admin/metodos-pago/`** — `layout.tsx` (requiere `settings:read`) + `page.tsx` (Server Component: `listPaymentMethods()` + `auth()`, pasa `canEdit`)
+  - **`src/app/api/admin/payment-methods/upload-qr-signature/route.ts`** — firma Cloudinary para carpeta `savaya/payment-qr`; requiere `settings:write`; devuelve `isDev: true` sin credenciales en dev (client usa `URL.createObjectURL`)
+  - **`BankSelector`** — dropdown con 22 bancos venezolanos preset + opción "Otro" que muestra input libre; `useEffect` resetea a 'select' cuando el padre limpia el valor (al cambiar tipo)
+  - **`PagoMovilQrForm`** — componente propio (extracción obligatoria por Rules of Hooks); `useState(false)` para `uploading`; dropzone con preview de imagen; `handleQrFile` usa try/catch y no re-lanza (evita silenciar errores en `startTransition`)
+  - **Validación Zod server-side por tipo**: `ZELLE_SCHEMA`, `PAGO_MOVIL_SCHEMA`, `PAGO_MOVIL_QR_SCHEMA`, `BANK_TRANSFER_SCHEMA`, `USDT_SCHEMA`, `BINANCE_SCHEMA` — `parseAccountDetails(type, raw)` en `actions.ts`
+  - **Pattern correcto para `startTransition` async**: siempre envolver el cuerpo en `try-catch` — React 19 silencia rechazos no capturados dentro de transiciones y el usuario no ve ningún feedback
+  - **Nav admin**: entrada "Métodos pago" con `WalletIcon` en `src/domains/admin/lib/nav.tsx`, permiso `settings:read`
+  - **Pendiente**: mostrar imagen QR al cliente en checkout cuando selecciona tipo `pago_movil_qr`
