@@ -1,5 +1,6 @@
 import { db, rawQuery } from '@/shared/lib/db'
-import { sql } from 'drizzle-orm'
+import { sql, inArray } from 'drizzle-orm'
+import { productVariants } from '@/domains/catalog/schema'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { auditLog } from '@/domains/audit-log/schema'
 import type { InventoryRow, MovementHistoryRow, ManualMovementPayload } from './types'
@@ -154,6 +155,59 @@ export async function getVariantDetail(variantId: string) {
     available: Number(r.quantity) - Number(r.reserved),
     isLow: Number(r.quantity) - Number(r.reserved) <= LOW_STOCK_THRESHOLD,
   }
+}
+
+export async function bulkSetInventoryBySkus(
+  items: { sku: string; quantity: number }[],
+  actor: ActorContext,
+): Promise<{ updated: number; failed: { sku: string; error: string }[] }> {
+  const skus = items.map((i) => i.sku)
+
+  const variantRows = await db
+    .select({ id: productVariants.id, sku: productVariants.sku })
+    .from(productVariants)
+    .where(inArray(productVariants.sku, skus))
+
+  const skuToVariantId = new Map(variantRows.map((r) => [r.sku, r.id]))
+
+  let updated = 0
+  const failed: { sku: string; error: string }[] = []
+
+  for (const item of items) {
+    const variantId = skuToVariantId.get(item.sku)
+    if (!variantId) {
+      failed.push({ sku: item.sku, error: 'SKU no encontrado' })
+      continue
+    }
+
+    // Get current stock to compute delta
+    const [current] = await rawQuery<{ quantity: number; reserved: number }>(
+      sql`SELECT COALESCE(quantity, 0) AS quantity, COALESCE(reserved, 0) AS reserved FROM inventory WHERE variant_id = ${variantId} LIMIT 1`,
+    )
+    const currentQty = current ? Number(current.quantity) : 0
+    const reserved = current ? Number(current.reserved) : 0
+    const delta = item.quantity - currentQty
+
+    if (item.quantity < reserved) {
+      failed.push({
+        sku: item.sku,
+        error: `No se puede reducir por debajo de reservas activas (${reserved} uds.)`,
+      })
+      continue
+    }
+
+    try {
+      await applyManualMovement(
+        { variantId, type: 'correction', delta, reason: 'Importación masiva CSV' },
+        actor,
+      )
+      updated++
+    } catch (err) {
+      failed.push({ sku: item.sku, error: err instanceof Error ? err.message : 'Error' })
+    }
+  }
+
+  return { updated, failed }
 }
 
 export async function applyManualMovement(
