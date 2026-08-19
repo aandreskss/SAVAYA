@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getProductBySlug, getRelatedProducts } from '@/domains/catalog/repository'
-import { getCurrentRate } from '@/domains/exchange-rates/service'
+import { getDisplayRate } from '@/domains/exchange-rates/service'
 import { ProductClientShell } from '@/domains/catalog/components/ProductClientShell'
 import { RecentlyViewed } from '@/domains/catalog/components/RecentlyViewed'
 import { RecentlyViewedTracker } from '@/domains/catalog/components/RecentlyViewedTracker'
@@ -53,7 +53,7 @@ export default async function ProductPage({ params }: Props) {
   // Fetch product, exchange rate, and wishlist IDs in parallel
   const [product, exchangeRate, wishlistVariantIds] = await Promise.all([
     getProductBySlug(slug),
-    getCurrentRate(),
+    getDisplayRate(),
     getWishlistIds(),
   ])
 

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { auth } from '@/domains/auth/auth'
+import { refreshRate, refreshEurRate } from '@/domains/exchange-rates/service'
 import { insertManualRate, setActiveDisplayRate } from './repository'
 import type { AdminExchangeRate, ActionResult } from './types'
 
@@ -49,6 +50,36 @@ export async function setManualRateAction(
     return { success: true, data: rate }
   } catch {
     return { success: false, error: 'Error al guardar la tasa' }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Refresh rates from BCV API — available to any authenticated admin
+// ---------------------------------------------------------------------------
+
+type RefreshedRates = {
+  usd: { rateVes: number; source: string; fetchedAt: Date }
+  eur: { rateVes: number; source: string; fetchedAt: Date }
+}
+
+export async function refreshRatesAction(): Promise<ActionResult<RefreshedRates>> {
+  const session = await auth()
+  await headers()
+
+  if (!session?.user?.id) return { success: false, error: 'No autenticado' }
+
+  try {
+    const [usd, eur] = await Promise.all([refreshRate(), refreshEurRate()])
+    revalidatePath(REVALIDATE)
+    return {
+      success: true,
+      data: {
+        usd: { rateVes: usd.rateVes, source: usd.source, fetchedAt: usd.fetchedAt },
+        eur: { rateVes: eur.rateVes, source: eur.source, fetchedAt: eur.fetchedAt },
+      },
+    }
+  } catch {
+    return { success: false, error: 'Error al consultar la API de BCV' }
   }
 }
 

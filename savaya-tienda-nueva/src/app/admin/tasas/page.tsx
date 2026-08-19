@@ -11,10 +11,12 @@ async function TasasContent() {
   ])
   const permissions = (session?.user?.permissions ?? []) as string[]
   const canOverride = permissions.includes('exchange_rates:override')
+  const canRefresh = !!session?.user?.id
   return (
     <ExchangeRatesManager
       history={history}
       canOverride={canOverride}
+      canRefresh={canRefresh}
       activeDisplayRate={activeDisplayRate}
     />
   )

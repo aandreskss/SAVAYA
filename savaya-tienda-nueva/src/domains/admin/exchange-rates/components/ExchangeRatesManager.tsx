@@ -3,9 +3,35 @@
 import { useState, useTransition } from 'react'
 import { Button, Badge } from '@/shared/ui'
 import { toast } from '@/shared/ui/Toast'
-import { setManualRateAction, setActiveDisplayRateAction } from '../actions'
+import { setManualRateAction, setActiveDisplayRateAction, refreshRatesAction } from '../actions'
 import type { AdminExchangeRate } from '../types'
 import type { BadgeVariant } from '@/shared/ui/Badge'
+
+// ---------------------------------------------------------------------------
+// Icons
+// ---------------------------------------------------------------------------
+
+function RefreshIcon({ spinning }: { spinning?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width="15"
+      height="15"
+      viewBox="0 0 15 15"
+      fill="none"
+      className={spinning ? 'animate-spin' : undefined}
+    >
+      <path
+        d="M1.5 7.5a6 6 0 0 1 10.5-4M13.5 7.5a6 6 0 0 1-10.5 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path d="M11.5 3l.5 2.5-2.5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 12l-.5-2.5 2.5-.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -188,10 +214,11 @@ function RateCard({
 type Props = {
   history: AdminExchangeRate[]
   canOverride: boolean
+  canRefresh: boolean
   activeDisplayRate: 'usd' | 'eur'
 }
 
-export function ExchangeRatesManager({ history, canOverride, activeDisplayRate }: Props) {
+export function ExchangeRatesManager({ history, canOverride, canRefresh, activeDisplayRate }: Props) {
   const usdHistory = history.filter((r) => r.currency === 'usd')
   const eurHistory = history.filter((r) => r.currency === 'eur')
   const [usdRates, setUsdRates] = useState(usdHistory)
@@ -200,6 +227,7 @@ export function ExchangeRatesManager({ history, canOverride, activeDisplayRate }
   const [overrideOpen, setOverrideOpen] = useState<'usd' | 'eur' | null>(null)
   const [isOverridePending, startOverrideTransition] = useTransition()
   const [isDisplayPending, startDisplayTransition] = useTransition()
+  const [isRefreshPending, startRefreshTransition] = useTransition()
 
   const usdCurrent = usdRates[0] ?? null
   const eurCurrent = eurRates[0] ?? null
@@ -232,6 +260,31 @@ export function ExchangeRatesManager({ history, canOverride, activeDisplayRate }
     })
   }
 
+  function handleRefresh() {
+    startRefreshTransition(async () => {
+      const res = await refreshRatesAction()
+      if (res.success) {
+        const now = new Date()
+        const makeEntry = (currency: 'usd' | 'eur', d: typeof res.data.usd): AdminExchangeRate => ({
+          id: crypto.randomUUID(),
+          currency,
+          rateVes: d.rateVes,
+          source: d.source,
+          isManualOverride: false,
+          overrideReason: null,
+          overrideByName: null,
+          fetchedAt: new Date(d.fetchedAt),
+          createdAt: now,
+        })
+        setUsdRates((prev) => [makeEntry('usd', res.data.usd), ...prev])
+        setEurRates((prev) => [makeEntry('eur', res.data.eur), ...prev])
+        toast.success(`Tasas actualizadas — USD: ${res.data.usd.rateVes.toFixed(2)} · EUR: ${res.data.eur.rateVes.toFixed(2)}`)
+      } else {
+        toast.error(res.error)
+      }
+    })
+  }
+
   const combinedHistory = [...usdRates, ...eurRates].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
@@ -239,9 +292,22 @@ export function ExchangeRatesManager({ history, canOverride, activeDisplayRate }
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-display text-3xl uppercase tracking-wide">Tasas de cambio</h1>
-        <p className="text-sm text-text-secondary mt-1">Tasas BCV oficiales · USD y EUR → Bs.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display text-3xl uppercase tracking-wide">Tasas de cambio</h1>
+          <p className="text-sm text-text-secondary mt-1">Tasas BCV oficiales · USD y EUR → Bs.</p>
+        </div>
+        {canRefresh && (
+          <button
+            type="button"
+            disabled={isRefreshPending}
+            onClick={handleRefresh}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:border-accent-gold/50 hover:text-accent-gold text-text-secondary text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshIcon spinning={isRefreshPending} />
+            {isRefreshPending ? 'Consultando BCV…' : 'Actualizar desde BCV'}
+          </button>
+        )}
       </div>
 
       {/* Active display rate selector */}

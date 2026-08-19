@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { getCheckoutInitialData } from '@/domains/checkout/repository'
 import { getCartSummary } from '@/domains/cart/repository'
 import { getCartId } from '@/domains/cart/service'
-import { getCurrentRate } from '@/domains/exchange-rates/service'
+import { getDisplayRate } from '@/domains/exchange-rates/service'
 import { CheckoutClient } from '@/domains/checkout/components/CheckoutClient'
 
 export const metadata: Metadata = {
@@ -15,7 +15,7 @@ export default async function CheckoutPage() {
   const cartId = await getCartId()
   const [cart, rateData] = await Promise.all([
     getCartSummary(cartId),
-    getCurrentRate(),
+    getDisplayRate(),
   ])
 
   // Guard: empty or unavailable-only cart
