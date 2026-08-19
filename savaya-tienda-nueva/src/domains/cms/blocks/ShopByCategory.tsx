@@ -98,23 +98,36 @@ function CategoryCard({
           alt={cat.name}
           fill
           sizes={sizes}
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
         />
       ) : (
         <div className="absolute inset-0 bg-surface-2" />
       )}
 
-      {/* Gradient overlay */}
+      {/* Base gradient */}
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.52) 0%, transparent 55%)' }}
+        style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.05) 60%)' }}
+      />
+      {/* Hover darkening overlay */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
       />
 
-      {/* Label */}
-      <span className="absolute left-5 bottom-4 font-display font-black text-lg text-white uppercase z-10 tracking-wide">
-        {cat.name}
-      </span>
+      {/* Label + reveal CTA */}
+      <div className="absolute left-5 bottom-0 z-10 pb-5">
+        <span className="block font-display font-black text-xl text-white uppercase tracking-wide drop-shadow-sm">
+          {cat.name}
+        </span>
+        <div className="flex items-center gap-2 mt-1.5 translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 ease-out delay-75">
+          <span className="block w-5 h-px bg-accent-gold shrink-0" aria-hidden="true" />
+          <span className="font-sans text-[11px] font-bold text-accent-gold uppercase tracking-[0.14em]">
+            Explorar
+          </span>
+        </div>
+      </div>
     </Link>
   )
 }

@@ -18,11 +18,16 @@ export function NavScrollWrapper({ children }: { children: React.ReactNode }) {
       className={cn(
         'sticky top-0 z-40 transition-all duration-300',
         scrolled
-          ? 'bg-surface/98 backdrop-blur-xl border-b border-border shadow-[0_2px_20px_rgba(0,0,0,0.08)]'
-          : 'bg-surface/80 backdrop-blur-sm border-b border-transparent',
+          ? 'bg-surface/98 backdrop-blur-xl border-b border-border shadow-[0_4px_32px_rgba(0,0,0,0.14)]'
+          : 'bg-surface/85 backdrop-blur-md border-b border-border/20',
       )}
     >
       {children}
+      {/* Thin gold gradient accent — always visible */}
+      <div
+        aria-hidden="true"
+        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent-gold/30 to-transparent pointer-events-none"
+      />
     </header>
   )
 }

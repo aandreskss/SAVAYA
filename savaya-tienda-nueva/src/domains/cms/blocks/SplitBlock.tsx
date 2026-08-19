@@ -31,23 +31,26 @@ function SplitPanel({
   return (
     <Link
       href={href}
-      className="
-        group relative flex-1 min-h-[320px] md:min-h-[440px] overflow-hidden rounded-[32px]
-        focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2
-      "
+      className="group relative flex-1 min-h-[320px] md:min-h-[440px] overflow-hidden rounded-[32px] focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2"
     >
       <Image
         src={imageUrl}
         alt={label}
         fill
         sizes="(max-width: 768px) calc(100vw - 32px), calc(50vw - 48px)"
-        className="object-cover transition-transform duration-500 group-hover:scale-105"
+        className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
       />
 
+      {/* Base gradient */}
       <div
         aria-hidden="true"
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.58) 0%, transparent 52%)' }}
+        style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.08) 60%)' }}
+      />
+      {/* Hover darkening */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
       />
 
       <CornerMarks />
@@ -64,12 +67,15 @@ function SplitPanel({
             {eyebrow}
           </p>
         )}
-        <h3 className="font-display font-black text-[32px] text-white uppercase leading-none mb-2.5">
+        <h3 className="font-display font-black text-[32px] text-white uppercase leading-none mb-3 transition-transform duration-300 group-hover:-translate-y-1">
           {label}
         </h3>
-        <span className="font-sans text-xs font-semibold text-white/80 underline underline-offset-4">
-          Descubrir colección
-        </span>
+        <div className="flex items-center gap-2 translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 ease-out delay-75">
+          <span className="block w-5 h-px bg-accent-gold shrink-0" aria-hidden="true" />
+          <span className="font-sans text-[11px] font-bold text-accent-gold uppercase tracking-[0.14em]">
+            Descubrir
+          </span>
+        </div>
       </div>
     </Link>
   )

@@ -15,7 +15,7 @@ export async function Navbar() {
     <NavScrollWrapper>
       <nav
         aria-label="Navegación principal"
-        className="max-w-screen-xl mx-auto px-6 md:px-10 h-[68px] flex items-center gap-4"
+        className="max-w-screen-xl mx-auto px-6 md:px-10 h-[80px] flex items-center gap-4"
       >
         {/* Hamburger — mobile only */}
         <NavMobileToggle />

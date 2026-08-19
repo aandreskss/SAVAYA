@@ -44,7 +44,7 @@ export function NavDesktop({ categories }: Props) {
   )
 
   return (
-    <nav aria-label="Menú principal" className="hidden md:flex items-center gap-0">
+    <nav aria-label="Menú principal" className="hidden md:flex items-center gap-1">
       {categories.map((cat) => {
         const hasSubmenu = Boolean(cat.subcategories?.length)
         const isOpen = openCategory === cat.label
@@ -53,23 +53,22 @@ export function NavDesktop({ categories }: Props) {
         const triggerId = `${uid}-trigger-${cat.label.toLowerCase()}`
 
         const baseLinkClass = cn(
-          'relative group px-3 py-2 rounded-md',
-          'font-sans text-[13px] font-semibold uppercase tracking-[0.04em]',
+          'relative group px-4 py-2.5',
+          'font-display text-[15px] font-black uppercase tracking-[0.08em]',
           'transition-colors duration-150',
-          'hover:text-accent-gold hover:bg-surface-2/60',
-          'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2',
-          isActive ? 'text-text-primary' : 'text-text-secondary',
+          'hover:text-accent-gold',
+          'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded-sm',
+          isActive ? 'text-text-primary' : 'text-text-secondary/80',
         )
 
         if (!hasSubmenu) {
           return (
             <Link key={cat.label} href={cat.href} className={baseLinkClass}>
               {cat.label}
-              {/* Animated underline */}
               <span
                 aria-hidden="true"
                 className={cn(
-                  'absolute bottom-0.5 left-3 right-3 h-[1.5px] bg-accent-gold origin-left',
+                  'absolute bottom-0 left-4 right-4 h-[2px] bg-accent-gold origin-left',
                   'transition-transform duration-200 ease-out',
                   isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
                 )}
@@ -94,22 +93,21 @@ export function NavDesktop({ categories }: Props) {
               onFocus={cancelClose}
               onBlur={closeMenu}
               onKeyDown={(e) => handleKeyDown(e, cat.label)}
-              className={cn(baseLinkClass, 'flex items-center gap-1')}
+              className={cn(baseLinkClass, 'flex items-center gap-1.5')}
             >
               {cat.label}
               <ChevronIcon open={isOpen} />
-              {/* Animated underline */}
               <span
                 aria-hidden="true"
                 className={cn(
-                  'absolute bottom-0.5 left-3 right-3 h-[1.5px] bg-accent-gold origin-left',
+                  'absolute bottom-0 left-4 right-4 h-[2px] bg-accent-gold origin-left',
                   'transition-transform duration-200 ease-out',
                   isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
                 )}
               />
             </button>
 
-            {/* Mega menu panel */}
+            {/* Dropdown panel */}
             <div
               id={panelId}
               role="region"
@@ -117,22 +115,21 @@ export function NavDesktop({ categories }: Props) {
               onMouseEnter={cancelClose}
               onMouseLeave={closeMenu}
               className={cn(
-                'absolute top-full left-1/2 -translate-x-1/2 mt-2',
-                'w-64 bg-surface border border-border rounded-[20px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-50 overflow-hidden',
+                'absolute top-full left-1/2 -translate-x-1/2 mt-3',
+                'w-60 bg-surface border border-border/80 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.18)] z-50 overflow-hidden',
                 'transition-all duration-200 origin-top',
                 isOpen
-                  ? 'opacity-100 scale-y-100 translate-y-0 pointer-events-auto'
-                  : 'opacity-0 scale-y-95 -translate-y-1 pointer-events-none',
+                  ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
+                  : 'opacity-0 scale-95 -translate-y-2 pointer-events-none',
               )}
             >
-              {/* Gold accent top line */}
               <div
                 aria-hidden="true"
                 className="h-[2px] bg-gradient-to-r from-accent-gold/0 via-accent-gold to-accent-gold/0"
               />
-              <div className="p-4">
-                <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3 px-1">
-                  Comprar por categoría
+              <div className="p-3">
+                <p className="font-display text-[10px] font-bold text-text-secondary uppercase tracking-[0.18em] mb-2 px-2 pt-1">
+                  {cat.label}
                 </p>
                 <ul className="flex flex-col gap-0.5">
                   {cat.subcategories?.map((sub) => (
@@ -143,15 +140,15 @@ export function NavDesktop({ categories }: Props) {
                         onClick={() => setOpenCategory(null)}
                         className={cn(
                           'group/item flex items-center gap-2.5 px-3 py-2 rounded-xl',
-                          'font-sans text-sm text-text-primary',
-                          'hover:text-accent-gold hover:bg-surface-2',
+                          'font-sans text-sm font-medium text-text-primary',
+                          'hover:text-accent-gold hover:bg-accent-gold/6',
                           'transition-all duration-150',
                           'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-[-2px]',
                         )}
                       >
                         <span
                           aria-hidden="true"
-                          className="w-1.5 h-1.5 rounded-full bg-border group-hover/item:bg-accent-gold transition-colors duration-150 shrink-0"
+                          className="w-1 h-1 rounded-full bg-border/80 group-hover/item:bg-accent-gold transition-colors duration-150 shrink-0"
                         />
                         {sub.name}
                       </Link>

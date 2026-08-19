@@ -147,7 +147,7 @@ export function BenefitsBlock({ title, benefits }: Props) {
       )}
 
       <div
-        className="grid grid-cols-2 gap-x-4 gap-y-6"
+        className="grid grid-cols-2 gap-3 md:gap-4"
         style={{
           gridTemplateColumns: `repeat(${Math.min(colCount, 4)}, minmax(0, 1fr))`,
         }}
@@ -155,9 +155,9 @@ export function BenefitsBlock({ title, benefits }: Props) {
         {benefits.map((benefit, i) => (
           <div
             key={`${benefit.icon}-${i}`}
-            className="flex flex-col items-center text-center gap-2.5"
+            className="group flex flex-col items-center text-center gap-3 rounded-2xl border border-border/50 bg-surface-2/30 p-5 transition-all duration-200 hover:border-accent-gold/30 hover:bg-surface-2/70"
           >
-            <div className="w-11 h-11 rounded-full bg-surface-2 flex items-center justify-center text-accent-gold shrink-0">
+            <div className="w-12 h-12 rounded-full bg-surface border border-border/60 flex items-center justify-center text-accent-gold shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:border-accent-gold/40 group-hover:bg-accent-gold/5">
               <BenefitIconEl icon={benefit.icon} />
             </div>
             <p className="font-sans text-[13px] font-bold text-text-primary leading-snug">{benefit.title}</p>
