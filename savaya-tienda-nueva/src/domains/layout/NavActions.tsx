@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useNavStore } from './nav-store'
 import { useCartStore } from '@/domains/cart/cart-store'
+import { ThemeToggle } from './ThemeToggle'
 import { cn } from '@/shared/lib/utils'
 
 type Props = {
@@ -19,6 +20,9 @@ export function NavActions({ isLoggedIn, cartCount: cartCountServer }: Props) {
 
   return (
     <div className="flex items-center gap-1">
+      {/* Tema claro/oscuro */}
+      <ThemeToggle className="h-10 w-10" />
+
       {/* Búsqueda */}
       <ActionButton aria-label="Buscar productos" onClick={toggleSearch}>
         <SearchIcon />

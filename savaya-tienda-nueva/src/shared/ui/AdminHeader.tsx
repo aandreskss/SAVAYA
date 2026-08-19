@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ThemeToggle } from '@/domains/layout/ThemeToggle'
 import { cn } from '@/shared/lib/utils'
 
 export type AdminHeaderProps = {
@@ -88,7 +89,9 @@ export function AdminHeader({
         </span>
       </div>
 
-      {/* Right: avatar + dropdown */}
+      {/* Right: theme toggle + avatar + dropdown */}
+      <div className="flex items-center gap-1">
+      <ThemeToggle className="w-9 h-9 rounded-lg" />
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
@@ -159,6 +162,7 @@ export function AdminHeader({
             </button>
           </div>
         )}
+      </div>
       </div>
     </header>
   )
