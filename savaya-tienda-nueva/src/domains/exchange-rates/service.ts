@@ -57,30 +57,44 @@ async function fetchBcvUsdRate(): Promise<{ rateVes: number; fetchedAt: Date } |
 
 // ---------------------------------------------------------------------------
 // EUR BCV fetch
+// Primary: dolarapi.com list endpoint (returns all currencies as array)
+// Fallback: pydolarve.org EUR endpoint
 // ---------------------------------------------------------------------------
 
 async function fetchBcvEurRate(): Promise<{ rateVes: number; fetchedAt: Date } | null> {
+  // Primary: get all rates from dolarapi.com and find the Euro entry
   try {
-    const res = await fetch('https://pydolarve.org/api/v1/euro?page=bcv', {
+    const res = await fetch('https://ve.dolarapi.com/v1/dolares', {
       next: { revalidate: 0 },
       signal: AbortSignal.timeout(8000),
     })
-    if (!res.ok) throw new Error(`pydolarve-eur HTTP ${res.status}`)
-    const data = (await res.json()) as { price?: number; last_update?: string }
-    if (!data.price || data.price <= 0) throw new Error('Invalid EUR price from pydolarve')
-    return { rateVes: data.price, fetchedAt: data.last_update ? new Date(data.last_update) : new Date() }
+    if (!res.ok) throw new Error(`dolarapi-list HTTP ${res.status}`)
+    const list = (await res.json()) as Array<{
+      nombre?: string
+      promedio?: number
+      fechaActualizacion?: string
+    }>
+    const eurItem = list.find((item) =>
+      item.nombre?.toLowerCase().includes('euro'),
+    )
+    if (!eurItem?.promedio || eurItem.promedio <= 0) throw new Error('EUR not found in dolarapi list')
+    return {
+      rateVes: eurItem.promedio,
+      fetchedAt: eurItem.fechaActualizacion ? new Date(eurItem.fechaActualizacion) : new Date(),
+    }
   } catch (primaryErr) {
+    // Fallback: pydolarve.org EUR endpoint
     try {
-      const res = await fetch('https://ve.dolarapi.com/v1/dolares/euro', {
+      const res = await fetch('https://pydolarve.org/api/v1/euro?page=bcv', {
         next: { revalidate: 0 },
         signal: AbortSignal.timeout(8000),
       })
-      if (!res.ok) throw new Error(`dolarapi-eur HTTP ${res.status}`)
-      const data = (await res.json()) as { promedio?: number; fechaActualizacion?: string }
-      if (!data.promedio || data.promedio <= 0) throw new Error('Invalid EUR promedio from dolarapi')
-      return { rateVes: data.promedio, fetchedAt: data.fechaActualizacion ? new Date(data.fechaActualizacion) : new Date() }
+      if (!res.ok) throw new Error(`pydolarve-eur HTTP ${res.status}`)
+      const data = (await res.json()) as { price?: number; last_update?: string }
+      if (!data.price || data.price <= 0) throw new Error('Invalid EUR price from pydolarve')
+      return { rateVes: data.price, fetchedAt: data.last_update ? new Date(data.last_update) : new Date() }
     } catch {
-      console.error('[exchange-rates/eur] both BCV EUR sources failed:', primaryErr)
+      console.error('[exchange-rates/eur] both EUR sources failed:', primaryErr)
       return null
     }
   }
