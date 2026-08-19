@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { Button } from '@/shared/ui'
 import { toast } from '@/shared/ui/Toast'
 import { Modal } from '@/shared/ui/Modal'
@@ -34,23 +34,32 @@ const TYPE_COLORS: Record<PaymentMethodType, string> = {
   cash: 'bg-green-500/20 text-green-300',
 }
 
-const BANK_OPTIONS = [
+const BANK_OPTIONS_PRESET = [
+  'Banesco',
   'Banco de Venezuela (BDV)',
   'Banco Provincial (BBVA)',
-  'Banesco',
   'Mercantil',
-  'Banco Exterior',
-  'Bicentenario del Pueblo',
+  'Bancamiga',
+  'BOD (Banco Occidental de Descuento)',
   'Bancaribe',
-  'Bancrecer',
+  'BNC (Banco Nacional de Crédito)',
+  'Banco Exterior',
   'Banplus',
-  'BNC',
-  'BOD',
-  'Sofitasa',
   'Venezolano de Crédito',
   'Fondo Común',
-  'Otro',
+  'Sofitasa',
+  'Bancrecer',
+  'Activo',
+  'Banfanb',
+  'Bicentenario del Pueblo',
+  'Del Tesoro',
+  'Mi Banco',
+  'Plaza',
+  '100% Banco',
+  'Bangente',
 ]
+
+const BANK_OPTIONS_PRESET_SET = new Set(BANK_OPTIONS_PRESET)
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -85,6 +94,65 @@ function accountSummary(method: AdminPaymentMethod): string {
     case 'binance_pay': return d.binanceId ?? '—'
     case 'cash': return 'Solo efectivo'
   }
+}
+
+// ---------------------------------------------------------------------------
+// BankSelector — dropdown with "Otro" free-text fallback
+// ---------------------------------------------------------------------------
+
+function BankSelector({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  const isPreset = BANK_OPTIONS_PRESET_SET.has(value)
+  const [mode, setMode] = useState<'select' | 'other'>(() =>
+    value && !isPreset ? 'other' : 'select',
+  )
+
+  // Reset to 'select' when the parent clears the value (type change)
+  useEffect(() => {
+    if (!value) setMode('select')
+  }, [value])
+
+  const selectValue = mode === 'other' ? '__otro__' : (value || '')
+
+  function handleSelect(selected: string) {
+    if (selected === '__otro__') {
+      setMode('other')
+      onChange('')
+    } else {
+      setMode('select')
+      onChange(selected)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <select
+        className={selectCls}
+        value={selectValue}
+        onChange={(e) => handleSelect(e.target.value)}
+      >
+        <option value="">Seleccionar banco</option>
+        {BANK_OPTIONS_PRESET.map((b) => (
+          <option key={b} value={b}>{b}</option>
+        ))}
+        <option value="__otro__">Otro</option>
+      </select>
+      {mode === 'other' && (
+        <input
+          autoFocus
+          className={inputCls}
+          value={value}
+          placeholder="Nombre del banco"
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -132,14 +200,10 @@ function AccountDetailsForm({
         {field('cedula', 'Cédula', 'V-12345678')}
         <div>
           <label className={labelCls}>Banco<span className="text-red-400 ml-0.5">*</span></label>
-          <select
-            className={selectCls}
+          <BankSelector
             value={value.bank ?? ''}
-            onChange={(e) => onChange({ ...value, bank: e.target.value })}
-          >
-            <option value="">Seleccionar banco</option>
-            {BANK_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
+            onChange={(v) => onChange({ ...value, bank: v })}
+          />
         </div>
         {field('accountHolder', 'Titular', 'Juan Pérez')}
       </div>
@@ -151,14 +215,10 @@ function AccountDetailsForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={labelCls}>Banco<span className="text-red-400 ml-0.5">*</span></label>
-          <select
-            className={selectCls}
+          <BankSelector
             value={value.bank ?? ''}
-            onChange={(e) => onChange({ ...value, bank: e.target.value })}
-          >
-            <option value="">Seleccionar banco</option>
-            {BANK_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
+            onChange={(v) => onChange({ ...value, bank: v })}
+          />
         </div>
         {field('accountNumber', 'Número de cuenta', '01020000001234567890')}
         {field('accountHolder', 'Titular', 'Juan Pérez')}
