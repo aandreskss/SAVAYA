@@ -62,27 +62,50 @@ async function fetchBcvUsdRate(): Promise<{ rateVes: number; fetchedAt: Date } |
 // ---------------------------------------------------------------------------
 
 async function fetchBcvEurRate(): Promise<{ rateVes: number; fetchedAt: Date } | null> {
-  // Primary: get all rates from dolarapi.com and find the Euro entry
+  // Helper: extract a positive number from multiple possible field names
+  function extractPrice(obj: Record<string, unknown>): number {
+    const candidates = ['promedio', 'precio', 'price', 'tasa', 'valor', 'rate']
+    for (const key of candidates) {
+      const v = Number(obj[key])
+      if (v > 0) return v
+    }
+    return 0
+  }
+  function extractDate(obj: Record<string, unknown>): Date {
+    const candidates = ['fechaActualizacion', 'last_update', 'lastUpdate', 'fecha', 'updatedAt']
+    for (const key of candidates) {
+      const s = obj[key]
+      if (typeof s === 'string' && s) return new Date(s)
+    }
+    return new Date()
+  }
+
+  // Primary: dolarapi.com — full list, find EUR item by nombre
   try {
     const res = await fetch('https://ve.dolarapi.com/v1/dolares', {
       next: { revalidate: 0 },
       signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) throw new Error(`dolarapi-list HTTP ${res.status}`)
-    const list = (await res.json()) as Array<{
-      nombre?: string
-      promedio?: number
-      fechaActualizacion?: string
-    }>
-    const eurItem = list.find((item) =>
-      item.nombre?.toLowerCase().includes('euro'),
-    )
-    if (!eurItem?.promedio || eurItem.promedio <= 0) throw new Error('EUR not found in dolarapi list')
-    return {
-      rateVes: eurItem.promedio,
-      fetchedAt: eurItem.fechaActualizacion ? new Date(eurItem.fechaActualizacion) : new Date(),
-    }
+    const raw: unknown = await res.json()
+
+    // Response may be array or object; normalize to array of entries
+    const entries: Record<string, unknown>[] = Array.isArray(raw)
+      ? (raw as Record<string, unknown>[])
+      : Object.values(raw as object).filter((v) => typeof v === 'object' && v !== null) as Record<string, unknown>[]
+
+    const eurItem = entries.find((item) => {
+      const name = String(item.nombre ?? item.name ?? item.moneda ?? '').toLowerCase()
+      return name.includes('euro') || name === 'eur'
+    })
+
+    const price = eurItem ? extractPrice(eurItem) : 0
+    if (price <= 0) throw new Error(`EUR item not found or price=0. Keys: ${entries.map(e => e.nombre).join(', ')}`)
+
+    return { rateVes: price, fetchedAt: extractDate(eurItem!) }
   } catch (primaryErr) {
+    console.error('[exchange-rates/eur] dolarapi-list failed:', String(primaryErr))
+
     // Fallback: pydolarve.org EUR endpoint
     try {
       const res = await fetch('https://pydolarve.org/api/v1/euro?page=bcv', {
@@ -90,11 +113,13 @@ async function fetchBcvEurRate(): Promise<{ rateVes: number; fetchedAt: Date } |
         signal: AbortSignal.timeout(8000),
       })
       if (!res.ok) throw new Error(`pydolarve-eur HTTP ${res.status}`)
-      const data = (await res.json()) as { price?: number; last_update?: string }
-      if (!data.price || data.price <= 0) throw new Error('Invalid EUR price from pydolarve')
-      return { rateVes: data.price, fetchedAt: data.last_update ? new Date(data.last_update) : new Date() }
-    } catch {
-      console.error('[exchange-rates/eur] both EUR sources failed:', primaryErr)
+      const raw: unknown = await res.json()
+      const data = raw as Record<string, unknown>
+      const price = extractPrice(data)
+      if (price <= 0) throw new Error(`pydolarve EUR price=0. Keys: ${Object.keys(data).join(', ')}`)
+      return { rateVes: price, fetchedAt: extractDate(data) }
+    } catch (fallbackErr) {
+      console.error('[exchange-rates/eur] pydolarve fallback also failed:', String(fallbackErr))
       return null
     }
   }
