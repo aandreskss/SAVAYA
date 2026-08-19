@@ -42,7 +42,7 @@ export async function approvePaymentAction(
 ): Promise<ActionResult> {
   const actor = await getActorContext()
   if (!actor) return { success: false, error: 'No autenticado' }
-  if (!actor.permissions.includes('payments:write')) {
+  if (!actor.permissions.includes('payments:approve')) {
     return { success: false, error: 'Sin permiso para aprobar pagos' }
   }
 
@@ -55,7 +55,9 @@ export async function approvePaymentAction(
     await approvePayment(parsed.data.proofId, parsed.data.orderId, actor)
     revalidatePath('/admin/pagos')
     revalidatePath('/admin/pedidos')
-    revalidatePath(`/admin/pedidos/${parsed.data.orderId}`)
+    if (parsed.data.orderNumber) {
+      revalidatePath(`/admin/pedidos/${parsed.data.orderNumber}`)
+    }
     return { success: true, data: undefined }
   } catch (err) {
     const message =
@@ -71,7 +73,7 @@ export async function rejectPaymentAction(
 ): Promise<ActionResult> {
   const actor = await getActorContext()
   if (!actor) return { success: false, error: 'No autenticado' }
-  if (!actor.permissions.includes('payments:write')) {
+  if (!actor.permissions.includes('payments:reject')) {
     return { success: false, error: 'Sin permiso para rechazar pagos' }
   }
 
@@ -84,7 +86,9 @@ export async function rejectPaymentAction(
     await rejectPayment(parsed.data.proofId, parsed.data.orderId, parsed.data.reason, actor)
     revalidatePath('/admin/pagos')
     revalidatePath('/admin/pedidos')
-    revalidatePath(`/admin/pedidos/${parsed.data.orderId}`)
+    if (parsed.data.orderNumber) {
+      revalidatePath(`/admin/pedidos/${parsed.data.orderNumber}`)
+    }
     return { success: true, data: undefined }
   } catch (err) {
     const message =
@@ -117,6 +121,9 @@ export async function transitionOrderStatusAction(
       parsed.data.reason,
     )
     revalidatePath('/admin/pedidos')
+    if (parsed.data.orderNumber) {
+      revalidatePath(`/admin/pedidos/${parsed.data.orderNumber}`)
+    }
     return { success: true, data: undefined }
   } catch (err) {
     const message =

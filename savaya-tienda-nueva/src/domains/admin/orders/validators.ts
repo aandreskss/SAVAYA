@@ -3,12 +3,14 @@ import { z } from 'zod'
 export const ApprovePaymentSchema = z.object({
   proofId: z.string().uuid('ID de comprobante inválido'),
   orderId: z.string().uuid('ID de pedido inválido'),
+  orderNumber: z.string().optional(),
 })
 
 export const RejectPaymentSchema = z.object({
   proofId: z.string().uuid('ID de comprobante inválido'),
   orderId: z.string().uuid('ID de pedido inválido'),
   reason: z.string().min(5, 'El motivo debe tener al menos 5 caracteres').max(500, 'Máximo 500 caracteres'),
+  orderNumber: z.string().optional(),
 })
 
 export const TransitionOrderSchema = z.object({
@@ -25,6 +27,7 @@ export const TransitionOrderSchema = z.object({
     'refunded',
   ]),
   reason: z.string().max(500).optional(),
+  orderNumber: z.string().optional(),
 })
 
 export type ApprovePaymentPayload = z.infer<typeof ApprovePaymentSchema>

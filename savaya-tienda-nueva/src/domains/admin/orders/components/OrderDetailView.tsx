@@ -7,7 +7,12 @@ import { Button } from '@/shared/ui/Button'
 import { Modal } from '@/shared/ui/Modal'
 import { OrderStatusBadge } from './OrderStatusBadge'
 import { PaymentProofViewer } from './PaymentProofViewer'
-import { transitionOrderStatusAction, deleteOrderAction } from '../actions'
+import {
+  transitionOrderStatusAction,
+  deleteOrderAction,
+  approvePaymentAction,
+  rejectPaymentAction,
+} from '../actions'
 import { toast } from '@/shared/ui/toast-store'
 import { VALID_TRANSITIONS } from '@/domains/orders/state-machine'
 import type { AdminOrderDetail } from '../types'
@@ -35,12 +40,34 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
   const availableTransitions = VALID_TRANSITIONS[order.status] ?? []
 
   function handleTransition(toStatus: OrderStatus) {
-    if (toStatus === 'cancelled' || toStatus === 'refunded') {
+    // Destructive transitions always require confirmation + reason
+    if (toStatus === 'cancelled' || toStatus === 'refunded' || toStatus === 'payment_rejected') {
       setConfirmTransition(toStatus)
       return
     }
+    // Payment approval: must go through approvePaymentAction to also update proof status
+    if (toStatus === 'paid' && order.status === 'payment_under_review' && order.proof) {
+      startTransition(async () => {
+        const result = await approvePaymentAction({
+          proofId: order.proof!.id,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+        })
+        if (result.success) {
+          toast.success('Pago aprobado')
+        } else {
+          toast.error(result.error)
+        }
+      })
+      return
+    }
+    // Regular status transitions
     startTransition(async () => {
-      const result = await transitionOrderStatusAction({ orderId: order.id, toStatus })
+      const result = await transitionOrderStatusAction({
+        orderId: order.id,
+        toStatus,
+        orderNumber: order.orderNumber,
+      })
       if (result.success) {
         toast.success(`Estado actualizado a: ${STATUS_LABELS[toStatus]}`)
       } else {
@@ -54,15 +81,31 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
     const ts = confirmTransition
     setConfirmTransition(null)
     startTransition(async () => {
-      const result = await transitionOrderStatusAction({
-        orderId: order.id,
-        toStatus: ts,
-        reason: reason || undefined,
-      })
-      if (result.success) {
-        toast.success(`Estado actualizado a: ${STATUS_LABELS[ts]}`)
+      // Payment rejection: must go through rejectPaymentAction to also update proof status
+      if (ts === 'payment_rejected' && order.proof) {
+        const result = await rejectPaymentAction({
+          proofId: order.proof.id,
+          orderId: order.id,
+          reason: reason || 'Rechazado por administrador',
+          orderNumber: order.orderNumber,
+        })
+        if (result.success) {
+          toast.success('Pago rechazado')
+        } else {
+          toast.error(result.error)
+        }
       } else {
-        toast.error(result.error)
+        const result = await transitionOrderStatusAction({
+          orderId: order.id,
+          toStatus: ts,
+          reason: reason || undefined,
+          orderNumber: order.orderNumber,
+        })
+        if (result.success) {
+          toast.success(`Estado actualizado a: ${STATUS_LABELS[ts]}`)
+        } else {
+          toast.error(result.error)
+        }
       }
       setReason('')
     })
@@ -93,7 +136,7 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
           {availableTransitions.map((ts) => (
             <Button
               key={ts}
-              variant={ts === 'cancelled' || ts === 'refunded' ? 'ghost' : 'secondary'}
+              variant={ts === 'cancelled' || ts === 'refunded' || ts === 'payment_rejected' ? 'ghost' : 'secondary'}
               size="sm"
               isLoading={isPending}
               onClick={() => handleTransition(ts)}
@@ -265,13 +308,16 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
       >
         <div className="space-y-4">
           <p className="text-sm text-text-secondary">
-            Esta acción{' '}
-            {confirmTransition === 'cancelled' ? 'cancelará el pedido' : 'marcará el pedido como reembolsado'}.
-            {' '}No se puede deshacer.
+            {confirmTransition === 'cancelled' && 'Esta acción cancelará el pedido. No se puede deshacer.'}
+            {confirmTransition === 'refunded' && 'Esta acción marcará el pedido como reembolsado. No se puede deshacer.'}
+            {confirmTransition === 'payment_rejected' && 'El comprobante será rechazado y el pedido volverá a pago pendiente.'}
           </p>
           <div>
             <label className="block text-sm font-medium mb-1">
-              Motivo <span className="text-text-secondary font-normal">(opcional)</span>
+              Motivo{' '}
+              <span className="text-text-secondary font-normal">
+                {confirmTransition === 'payment_rejected' ? '(obligatorio para el cliente)' : '(opcional)'}
+              </span>
             </label>
             <textarea
               value={reason}

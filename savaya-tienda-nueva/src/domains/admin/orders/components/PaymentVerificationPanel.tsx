@@ -36,6 +36,7 @@ export function PaymentVerificationPanel({ items }: { items: PendingPaymentItem[
       const result = await approvePaymentAction({
         proofId: selected.proof.id,
         orderId: selected.orderId,
+        orderNumber: selected.orderNumber,
       })
       if (result.success) {
         toast.success('Pago aprobado correctamente')
@@ -54,6 +55,7 @@ export function PaymentVerificationPanel({ items }: { items: PendingPaymentItem[
         proofId: selected.proof.id,
         orderId: selected.orderId,
         reason,
+        orderNumber: selected.orderNumber,
       })
       if (result.success) {
         toast.success('Pago rechazado')
