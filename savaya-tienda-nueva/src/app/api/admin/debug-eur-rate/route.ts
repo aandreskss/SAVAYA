@@ -3,9 +3,10 @@ import { auth } from '@/domains/auth/auth'
 
 async function fetchRaw(url: string): Promise<{ status: number; body: unknown; error?: string }> {
   try {
-    const res = await fetch(url, { next: { revalidate: 0 }, signal: AbortSignal.timeout(8000) })
+    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) })
+    const text = await res.text()
     let body: unknown
-    try { body = await res.json() } catch { body = await res.text() }
+    try { body = JSON.parse(text) } catch { body = text }
     return { status: res.status, body }
   } catch (e) {
     return { status: 0, body: null, error: String(e) }

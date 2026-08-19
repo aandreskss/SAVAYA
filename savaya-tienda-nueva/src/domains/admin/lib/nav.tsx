@@ -128,6 +128,16 @@ function GearIcon() {
   )
 }
 
+function WalletIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M2 5.5A1.5 1.5 0 0 1 3.5 4h11A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-11A1.5 1.5 0 0 1 2 12.5v-7Z" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M2 8h14" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="13" cy="11" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Nav definition
 // ---------------------------------------------------------------------------
@@ -146,6 +156,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Promociones',   href: '/admin/promociones',  icon: <PercentIcon />,    permission: 'promotions:read' },
   { label: 'Delivery',      href: '/admin/delivery',     icon: <TruckIcon />,      permission: 'shipping:read' },
   { label: 'Tasas',         href: '/admin/tasas',        icon: <TrendingUpIcon />, permission: 'exchange_rates:read' },
+  { label: 'Métodos pago',  href: '/admin/metodos-pago', icon: <WalletIcon />,     permission: 'settings:read' },
   { label: 'Analytics',     href: '/admin/analytics',    icon: <BarChartIcon />,   permission: 'analytics:read' },
   { label: 'Usuarios',      href: '/admin/usuarios',     icon: <ShieldIcon />,     permission: 'users:read' },
   { label: 'Configuración', href: '/admin/configuracion',icon: <GearIcon />,       permission: 'settings:read' },
