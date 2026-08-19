@@ -1,5 +1,5 @@
 export type ExchangeRate = {
-  currency: 'usd'
+  currency: 'usd' | 'eur'
   rateVes: number
   source: string
   fetchedAt: Date

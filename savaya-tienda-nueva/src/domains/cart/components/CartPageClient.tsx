@@ -20,11 +20,12 @@ import type { AppliedCoupon } from '@/domains/checkout/types'
 
 type Props = {
   initialSummary: CartSummary
-  /** Pre-calculated VES equivalent of the subtotal */
   subtotalVes: number
+  /** Which BCV rate is being used to display Bs. amounts */
+  rateCurrency: 'usd' | 'eur'
 }
 
-export function CartPageClient({ initialSummary, subtotalVes }: Props) {
+export function CartPageClient({ initialSummary, subtotalVes, rateCurrency }: Props) {
   const router = useRouter()
   const storeSummary = useCartStore((s) => s.summary)
   const setSummary = useCartStore((s) => s.setSummary)
@@ -123,13 +124,21 @@ export function CartPageClient({ initialSummary, subtotalVes }: Props) {
                   {formatPrice(displayTotal)}
                 </span>
               </div>
-              <p className="font-sans text-xs text-text-secondary">
-                ≈ Bs.{' '}
-                {new Intl.NumberFormat('es-VE', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }).format(subtotalVes * (displayTotal / (subtotalUsd || 1)))}
-              </p>
+              <div className="flex items-center justify-between bg-surface rounded-lg px-3 py-2">
+                <span className="font-sans text-xs text-text-secondary">
+                  Total en Bs.{' '}
+                  <span className="text-text-secondary/60">
+                    (tasa {rateCurrency === 'eur' ? '€' : '$'} BCV)
+                  </span>
+                </span>
+                <span className="font-sans text-sm font-bold text-text-primary">
+                  Bs.{' '}
+                  {new Intl.NumberFormat('es-VE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(subtotalVes * (displayTotal / (subtotalUsd || 1)))}
+                </span>
+              </div>
             </div>
 
             {/* Coupon input */}

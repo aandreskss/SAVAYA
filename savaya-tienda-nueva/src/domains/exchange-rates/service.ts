@@ -1,11 +1,14 @@
 import 'server-only'
+import { db } from '@/shared/lib/db'
+import { eq } from 'drizzle-orm'
+import { applicationSettings } from '@/domains/settings/schema'
 import { getLatestRate, saveRate } from './repository'
 export type { ExchangeRate } from './utils'
 export { convertToVes, formatVes } from './utils'
 
 import type { ExchangeRate } from './utils'
 
-const FALLBACK_RATE: ExchangeRate = {
+const FALLBACK_USD: ExchangeRate = {
   currency: 'usd',
   rateVes: 48.5,
   source: 'fallback-dev',
@@ -13,122 +16,160 @@ const FALLBACK_RATE: ExchangeRate = {
   isManualOverride: false,
 }
 
-// ---------------------------------------------------------------------------
-// BCV fetch — primary: dolarapi.com, fallback: last stored rate
-// ADR 003: source chosen for reliability + no API key requirement
-// ---------------------------------------------------------------------------
-
-type DolarApiResponse = {
-  monitors: {
-    bcv: {
-      price: number
-      last_update: string
-    }
-  }
+const FALLBACK_EUR: ExchangeRate = {
+  currency: 'eur',
+  rateVes: 53.0,
+  source: 'fallback-dev',
+  fetchedAt: new Date(),
+  isManualOverride: false,
 }
 
-async function fetchBcvRate(): Promise<{ rateVes: number; fetchedAt: Date } | null> {
+// ---------------------------------------------------------------------------
+// USD BCV fetch
+// ---------------------------------------------------------------------------
+
+async function fetchBcvUsdRate(): Promise<{ rateVes: number; fetchedAt: Date } | null> {
   try {
     const res = await fetch('https://pydolarve.org/api/v1/dollar?page=bcv', {
-      next: { revalidate: 0 }, // always fresh when called explicitly
+      next: { revalidate: 0 },
       signal: AbortSignal.timeout(8000),
     })
-
     if (!res.ok) throw new Error(`pydolarve HTTP ${res.status}`)
-
     const data = (await res.json()) as { price?: number; last_update?: string }
     if (!data.price || data.price <= 0) throw new Error('Invalid price from pydolarve')
-
-    return {
-      rateVes: data.price,
-      fetchedAt: data.last_update ? new Date(data.last_update) : new Date(),
-    }
+    return { rateVes: data.price, fetchedAt: data.last_update ? new Date(data.last_update) : new Date() }
   } catch (primaryErr) {
-    // Fallback to dolarapi.com
     try {
       const res = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', {
         next: { revalidate: 0 },
         signal: AbortSignal.timeout(8000),
       })
       if (!res.ok) throw new Error(`dolarapi HTTP ${res.status}`)
-
       const data = (await res.json()) as { promedio?: number; fechaActualizacion?: string }
       if (!data.promedio || data.promedio <= 0) throw new Error('Invalid promedio from dolarapi')
-
-      return {
-        rateVes: data.promedio,
-        fetchedAt: data.fechaActualizacion ? new Date(data.fechaActualizacion) : new Date(),
-      }
+      return { rateVes: data.promedio, fetchedAt: data.fechaActualizacion ? new Date(data.fechaActualizacion) : new Date() }
     } catch {
-      console.error('[exchange-rates] both BCV sources failed:', primaryErr)
+      console.error('[exchange-rates/usd] both BCV sources failed:', primaryErr)
       return null
     }
   }
 }
 
 // ---------------------------------------------------------------------------
-// getCurrentRate — used everywhere in the app (PDP, checkout, etc.)
-// Priority: DB (latest, including manual override) → fallback-dev
+// EUR BCV fetch
+// ---------------------------------------------------------------------------
+
+async function fetchBcvEurRate(): Promise<{ rateVes: number; fetchedAt: Date } | null> {
+  try {
+    const res = await fetch('https://pydolarve.org/api/v1/euro?page=bcv', {
+      next: { revalidate: 0 },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) throw new Error(`pydolarve-eur HTTP ${res.status}`)
+    const data = (await res.json()) as { price?: number; last_update?: string }
+    if (!data.price || data.price <= 0) throw new Error('Invalid EUR price from pydolarve')
+    return { rateVes: data.price, fetchedAt: data.last_update ? new Date(data.last_update) : new Date() }
+  } catch (primaryErr) {
+    try {
+      const res = await fetch('https://ve.dolarapi.com/v1/dolares/euro', {
+        next: { revalidate: 0 },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok) throw new Error(`dolarapi-eur HTTP ${res.status}`)
+      const data = (await res.json()) as { promedio?: number; fechaActualizacion?: string }
+      if (!data.promedio || data.promedio <= 0) throw new Error('Invalid EUR promedio from dolarapi')
+      return { rateVes: data.promedio, fetchedAt: data.fechaActualizacion ? new Date(data.fechaActualizacion) : new Date() }
+    } catch {
+      console.error('[exchange-rates/eur] both BCV EUR sources failed:', primaryErr)
+      return null
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// getCurrentRate — USD
 // ---------------------------------------------------------------------------
 
 export async function getCurrentRate(): Promise<ExchangeRate> {
-  if (!process.env.DATABASE_URL) {
-    return FALLBACK_RATE
-  }
-
+  if (!process.env.DATABASE_URL) return FALLBACK_USD
   try {
     const stored = await getLatestRate('usd')
     if (stored) {
-      return {
-        currency: 'usd',
-        rateVes: stored.rateVes,
-        source: stored.source,
-        fetchedAt: stored.fetchedAt,
-        isManualOverride: stored.isManualOverride,
-      }
+      return { currency: 'usd', rateVes: stored.rateVes, source: stored.source, fetchedAt: stored.fetchedAt, isManualOverride: stored.isManualOverride }
     }
-    // No stored rate — try to fetch and store one immediately
     return await refreshRate()
   } catch {
-    return { ...FALLBACK_RATE, source: 'fallback-db-error' }
+    return { ...FALLBACK_USD, source: 'fallback-db-error' }
   }
 }
 
 // ---------------------------------------------------------------------------
-// refreshRate — fetches from BCV and persists. Called by the cron endpoint.
+// getCurrentEurRate — EUR
+// ---------------------------------------------------------------------------
+
+export async function getCurrentEurRate(): Promise<ExchangeRate> {
+  if (!process.env.DATABASE_URL) return FALLBACK_EUR
+  try {
+    const stored = await getLatestRate('eur')
+    if (stored) {
+      return { currency: 'eur', rateVes: stored.rateVes, source: stored.source, fetchedAt: stored.fetchedAt, isManualOverride: stored.isManualOverride }
+    }
+    return await refreshEurRate()
+  } catch {
+    return { ...FALLBACK_EUR, source: 'fallback-db-error' }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// getDisplayRate — reads active_display_rate setting and returns the right rate
+// Used by cart, PDP, checkout for displaying prices in Bs.
+// ---------------------------------------------------------------------------
+
+export async function getDisplayRate(): Promise<ExchangeRate> {
+  if (!process.env.DATABASE_URL) return FALLBACK_USD
+  try {
+    const [row] = await db
+      .select({ value: applicationSettings.value })
+      .from(applicationSettings)
+      .where(eq(applicationSettings.key, 'active_display_rate'))
+      .limit(1)
+    const currency = row?.value === 'eur' ? 'eur' : 'usd'
+    return currency === 'eur' ? getCurrentEurRate() : getCurrentRate()
+  } catch {
+    return getCurrentRate()
+  }
+}
+
+// ---------------------------------------------------------------------------
+// refreshRate — USD — fetches from BCV and persists (called by cron)
 // ---------------------------------------------------------------------------
 
 export async function refreshRate(): Promise<ExchangeRate> {
-  const fetched = await fetchBcvRate()
-
+  const fetched = await fetchBcvUsdRate()
   if (!fetched) {
-    // Return last stored rate if fetch failed
     const stored = await getLatestRate('usd').catch(() => null)
     if (stored) {
-      return {
-        currency: 'usd',
-        rateVes: stored.rateVes,
-        source: `${stored.source}(cached-on-fetch-error)`,
-        fetchedAt: stored.fetchedAt,
-        isManualOverride: stored.isManualOverride,
-      }
+      return { currency: 'usd', rateVes: stored.rateVes, source: `${stored.source}(cached-on-fetch-error)`, fetchedAt: stored.fetchedAt, isManualOverride: stored.isManualOverride }
     }
-    return { ...FALLBACK_RATE, source: 'fallback-fetch-error' }
+    return { ...FALLBACK_USD, source: 'fallback-fetch-error' }
   }
-
-  await saveRate({
-    currency: 'usd',
-    rateVes: fetched.rateVes,
-    source: 'pydolarve/bcv',
-    fetchedAt: fetched.fetchedAt,
-  })
-
-  return {
-    currency: 'usd',
-    rateVes: fetched.rateVes,
-    source: 'pydolarve/bcv',
-    fetchedAt: fetched.fetchedAt,
-    isManualOverride: false,
-  }
+  await saveRate({ currency: 'usd', rateVes: fetched.rateVes, source: 'pydolarve/bcv', fetchedAt: fetched.fetchedAt })
+  return { currency: 'usd', rateVes: fetched.rateVes, source: 'pydolarve/bcv', fetchedAt: fetched.fetchedAt, isManualOverride: false }
 }
 
+// ---------------------------------------------------------------------------
+// refreshEurRate — EUR — fetches from BCV and persists (called by cron)
+// ---------------------------------------------------------------------------
+
+export async function refreshEurRate(): Promise<ExchangeRate> {
+  const fetched = await fetchBcvEurRate()
+  if (!fetched) {
+    const stored = await getLatestRate('eur').catch(() => null)
+    if (stored) {
+      return { currency: 'eur', rateVes: stored.rateVes, source: `${stored.source}(cached-on-fetch-error)`, fetchedAt: stored.fetchedAt, isManualOverride: stored.isManualOverride }
+    }
+    return { ...FALLBACK_EUR, source: 'fallback-fetch-error' }
+  }
+  await saveRate({ currency: 'eur', rateVes: fetched.rateVes, source: 'pydolarve/bcv-eur', fetchedAt: fetched.fetchedAt })
+  return { currency: 'eur', rateVes: fetched.rateVes, source: 'pydolarve/bcv-eur', fetchedAt: fetched.fetchedAt, isManualOverride: false }
+}

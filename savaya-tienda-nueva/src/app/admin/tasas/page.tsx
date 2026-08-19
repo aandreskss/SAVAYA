@@ -1,13 +1,23 @@
 import { Suspense } from 'react'
 import { auth } from '@/domains/auth/auth'
-import { listRateHistory } from '@/domains/admin/exchange-rates/repository'
+import { listRateHistory, getActiveDisplayRate } from '@/domains/admin/exchange-rates/repository'
 import { ExchangeRatesManager } from '@/domains/admin/exchange-rates/components/ExchangeRatesManager'
 
 async function TasasContent() {
-  const [history, session] = await Promise.all([listRateHistory(30), auth()])
+  const [history, activeDisplayRate, session] = await Promise.all([
+    listRateHistory(50),
+    getActiveDisplayRate(),
+    auth(),
+  ])
   const permissions = (session?.user?.permissions ?? []) as string[]
   const canOverride = permissions.includes('exchange_rates:override')
-  return <ExchangeRatesManager history={history} canOverride={canOverride} />
+  return (
+    <ExchangeRatesManager
+      history={history}
+      canOverride={canOverride}
+      activeDisplayRate={activeDisplayRate}
+    />
+  )
 }
 
 export default function TasasAdminPage() {

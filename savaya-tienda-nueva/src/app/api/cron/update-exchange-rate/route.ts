@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { refreshRate } from '@/domains/exchange-rates/service'
+import { refreshRate, refreshEurRate } from '@/domains/exchange-rates/service'
 
 async function handler(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
@@ -10,12 +10,11 @@ async function handler(req: NextRequest) {
   }
 
   try {
-    const rate = await refreshRate()
+    const [usd, eur] = await Promise.all([refreshRate(), refreshEurRate()])
     return NextResponse.json({
       ok: true,
-      rate: rate.rateVes,
-      source: rate.source,
-      fetchedAt: rate.fetchedAt,
+      usd: { rate: usd.rateVes, source: usd.source, fetchedAt: usd.fetchedAt },
+      eur: { rate: eur.rateVes, source: eur.source, fetchedAt: eur.fetchedAt },
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
