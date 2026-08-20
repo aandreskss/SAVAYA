@@ -7,7 +7,7 @@ export function NavScrollWrapper({ children }: { children: React.ReactNode }) {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
+    const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -16,18 +16,12 @@ export function NavScrollWrapper({ children }: { children: React.ReactNode }) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 transition-all duration-300',
-        scrolled
-          ? 'bg-surface/98 backdrop-blur-xl border-b border-border shadow-[0_4px_32px_rgba(0,0,0,0.14)]'
-          : 'bg-surface/85 backdrop-blur-md border-b border-border/20',
+        'sticky top-0 z-40 bg-surface transition-shadow duration-300',
+        'border-b border-border/50',
+        scrolled && 'shadow-[0_2px_16px_rgba(0,0,0,0.08)]',
       )}
     >
       {children}
-      {/* Thin gold gradient accent — always visible */}
-      <div
-        aria-hidden="true"
-        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent-gold/30 to-transparent pointer-events-none"
-      />
     </header>
   )
 }

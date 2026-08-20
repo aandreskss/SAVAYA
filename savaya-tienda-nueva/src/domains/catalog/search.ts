@@ -109,24 +109,28 @@ export class PostgresSearchProvider implements SearchProvider {
       ]
     } catch {
       // Fallback to basic ILIKE if tsvector/trgm are not yet available
-      const productRows = await db
-        .select({
-          id: products.id,
-          name: products.name,
-          slug: products.slug,
-          basePrice: products.basePrice,
-        })
-        .from(products)
-        .where(
-          and(
-            eq(products.isActive, true),
-            sql`${products.name} ILIKE ${'%' + q + '%'}`,
-          ),
-        )
-        .limit(limit)
+      const productRows = await rawQuery<{
+        id: string
+        name: string
+        slug: string
+        base_price: string
+        image_url: string | null
+      }>(sql`
+        SELECT p.id, p.name, p.slug, p.base_price,
+               pm.url AS image_url
+        FROM products p
+        LEFT JOIN LATERAL (
+          SELECT url FROM product_media
+          WHERE product_id = p.id AND is_primary = true
+          LIMIT 1
+        ) pm ON true
+        WHERE p.is_active = true
+          AND p.name ILIKE ${'%' + q + '%'}
+        LIMIT ${limit}
+      `)
 
       const categoryRows = await db
-        .select({ id: categories.id, name: categories.name, slug: categories.slug })
+        .select({ id: categories.id, name: categories.name, slug: categories.slug, imageUrl: categories.imageUrl })
         .from(categories)
         .where(
           and(
@@ -142,7 +146,8 @@ export class PostgresSearchProvider implements SearchProvider {
           id: p.id,
           name: p.name,
           slug: p.slug,
-          price: Number(p.basePrice),
+          price: Number(p.base_price),
+          imageUrl: p.image_url ?? undefined,
           currency: 'USD',
         })),
         ...categoryRows.map((c) => ({
@@ -150,6 +155,7 @@ export class PostgresSearchProvider implements SearchProvider {
           id: c.id,
           name: c.name,
           slug: c.slug,
+          imageUrl: c.imageUrl ?? undefined,
           currency: 'USD',
         })),
       ]

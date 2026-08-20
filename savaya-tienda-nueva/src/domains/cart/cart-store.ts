@@ -14,6 +14,7 @@ type CartStore = {
   closeCart: () => void
   toggleCart: () => void
   setSummary: (summary: CartSummary) => void
+  clearCart: () => void
 }
 
 export const useCartStore = create<CartStore>((set) => ({
@@ -23,4 +24,5 @@ export const useCartStore = create<CartStore>((set) => ({
   closeCart: () => set({ isOpen: false }),
   toggleCart: () => set((s) => ({ isOpen: !s.isOpen })),
   setSummary: (summary) => set({ summary }),
+  clearCart: () => set({ summary: null, isOpen: false }),
 }))

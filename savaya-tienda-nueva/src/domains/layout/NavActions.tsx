@@ -19,21 +19,35 @@ export function NavActions({ isLoggedIn, cartCount: cartCountServer }: Props) {
   const cartCount = summary?.itemCount ?? cartCountServer
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       {/* Tema claro/oscuro */}
-      <ThemeToggle className="h-10 w-10" />
+      <ThemeToggle className="h-9 w-9" />
 
       {/* Búsqueda */}
       <ActionButton aria-label="Buscar productos" onClick={toggleSearch}>
         <SearchIcon />
       </ActionButton>
 
-      {/* Wishlist — solo desktop */}
+      {/* Cuenta — solo desktop */}
       <Link
-        href={isLoggedIn ? '/mi-cuenta/wishlist' : '/iniciar-sesion'}
-        aria-label="Wishlist"
+        href={isLoggedIn ? '/mi-cuenta' : '/iniciar-sesion'}
+        aria-label={isLoggedIn ? 'Mi cuenta' : 'Iniciar sesión'}
         className={cn(
-          'hidden md:flex h-10 w-10 items-center justify-center rounded-sm',
+          'hidden md:flex h-9 w-9 items-center justify-center rounded-sm',
+          'text-text-primary hover:text-accent-gold hover:bg-surface-2',
+          'transition-colors duration-150',
+          'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2',
+        )}
+      >
+        <PersonIcon />
+      </Link>
+
+      {/* Wishlist — lleva directamente a lista de deseos */}
+      <Link
+        href="/mi-cuenta/wishlist"
+        aria-label="Lista de deseos"
+        className={cn(
+          'hidden md:flex h-9 w-9 items-center justify-center rounded-sm',
           'text-text-primary hover:text-accent-gold hover:bg-surface-2',
           'transition-colors duration-150',
           'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2',
@@ -64,21 +78,6 @@ export function NavActions({ isLoggedIn, cartCount: cartCountServer }: Props) {
           )}
         </span>
       </ActionButton>
-
-      {/* Cuenta — solo desktop */}
-      <Link
-        href={isLoggedIn ? '/mi-cuenta' : '/iniciar-sesion'}
-        aria-label={isLoggedIn ? 'Mi cuenta' : 'Iniciar sesión'}
-        className={cn(
-          'hidden md:flex h-10 w-10 items-center justify-center rounded-sm',
-          'text-text-primary hover:text-accent-gold hover:bg-surface-2',
-          'transition-colors duration-150',
-          'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2',
-        )}
-      >
-        <PersonIcon />
-      </Link>
-
     </div>
   )
 }

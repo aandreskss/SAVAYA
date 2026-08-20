@@ -53,12 +53,12 @@ export function NavDesktop({ categories }: Props) {
         const triggerId = `${uid}-trigger-${cat.label.toLowerCase()}`
 
         const baseLinkClass = cn(
-          'relative group px-4 py-2.5',
-          'font-display text-[15px] font-black uppercase tracking-[0.08em]',
+          'relative group px-3.5 py-2',
+          'font-sans text-sm font-medium',
           'transition-colors duration-150',
           'hover:text-accent-gold',
           'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded-sm',
-          isActive ? 'text-text-primary' : 'text-text-secondary/80',
+          isActive ? 'text-text-primary' : 'text-text-secondary',
         )
 
         if (!hasSubmenu) {
