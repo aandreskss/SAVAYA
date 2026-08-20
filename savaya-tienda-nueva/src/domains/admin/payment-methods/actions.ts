@@ -136,7 +136,12 @@ export async function createPaymentMethodAction(
     revalidatePath(REVALIDATE)
     revalidatePath('/checkout')
     return { success: true, data: method }
-  } catch {
+  } catch (err) {
+    console.error('[createPaymentMethodAction]', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('invalid input value for enum') || msg.includes('pago_movil_qr')) {
+      return { success: false, error: 'El tipo "Pago Móvil QR" no está habilitado en la base de datos. Ejecuta la migración 0005 en Neon.' }
+    }
     return { success: false, error: 'Error al crear el método de pago' }
   }
 }

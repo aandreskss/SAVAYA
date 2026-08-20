@@ -42,6 +42,16 @@ interface Props {
 
 const GOLD = '#CA8C31'
 
+// SVG viewBox dimensions
+const W = 640
+const H = 200
+const PL = 52
+const PR = 20
+const PT = 16
+const PB = 32
+const chartW = W - PL - PR
+const chartH = H - PT - PB
+
 export function SalesLineChart({ data }: Props) {
   const [hovered, setHovered] = useState<number | null>(null)
   const uid = useId().replace(/:/g, '')
@@ -54,16 +64,6 @@ export function SalesLineChart({ data }: Props) {
     )
   }
 
-  const W = 640
-  const H = 200
-  const PL = 52
-  const PR = 20
-  const PT = 16
-  const PB = 32
-
-  const chartW = W - PL - PR
-  const chartH = H - PT - PB
-
   const maxRevenue = Math.max(...data.map((d) => d.revenue), 1)
   const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW
   const xOffset = data.length === 1 ? chartW / 2 : 0
@@ -75,49 +75,40 @@ export function SalesLineChart({ data }: Props) {
   }))
 
   const linePath = smoothBezierPath(pts)
-
-  // Area: close the smooth path at the bottom
   const areaPath =
     pts.length > 1
       ? `${linePath} L ${pts[pts.length - 1].x.toFixed(2)},${(PT + chartH).toFixed(2)} L ${pts[0].x.toFixed(2)},${(PT + chartH).toFixed(2)} Z`
       : ''
 
-  // Y-axis ticks
   const yTicks = [0, 0.25, 0.5, 0.75, 1]
-
-  // X-axis: limit labels to avoid overlap
   const maxXLabels = 7
   const xLabelStep = data.length > maxXLabels ? Math.ceil(data.length / maxXLabels) : 1
 
   const hoveredPt = hovered !== null ? pts[hovered] : null
 
-  // Tooltip clamping
-  const ttW = 118
-  const ttH = 56
-  const ttX = hoveredPt
-    ? Math.min(Math.max(hoveredPt.x - ttW / 2, PL), W - PR - ttW)
-    : 0
-  const ttY = hoveredPt
-    ? Math.max(hoveredPt.y - ttH - 12, PT)
-    : 0
+  // Tooltip position as % of viewBox — maps cleanly to the padded container
+  const ttLeftPct = hoveredPt ? (hoveredPt.x / W) * 100 : 0
+  const ttTopPct = hoveredPt ? (hoveredPt.y / H) * 100 : 0
 
   return (
-    <div className="relative select-none">
+    // Aspect-ratio container: SVG + tooltip both use the same coordinate space
+    <div
+      className="relative w-full select-none"
+      style={{ paddingBottom: `${(H / W) * 100}%` }}
+    >
+      {/* SVG fills the container exactly */}
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto"
-        style={{ overflow: 'visible' }}
+        className="absolute inset-0 w-full h-full overflow-visible"
         aria-hidden="true"
       >
         <defs>
-          {/* Area gradient — gold tint that reads in both themes */}
           <linearGradient id={`${uid}-area`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={GOLD} stopOpacity="0.22" />
-            <stop offset="75%" stopColor={GOLD} stopOpacity="0.04" />
+            <stop offset="0%" stopColor={GOLD} stopOpacity="0.2" />
+            <stop offset="80%" stopColor={GOLD} stopOpacity="0.03" />
             <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
           </linearGradient>
 
-          {/* Glow filter on the line */}
           <filter id={`${uid}-glow`} x="-20%" y="-80%" width="140%" height="260%">
             <feGaussianBlur stdDeviation="3" result="blur" />
             <feMerge>
@@ -126,32 +117,25 @@ export function SalesLineChart({ data }: Props) {
             </feMerge>
           </filter>
 
-          {/* Clip to chart area */}
           <clipPath id={`${uid}-clip`}>
             <rect x={PL} y={PT} width={chartW} height={chartH} />
           </clipPath>
         </defs>
 
-        {/* Horizontal grid lines */}
+        {/* Grid lines */}
         {yTicks.map((frac) => (
           <line
             key={frac}
-            x1={PL}
-            y1={(PT + frac * chartH).toFixed(1)}
-            x2={W - PR}
-            y2={(PT + frac * chartH).toFixed(1)}
-            style={{ stroke: 'var(--color-border)', strokeOpacity: frac === 0 ? 0.8 : 0.5 }}
+            x1={PL} y1={(PT + frac * chartH).toFixed(1)}
+            x2={W - PR} y2={(PT + frac * chartH).toFixed(1)}
+            style={{ stroke: 'var(--color-border)', strokeOpacity: frac === 0 ? 0.8 : 0.45 }}
             strokeWidth="1"
           />
         ))}
 
         {/* Area fill */}
         {areaPath && (
-          <path
-            d={areaPath}
-            fill={`url(#${uid}-area)`}
-            clipPath={`url(#${uid}-clip)`}
-          />
+          <path d={areaPath} fill={`url(#${uid}-area)`} clipPath={`url(#${uid}-clip)`} />
         )}
 
         {/* Smooth line */}
@@ -170,14 +154,9 @@ export function SalesLineChart({ data }: Props) {
         {/* Hover crosshair */}
         {hoveredPt && (
           <line
-            x1={hoveredPt.x}
-            y1={PT}
-            x2={hoveredPt.x}
-            y2={PT + chartH}
-            stroke={GOLD}
-            strokeOpacity="0.35"
-            strokeWidth="1"
-            strokeDasharray="4 3"
+            x1={hoveredPt.x} y1={PT}
+            x2={hoveredPt.x} y2={PT + chartH}
+            stroke={GOLD} strokeOpacity="0.3" strokeWidth="1" strokeDasharray="4 3"
           />
         )}
 
@@ -185,31 +164,19 @@ export function SalesLineChart({ data }: Props) {
         {pts.map((p, i) => (
           <g key={i}>
             <rect
-              x={p.x - xStep / 2}
-              y={PT}
-              width={xStep}
-              height={chartH}
+              x={p.x - xStep / 2} y={PT}
+              width={xStep} height={chartH}
               fill="transparent"
               style={{ cursor: 'crosshair' }}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             />
-            {/* Outer ring (hovered) */}
             {hovered === i && (
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r="7"
-                fill={GOLD}
-                fillOpacity="0.18"
-                style={{ pointerEvents: 'none' }}
-              />
+              <circle cx={p.x} cy={p.y} r="8" fill={GOLD} fillOpacity="0.15" style={{ pointerEvents: 'none' }} />
             )}
-            {/* Dot */}
             <circle
-              cx={p.x}
-              cy={p.y}
-              r={hovered === i ? 4 : 2.5}
+              cx={p.x} cy={p.y}
+              r={hovered === i ? 4.5 : 2.5}
               fill={GOLD}
               stroke="var(--color-surface)"
               strokeWidth={hovered === i ? 2 : 1.5}
@@ -221,15 +188,7 @@ export function SalesLineChart({ data }: Props) {
         {/* X-axis labels */}
         {pts.map((p, i) =>
           i % xLabelStep === 0 || i === pts.length - 1 ? (
-            <text
-              key={i}
-              x={p.x}
-              y={H - 6}
-              textAnchor="middle"
-              fontSize="10"
-              fontFamily="inherit"
-              style={{ fill: 'var(--color-text-muted)' }}
-            >
+            <text key={i} x={p.x} y={H - 6} textAnchor="middle" fontSize="10" fontFamily="inherit" style={{ fill: 'var(--color-text-muted)' }}>
               {formatDay(p.day)}
             </text>
           ) : null,
@@ -237,50 +196,58 @@ export function SalesLineChart({ data }: Props) {
 
         {/* Y-axis labels */}
         {yTicks.filter((f) => f === 0 || f === 0.5 || f === 1).map((frac) => (
-          <text
-            key={frac}
-            x={PL - 6}
-            y={(PT + (1 - frac) * chartH + 4).toFixed(1)}
-            textAnchor="end"
-            fontSize="10"
-            fontFamily="inherit"
-            style={{ fill: 'var(--color-text-muted)' }}
-          >
+          <text key={frac} x={PL - 6} y={(PT + (1 - frac) * chartH + 4).toFixed(1)} textAnchor="end" fontSize="10" fontFamily="inherit" style={{ fill: 'var(--color-text-muted)' }}>
             {formatUsd(maxRevenue * frac)}
           </text>
         ))}
-
-        {/* Tooltip */}
-        {hoveredPt && (
-          <foreignObject x={ttX} y={ttY} width={ttW} height={ttH}>
-            <div
-              // @ts-expect-error – xmlns required for foreignObject in SVG
-              xmlns="http://www.w3.org/1999/xhtml"
-              style={{
-                background: 'var(--color-surface-3)',
-                border: '1px solid var(--color-border)',
-                borderTop: `2px solid ${GOLD}`,
-                color: 'var(--color-text-primary)',
-                fontSize: '11px',
-                fontFamily: 'inherit',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                lineHeight: '1.55',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <div style={{ fontWeight: 700, color: GOLD, marginBottom: '2px' }}>
-                {formatDay(hoveredPt.day)}
-              </div>
-              <div style={{ fontWeight: 600 }}>{formatUsdFull(hoveredPt.revenue)}</div>
-              <div style={{ opacity: 0.65, fontSize: '10px' }}>
-                {hoveredPt.orderCount} {hoveredPt.orderCount === 1 ? 'pedido' : 'pedidos'}
-              </div>
-            </div>
-          </foreignObject>
-        )}
       </svg>
+
+      {/* Tooltip — rendered as HTML outside the SVG for correct theme + font rendering */}
+      {hoveredPt && (
+        <div
+          className="absolute pointer-events-none z-10"
+          style={{
+            left: `${ttLeftPct}%`,
+            top: `${ttTopPct}%`,
+            transform: 'translate(-50%, calc(-100% - 10px))',
+          }}
+        >
+          {/* Card */}
+          <div
+            className="rounded-lg overflow-hidden shadow-xl"
+            style={{
+              background: 'var(--color-surface-2)',
+              border: '1px solid var(--color-border)',
+              minWidth: '116px',
+            }}
+          >
+            {/* Gold accent top bar */}
+            <div style={{ height: '2px', background: GOLD }} />
+            <div className="px-3 py-2">
+              <p className="font-sans text-[11px] font-bold mb-1" style={{ color: GOLD }}>
+                {formatDay(hoveredPt.day)}
+              </p>
+              <p className="font-sans text-[13px] font-semibold text-text-primary leading-tight">
+                {formatUsdFull(hoveredPt.revenue)}
+              </p>
+              <p className="font-sans text-[11px] text-text-muted mt-0.5">
+                {hoveredPt.orderCount} {hoveredPt.orderCount === 1 ? 'pedido' : 'pedidos'}
+              </p>
+            </div>
+          </div>
+          {/* Caret */}
+          <div
+            className="mx-auto"
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '6px solid transparent',
+              borderRight: '6px solid transparent',
+              borderTop: `6px solid var(--color-border)`,
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }

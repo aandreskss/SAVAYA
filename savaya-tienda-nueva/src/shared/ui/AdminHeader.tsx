@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ThemeToggle } from '@/domains/layout/ThemeToggle'
+import { getNotificationsAction } from '@/domains/admin/dashboard/actions'
+import type { PendingPaymentItem } from '@/domains/admin/dashboard/types'
 import { cn } from '@/shared/lib/utils'
 
 export type AdminHeaderProps = {
@@ -67,6 +70,15 @@ function UserIcon() {
   )
 }
 
+function SpinnerIcon() {
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className="animate-spin">
+      <circle cx="8" cy="8" r="5" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
+      <path d="M13 8a5 5 0 0 0-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -75,23 +87,52 @@ function getInitials(name: string): string {
     .join('')
 }
 
+function useOutsideClick(ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [ref, onClose])
+}
+
 export function AdminHeader({ userName, onMenuToggle, onLogout, className }: AdminHeaderProps) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
-  const initials = getInitials(userName)
   const router = useRouter()
+  const initials = getInitials(userName)
   const pageTitle = resolvePageTitle(pathname)
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false)
-      }
+  // ── User dropdown ──────────────────────────────────────────────────────────
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  useOutsideClick(dropdownRef, useCallback(() => setIsDropdownOpen(false), []))
+
+  // ── Notification panel ─────────────────────────────────────────────────────
+  const [isNotifOpen, setIsNotifOpen] = useState(false)
+  const [notifItems, setNotifItems] = useState<PendingPaymentItem[] | null>(null)
+  const [isLoadingNotif, setIsLoadingNotif] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+  useOutsideClick(notifRef, useCallback(() => setIsNotifOpen(false), []))
+
+  const openNotifications = useCallback(async () => {
+    setIsNotifOpen((prev) => {
+      if (prev) return false
+      return true
+    })
+    // Fetch fresh data every time the panel opens
+    setIsLoadingNotif(true)
+    try {
+      const { items } = await getNotificationsAction()
+      setNotifItems(items)
+    } catch {
+      setNotifItems([])
+    } finally {
+      setIsLoadingNotif(false)
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const pendingCount = notifItems?.length ?? 0
 
   return (
     <header
@@ -124,21 +165,122 @@ export function AdminHeader({ userName, onMenuToggle, onLogout, className }: Adm
 
       {/* Right: bell + theme toggle + avatar */}
       <div className="flex items-center gap-1">
-        {/* Bell — decorativo por ahora */}
-        <button
-          type="button"
-          aria-label="Notificaciones"
-          className={cn(
-            'flex items-center justify-center w-9 h-9 rounded-lg',
-            'text-text-secondary hover:text-text-primary hover:bg-surface-2',
-            'transition-colors duration-150',
+
+        {/* Notification bell */}
+        <div className="relative" ref={notifRef}>
+          <button
+            type="button"
+            aria-label="Notificaciones"
+            aria-expanded={isNotifOpen}
+            aria-haspopup="true"
+            onClick={openNotifications}
+            className={cn(
+              'relative flex items-center justify-center w-9 h-9 rounded-lg',
+              'text-text-secondary hover:text-text-primary hover:bg-surface-2',
+              'transition-colors duration-150',
+              'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2',
+              isNotifOpen && 'bg-surface-2 text-text-primary',
+            )}
+          >
+            <BellIcon />
+            {/* Badge — only shown once notifItems has been fetched and count > 0 */}
+            {notifItems !== null && pendingCount > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"
+              />
+            )}
+          </button>
+
+          {/* Notification dropdown */}
+          {isNotifOpen && (
+            <div
+              className={cn(
+                'absolute right-0 top-full mt-2 z-50',
+                'w-72 bg-surface border border-border rounded-xl shadow-xl',
+                'overflow-hidden',
+              )}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <p className="font-sans text-sm font-semibold text-text-primary">
+                  Notificaciones
+                </p>
+                {notifItems !== null && pendingCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-error/12 text-error font-sans text-xs font-semibold">
+                    {pendingCount}
+                  </span>
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="max-h-72 overflow-y-auto">
+                {isLoadingNotif ? (
+                  <div className="flex items-center justify-center gap-2 py-8 text-text-secondary">
+                    <SpinnerIcon />
+                    <span className="font-sans text-sm">Cargando...</span>
+                  </div>
+                ) : !notifItems || notifItems.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <p className="font-sans text-sm text-text-muted">Sin notificaciones pendientes</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-border/60">
+                    {notifItems.map((item) => (
+                      <li key={item.proofId}>
+                        <Link
+                          href="/admin/pagos"
+                          onClick={() => setIsNotifOpen(false)}
+                          className={cn(
+                            'flex flex-col gap-0.5 px-4 py-3',
+                            'hover:bg-surface-2 transition-colors duration-100',
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-sans text-xs font-semibold text-accent-gold">
+                              {item.orderNumber}
+                            </span>
+                            <span className="font-sans text-xs font-medium text-text-primary">
+                              ${item.totalUsd.toFixed(2)}
+                            </span>
+                          </div>
+                          <span className="font-sans text-sm text-text-secondary truncate">
+                            {item.customerName}
+                          </span>
+                          <span className="font-sans text-xs text-text-muted">
+                            {item.paymentMethodName} · comprobante pendiente
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-border">
+                <Link
+                  href="/admin/pagos"
+                  onClick={() => setIsNotifOpen(false)}
+                  className={cn(
+                    'flex items-center justify-center gap-1.5 px-4 py-2.5',
+                    'font-sans text-xs font-medium text-text-secondary',
+                    'hover:text-text-primary hover:bg-surface-2 transition-colors duration-100',
+                  )}
+                >
+                  Ver todos los pagos
+                  <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M4.5 2.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
           )}
-        >
-          <BellIcon />
-        </button>
+        </div>
 
         <ThemeToggle className="w-9 h-9 rounded-lg" />
 
+        {/* User avatar dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"

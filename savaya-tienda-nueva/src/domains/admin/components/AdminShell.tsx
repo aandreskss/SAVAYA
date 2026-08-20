@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { logoutAdmin } from '@/domains/auth/actions'
 import { AdminSidebar, type NavItem } from '@/shared/ui/AdminSidebar'
 import { AdminHeader } from '@/shared/ui/AdminHeader'
+import { ToastContainer } from '@/shared/ui/Toast'
 
 interface Props {
   navItems: NavItem[]
@@ -63,6 +64,8 @@ export function AdminShell({ navItems, userPermissions, userName, children }: Pr
           {children}
         </main>
       </div>
+
+      <ToastContainer />
     </div>
   )
 }

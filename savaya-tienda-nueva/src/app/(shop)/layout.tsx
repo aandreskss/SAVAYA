@@ -8,6 +8,7 @@ import { CartDrawer } from '@/domains/cart/components/CartDrawer'
 import { AnalyticsProvider } from '@/domains/analytics/AnalyticsProvider'
 import { getAnnouncementBarSection } from '@/domains/cms/repository'
 import { AnnouncementBar } from '@/domains/cms/blocks/AnnouncementBar'
+import { ToastContainer } from '@/shared/ui/Toast'
 import type { BlockContent } from '@/domains/cms/block-schemas'
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         </main>
         <Footer />
       </div>
+      <ToastContainer />
     </CartProvider>
   )
 }
