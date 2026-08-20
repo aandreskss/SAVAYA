@@ -300,15 +300,7 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
         <div className="space-y-4 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4">
           {/* Account details */}
           {selectedMethod.accountDetails && Object.keys(selectedMethod.accountDetails).length > 0 && (
-            <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-gold-soft)] p-3 text-sm space-y-1">
-              <p className="font-semibold">Datos para el pago</p>
-              {Object.entries(selectedMethod.accountDetails).map(([k, v]) => (
-                <p key={k} className="text-[var(--color-text-secondary)]">
-                  <span className="capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>:{' '}
-                  <span className="font-medium text-text-primary">{v}</span>
-                </p>
-              ))}
-            </div>
+            <AccountDetails details={selectedMethod.accountDetails as Record<string, string>} />
           )}
 
           {/* Amount to pay */}
@@ -542,6 +534,58 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
         </button>
       </div>
     </form>
+  )
+}
+
+// ── AccountDetails helper ─────────────────────────────────────────────────────
+
+const FIELD_LABELS: Record<string, string> = {
+  email: 'Email',
+  holderName: 'Titular',
+  accountHolder: 'Titular',
+  phone: 'Teléfono',
+  cedula: 'Cédula',
+  bank: 'Banco',
+  accountNumber: 'Número de cuenta',
+  accountType: 'Tipo de cuenta',
+  rif: 'RIF',
+  walletAddress: 'Dirección wallet',
+  binanceId: 'Binance ID',
+  qrUrl: 'Código QR',
+}
+
+function AccountDetails({ details }: { details: Record<string, string> }) {
+  const qrImageUrl = details.qrImageUrl
+  const textEntries = Object.entries(details).filter(
+    ([k, v]) => k !== 'qrImageUrl' && k !== 'qrUrl' && v,
+  )
+
+  return (
+    <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-gold-soft)] p-3 text-sm space-y-2">
+      <p className="font-semibold">Datos para el pago</p>
+
+      {/* QR image — shown prominently when available */}
+      {qrImageUrl && (
+        <div className="flex flex-col items-center gap-2 py-2">
+          <img
+            src={qrImageUrl}
+            alt="Código QR Pago Móvil"
+            className="w-44 h-44 object-contain rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white"
+          />
+          <p className="text-xs text-[var(--color-text-secondary)]">Escanea el QR con tu app bancaria</p>
+        </div>
+      )}
+
+      {/* Text fields */}
+      <div className="space-y-1">
+        {textEntries.map(([k, v]) => (
+          <p key={k} className="text-[var(--color-text-secondary)]">
+            <span className="capitalize">{FIELD_LABELS[k] ?? k.replace(/([A-Z])/g, ' $1')}</span>:{' '}
+            <span className="font-medium text-text-primary">{v}</span>
+          </p>
+        ))}
+      </div>
+    </div>
   )
 }
 
