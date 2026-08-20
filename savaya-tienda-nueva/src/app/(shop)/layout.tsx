@@ -6,9 +6,15 @@ import { GenderSync } from '@/domains/layout/GenderSync'
 import { CartProvider } from '@/domains/cart/components/CartProvider'
 import { CartDrawer } from '@/domains/cart/components/CartDrawer'
 import { AnalyticsProvider } from '@/domains/analytics/AnalyticsProvider'
+import { getAnnouncementBarSection } from '@/domains/cms/repository'
+import { AnnouncementBar } from '@/domains/cms/blocks/AnnouncementBar'
+import type { BlockContent } from '@/domains/cms/block-schemas'
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const nonce = (await headers()).get('x-nonce') ?? ''
+  const [nonce, announcementSection] = await Promise.all([
+    headers().then((h) => h.get('x-nonce') ?? ''),
+    getAnnouncementBarSection(),
+  ])
 
   return (
     <CartProvider>
@@ -19,6 +25,12 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       />
       <GenderSync />
       <div className="min-h-screen flex flex-col">
+        {/* Announcement bar — sits above the sticky navbar, scrolls away */}
+        {announcementSection && (
+          <AnnouncementBar
+            {...(announcementSection.content as BlockContent<'announcement_bar'>)}
+          />
+        )}
         <Navbar />
         <SearchOverlay />
         <CartDrawer />

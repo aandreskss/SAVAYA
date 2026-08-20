@@ -181,6 +181,48 @@ export async function getHomePageSections(): Promise<PageSection[]> {
 }
 
 /**
+ * Fetches the active announcement_bar section for the home page.
+ * Used by the shop layout to render it above the sticky navbar on all pages.
+ * Returns null if no active announcement bar is found.
+ */
+export async function getAnnouncementBarSection(): Promise<PageSection | null> {
+  if (!process.env.DATABASE_URL) {
+    return DEV_FALLBACK_SECTIONS.find((s) => s.type === 'announcement_bar') ?? null
+  }
+
+  try {
+    const homePage = await db
+      .select({ id: pages.id })
+      .from(pages)
+      .where(and(eq(pages.slug, 'home'), eq(pages.isActive, true)))
+      .limit(1)
+
+    if (!homePage[0]) return null
+
+    const rows = await db
+      .select({
+        id: pageSections.id,
+        type: pageSections.type,
+        content: pageSections.content,
+        sortOrder: pageSections.sortOrder,
+      })
+      .from(pageSections)
+      .where(
+        and(
+          eq(pageSections.pageId, homePage[0].id),
+          eq(pageSections.isActive, true),
+          eq(pageSections.type, 'announcement_bar'),
+        ),
+      )
+      .limit(1)
+
+    return (rows[0] as PageSection) ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Fetches active banners whose active window includes `now`.
  * A null endsAt means the banner runs indefinitely from startsAt.
  */

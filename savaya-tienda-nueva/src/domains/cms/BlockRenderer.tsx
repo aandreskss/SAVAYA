@@ -52,7 +52,8 @@ async function fetchCarouselProducts(
 export async function BlockRenderer({ block }: Props) {
   switch (block.type) {
     case 'announcement_bar':
-      return <AnnouncementBar {...(block.content as BlockContent<'announcement_bar'>)} />
+      // Rendered above the sticky navbar in the shop layout — skip here to avoid duplication.
+      return null
 
     case 'hero':
       return <Hero {...(block.content as BlockContent<'hero'>)} />
