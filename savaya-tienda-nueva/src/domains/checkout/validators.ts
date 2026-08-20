@@ -57,6 +57,7 @@ const PARTIAL_TYPES = ['full', 'partial_20', 'partial_35', 'partial_50'] as cons
 const PAYMENT_METHOD_TYPES = [
   'zelle',
   'pago_movil',
+  'pago_movil_qr',
   'bank_transfer',
   'usdt_trc20',
   'binance_pay',

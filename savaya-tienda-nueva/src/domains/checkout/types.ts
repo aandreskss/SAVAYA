@@ -53,6 +53,7 @@ export type ShippingOption = {
 export type PaymentMethodType =
   | 'zelle'
   | 'pago_movil'
+  | 'pago_movil_qr'
   | 'bank_transfer'
   | 'usdt_trc20'
   | 'binance_pay'
