@@ -68,18 +68,27 @@ export async function refreshRatesAction(): Promise<ActionResult<RefreshedRates>
 
   if (!session?.user?.id) return { success: false, error: 'No autenticado' }
 
-  try {
-    const [usd, eur] = await Promise.all([refreshRate(), refreshEurRate()])
-    revalidatePath(REVALIDATE)
-    return {
-      success: true,
-      data: {
-        usd: { rateVes: usd.rateVes, source: usd.source, fetchedAt: usd.fetchedAt },
-        eur: { rateVes: eur.rateVes, source: eur.source, fetchedAt: eur.fetchedAt },
-      },
-    }
-  } catch {
-    return { success: false, error: 'Error al consultar la API de BCV' }
+  const [usdResult, eurResult] = await Promise.allSettled([refreshRate(), refreshEurRate()])
+
+  revalidatePath(REVALIDATE)
+
+  const usd = usdResult.status === 'fulfilled' ? usdResult.value : null
+  const eur = eurResult.status === 'fulfilled' ? eurResult.value : null
+
+  if (!usd && !eur) {
+    return { success: false, error: 'Ambas fuentes de tasa fallaron. Carga la tasa manualmente.' }
+  }
+
+  return {
+    success: true,
+    data: {
+      usd: usd
+        ? { rateVes: usd.rateVes, source: usd.source, fetchedAt: usd.fetchedAt }
+        : { rateVes: 0, source: 'error', fetchedAt: new Date() },
+      eur: eur
+        ? { rateVes: eur.rateVes, source: eur.source, fetchedAt: eur.fetchedAt }
+        : { rateVes: 0, source: 'error', fetchedAt: new Date() },
+    },
   }
 }
 
