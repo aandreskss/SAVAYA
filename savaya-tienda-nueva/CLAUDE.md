@@ -140,9 +140,9 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
 
 ---
 
-## 9. Estado del proyecto (actualizado 2026-08-19)
+## 9. Estado del proyecto (actualizado 2026-08-26)
 
-**Estado: Fases 0–9 completas + mejoras post-lanzamiento activas. Módulo de métodos de pago admin completo con Pago Móvil QR y upload Cloudinary.**
+**Estado: Fases 0–9 completas + mejoras post-lanzamiento activas. Módulo de métodos de pago admin completo con Pago Móvil QR y upload Cloudinary. Mejoras admin 2026-08-26: SKU bulk edit por color + fix tema oscuro.**
 
 | Fase | Estado |
 |---|---|
@@ -435,3 +435,14 @@ Todo el copy de cara al usuario en español venezolano natural y profesional (no
   - **Pattern correcto para `startTransition` async**: siempre envolver el cuerpo en `try-catch` — React 19 silencia rechazos no capturados dentro de transiciones y el usuario no ve ningún feedback
   - **Nav admin**: entrada "Métodos pago" con `WalletIcon` en `src/domains/admin/lib/nav.tsx`, permiso `settings:read`
   - **Pendiente**: mostrar imagen QR al cliente en checkout cuando selecciona tipo `pago_movil_qr`
+
+- **Mejoras admin (2026-08-26):**
+  - **Fix tema oscuro atascado** — causa raíz: `[data-gender="hombre"]` en `globals.css` también dispara el modo oscuro. Si el usuario visitaba `/hombre` en el storefront, `savaya-gender='hombre'` quedaba en localStorage y `ThemeSync` lo restauraba en cada página (incluido admin). El `ThemeToggle` solo controla `data-theme`, no `data-gender`, por lo que el oscuro no cedía al hacer clic en "modo claro".
+    - `src/domains/admin/components/AdminShell.tsx` — `useEffect` que elimina `data-gender` del `<html>` al entrar al admin y lo restaura al salir (admin no tiene concepto de género temático).
+    - `src/domains/layout/theme-store.ts` — `setTheme('light')` ahora usa `removeAttribute('data-theme')` en vez de `dataset.theme = ''` (más explícito).
+  - **SKU bulk edit por color** (`src/domains/admin/catalog/components/tabs/VariantsTab.tsx`):
+    - Panel "Referencia base por color" aparece encima de la tabla cuando hay variantes activas.
+    - Una fila por color activo: [swatch] [nombre] [input base] → preview "BASE-35, BASE-36…"
+    - Al escribir en el input, propaga inmediatamente `{prefix}-{sizeName}` a todas las variantes activas de ese color.
+    - Los inputs individuales de SKU en la tabla siguen siendo editables de forma independiente (propagación es unidireccional: base → individuo, no al revés).
+    - Estado interno `skuPrefixes: Record<colorId, string>` inicializado extrayendo el prefijo de la primera variante activa de cada color (strip de último `-SIZE`).
