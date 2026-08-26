@@ -3,7 +3,7 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { Button, Modal, Badge } from '@/shared/ui'
 import { toast } from '@/shared/ui/Toast'
-import { setUserRolesAction, createAdminUserAction } from '../actions'
+import { setUserRolesAction, createAdminUserAction, deleteAdminUserAction } from '../actions'
 import type { AdminUser, AdminRole } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -341,11 +341,26 @@ export function UsersManager({ initialUsers, allRoles, currentUserId, isSuperAdm
   const [users, setUsers] = useState(initialUsers)
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [deletePending, startDeleteTransition] = useTransition()
 
   function handleCreated(user: AdminUser) {
     setUsers((prev) => [user, ...prev])
     setCreateModalOpen(false)
+  }
+
+  function handleDelete(userId: string) {
+    startDeleteTransition(async () => {
+      const res = await deleteAdminUserAction(userId)
+      if (res.success) {
+        setUsers((prev) => prev.filter((u) => u.id !== userId))
+        setConfirmDeleteId(null)
+        toast.success('Usuario eliminado')
+      } else {
+        toast.error(res.error)
+      }
+    })
   }
 
   function handleSave(userId: string, roleIds: string[]) {
@@ -442,12 +457,42 @@ export function UsersManager({ initialUsers, allRoles, currentUserId, isSuperAdm
                       </td>
                       <td className="px-4 py-3 text-right">
                         {!isYou && (
-                          <button
-                            onClick={() => setEditingUser(u)}
-                            className="text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded hover:bg-surface-2 transition-colors"
-                          >
-                            Gestionar roles
-                          </button>
+                          confirmDeleteId === u.id ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="text-xs text-text-secondary">¿Eliminar?</span>
+                              <button
+                                onClick={() => handleDelete(u.id)}
+                                disabled={deletePending}
+                                className="text-xs font-medium text-error hover:text-error/80 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                              >
+                                {deletePending ? '...' : 'Sí'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded transition-colors"
+                              >
+                                No
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <button
+                                onClick={() => setEditingUser(u)}
+                                className="text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded hover:bg-surface-2 transition-colors"
+                              >
+                                Gestionar roles
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(u.id)}
+                                aria-label="Eliminar usuario"
+                                className="p-1 rounded text-text-muted hover:text-error transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </span>
+                          )
                         )}
                       </td>
                     </tr>
@@ -494,12 +539,42 @@ export function UsersManager({ initialUsers, allRoles, currentUserId, isSuperAdm
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         {!isYou && (
-                          <button
-                            onClick={() => setEditingUser(u)}
-                            className="text-xs text-accent-gold hover:text-accent-gold/80 px-2 py-1 rounded transition-colors"
-                          >
-                            Asignar rol
-                          </button>
+                          confirmDeleteId === u.id ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="text-xs text-text-secondary">¿Eliminar?</span>
+                              <button
+                                onClick={() => handleDelete(u.id)}
+                                disabled={deletePending}
+                                className="text-xs font-medium text-error hover:text-error/80 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                              >
+                                {deletePending ? '...' : 'Sí'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded transition-colors"
+                              >
+                                No
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <button
+                                onClick={() => setEditingUser(u)}
+                                className="text-xs text-accent-gold hover:text-accent-gold/80 px-2 py-1 rounded transition-colors"
+                              >
+                                Asignar rol
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(u.id)}
+                                aria-label="Eliminar usuario"
+                                className="p-1 rounded text-text-muted hover:text-error transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </span>
+                          )
                         )}
                       </td>
                     </tr>

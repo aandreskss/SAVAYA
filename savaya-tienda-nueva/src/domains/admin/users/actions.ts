@@ -5,7 +5,7 @@ import { headers } from 'next/headers'
 import { auth } from '@/domains/auth/auth'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
-import { setUserRoles, createAdminUser } from './repository'
+import { setUserRoles, createAdminUser, deleteAdminUser } from './repository'
 import type { ActionResult, AdminUser } from './types'
 
 const REVALIDATE = '/admin/usuarios'
@@ -90,5 +90,30 @@ export async function setUserRolesAction(
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Error al actualizar los roles' }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Delete user
+// ---------------------------------------------------------------------------
+
+export async function deleteAdminUserAction(
+  targetUserId: string,
+): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('users:write')) {
+    return { success: false, error: 'Sin permiso para eliminar usuarios' }
+  }
+  if (actor.id === targetUserId) {
+    return { success: false, error: 'No puedes eliminar tu propia cuenta' }
+  }
+
+  try {
+    await deleteAdminUser(targetUserId)
+    revalidatePath(REVALIDATE)
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al eliminar el usuario' }
   }
 }

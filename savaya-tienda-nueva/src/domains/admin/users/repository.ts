@@ -160,6 +160,14 @@ export async function createAdminUser(
 }
 
 // ---------------------------------------------------------------------------
+// Delete user (cascades to accounts, sessions, userRoles, 2FA)
+// ---------------------------------------------------------------------------
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  await db.delete(users).where(eq(users.id, userId))
+}
+
+// ---------------------------------------------------------------------------
 // Check if a user is super_admin
 // ---------------------------------------------------------------------------
 
