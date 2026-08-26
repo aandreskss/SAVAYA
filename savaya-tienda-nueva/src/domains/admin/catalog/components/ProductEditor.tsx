@@ -50,6 +50,7 @@ function initMedia(product?: AdminProductForEdit): MediaItem[] {
     altText: m.altText ?? '',
     isPrimary: m.isPrimary,
     sortOrder: m.sortOrder,
+    colorId: m.colorId ?? null,
   }))
 }
 
@@ -134,6 +135,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
           altText: m.altText || null,
           isPrimary: m.isPrimary,
           sortOrder: m.sortOrder,
+          colorId: m.colorId ?? null,
         })),
       }
 
@@ -172,6 +174,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
         <MediaTab
           productId={product?.id}
           media={media}
+          colors={colors}
           onChange={setMedia}
         />
       ),

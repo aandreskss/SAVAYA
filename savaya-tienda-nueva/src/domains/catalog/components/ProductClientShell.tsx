@@ -62,11 +62,16 @@ export function ProductClientShell({
     }
   }
 
+  const selectedColorId = selectedVariantId
+    ? product.variants.find((v) => v.id === selectedVariantId)?.color.id
+    : product.variants[0]?.color.id
+
   return (
     <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
       <ProductGallery
         images={product.images}
         selectedVariantId={selectedVariantId}
+        selectedColorId={selectedColorId}
         productName={product.name}
       />
       <ProductInfo

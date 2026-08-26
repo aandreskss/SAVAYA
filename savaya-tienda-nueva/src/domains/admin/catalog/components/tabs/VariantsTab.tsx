@@ -99,13 +99,24 @@ export function VariantsTab({
         if (existing) {
           next.push({ ...existing, isActive: true })
         } else {
+          // Derive SKU prefix from a sibling variant of the same color (preserving user edits).
+          // Sibling SKU format is expected to be "PREFIX-SIZE", so strip the last dash-segment.
+          const sibling = variants.find((v) => v.colorId === colorId)
+          let sku: string
+          if (sibling) {
+            const lastDash = sibling.sku.lastIndexOf('-')
+            const prefix = lastDash > 0 ? sibling.sku.slice(0, lastDash) : sibling.sku
+            sku = `${prefix}-${size.name}`
+          } else {
+            sku = generateSku(productName, color.name, size.name)
+          }
           next.push({
             colorId,
             colorName: color.name,
             colorHex: color.hex ?? '#888',
             sizeId,
             sizeName: size.name,
-            sku: generateSku(productName, color.name, size.name),
+            sku,
             price: basePrice || '0',
             compareAtPrice: '',
             isActive: true,

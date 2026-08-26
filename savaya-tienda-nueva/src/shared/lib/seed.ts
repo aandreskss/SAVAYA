@@ -73,6 +73,15 @@ const SIZES_DATA = [
   { name: '38', sortOrder: 4 },
   { name: '39', sortOrder: 5 },
   { name: '40', sortOrder: 6 },
+  { name: '41', sortOrder: 7 },
+  { name: '42', sortOrder: 8 },
+  { name: '43', sortOrder: 9 },
+  { name: '44', sortOrder: 10 },
+  { name: '45', sortOrder: 11 },
+  { name: '46', sortOrder: 12 },
+  { name: '47', sortOrder: 13 },
+  { name: '48', sortOrder: 14 },
+  { name: '49', sortOrder: 15 },
 ]
 
 // 19 colors validated with SAVAYA — using DATABASE.md values (authoritative)

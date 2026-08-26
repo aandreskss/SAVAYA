@@ -18,6 +18,7 @@ const MediaSchema = z.object({
   altText: z.string().max(200).nullable(),
   isPrimary: z.boolean(),
   sortOrder: z.number().int().min(0),
+  colorId: z.string().uuid().nullable().optional(),
 })
 
 export const SaveProductSchema = z.object({

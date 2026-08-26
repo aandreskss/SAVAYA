@@ -275,6 +275,7 @@ export async function getAdminProductForEdit(id: string): Promise<AdminProductFo
         isPrimary: productMedia.isPrimary,
         sortOrder: productMedia.sortOrder,
         variantId: productMedia.variantId,
+        colorId: productMedia.colorId,
       })
       .from(productMedia)
       .where(eq(productMedia.productId, id))
@@ -327,6 +328,7 @@ export async function getAdminProductForEdit(id: string): Promise<AdminProductFo
       isPrimary: m.isPrimary,
       sortOrder: m.sortOrder,
       variantId: m.variantId,
+      colorId: m.colorId,
     })),
   }
 }
@@ -444,6 +446,7 @@ export async function createProduct(
         altText: m.altText,
         isPrimary: m.isPrimary,
         sortOrder: m.sortOrder,
+        colorId: m.colorId ?? null,
       })),
     )
   }
@@ -570,7 +573,7 @@ export async function updateProduct(
   for (const m of data.media.filter((m) => m.id)) {
     await db
       .update(productMedia)
-      .set({ isPrimary: m.isPrimary, sortOrder: m.sortOrder, altText: m.altText })
+      .set({ isPrimary: m.isPrimary, sortOrder: m.sortOrder, altText: m.altText, colorId: m.colorId ?? null })
       .where(eq(productMedia.id, m.id!))
   }
 
@@ -584,6 +587,7 @@ export async function updateProduct(
         altText: m.altText,
         isPrimary: m.isPrimary,
         sortOrder: m.sortOrder,
+        colorId: m.colorId ?? null,
       })),
     )
   }
@@ -730,6 +734,7 @@ export async function duplicateProduct(
         altText: m.altText,
         isPrimary: m.isPrimary,
         sortOrder: m.sortOrder,
+        colorId: m.colorId,
       })),
     )
   }

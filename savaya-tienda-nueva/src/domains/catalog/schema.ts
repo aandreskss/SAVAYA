@@ -170,6 +170,9 @@ export const productMedia = pgTable(
     variantId: uuid('variant_id').references(() => productVariants.id, {
       onDelete: 'set null',
     }),
+    colorId: uuid('color_id').references(() => colors.id, {
+      onDelete: 'set null',
+    }),
     cloudinaryPublicId: text('cloudinary_public_id').notNull(),
     url: text('url').notNull(),
     altText: text('alt_text'),

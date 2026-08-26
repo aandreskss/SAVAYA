@@ -747,6 +747,7 @@ export type ProductDetail = {
     altText: string | null
     isPrimary: boolean
     variantId: string | null
+    colorId: string | null
     type: 'image' | 'video'
     sortOrder: number
   }[]
@@ -877,6 +878,7 @@ const DEV_PRODUCT_DETAIL: ProductDetail = {
       altText: 'Sandalia Punta Fina — vista frontal',
       isPrimary: true,
       variantId: null,
+      colorId: null,
       type: 'image',
       sortOrder: 0,
     },
@@ -886,6 +888,7 @@ const DEV_PRODUCT_DETAIL: ProductDetail = {
       altText: 'Sandalia Punta Fina — vista lateral',
       isPrimary: false,
       variantId: null,
+      colorId: null,
       type: 'image',
       sortOrder: 1,
     },
@@ -895,6 +898,7 @@ const DEV_PRODUCT_DETAIL: ProductDetail = {
       altText: 'Sandalia Punta Fina — detalle suela',
       isPrimary: false,
       variantId: null,
+      colorId: null,
       type: 'image',
       sortOrder: 2,
     },
@@ -904,6 +908,7 @@ const DEV_PRODUCT_DETAIL: ProductDetail = {
       altText: 'Sandalia Punta Fina — vista trasera',
       isPrimary: false,
       variantId: null,
+      colorId: null,
       type: 'image',
       sortOrder: 3,
     },
@@ -987,6 +992,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
       altText: productMedia.altText,
       isPrimary: productMedia.isPrimary,
       variantId: productMedia.variantId,
+      colorId: productMedia.colorId,
       type: productMedia.type,
       sortOrder: productMedia.sortOrder,
     })
@@ -1017,6 +1023,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
     altText: img.altText,
     isPrimary: img.isPrimary,
     variantId: img.variantId,
+    colorId: img.colorId,
     type: img.type as 'image' | 'video',
     sortOrder: img.sortOrder,
   }))

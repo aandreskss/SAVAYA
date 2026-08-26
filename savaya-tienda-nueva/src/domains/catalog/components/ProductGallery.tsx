@@ -12,12 +12,14 @@ type GalleryImage = {
   url: string
   altText: string | null
   variantId: string | null
+  colorId: string | null
   type: 'image' | 'video'
 }
 
 export type ProductGalleryProps = {
   images: GalleryImage[]
   selectedVariantId?: string
+  selectedColorId?: string
   productName: string
 }
 
@@ -25,35 +27,37 @@ export type ProductGalleryProps = {
 // ProductGallery
 // ---------------------------------------------------------------------------
 
-export function ProductGallery({ images, selectedVariantId, productName }: ProductGalleryProps) {
+export function ProductGallery({ images, selectedVariantId, selectedColorId, productName }: ProductGalleryProps) {
+  // Filter to images matching the selected color (or untagged images).
+  // If no color is selected, show all images.
+  const visibleImages = selectedColorId
+    ? images.filter((img) => img.colorId === null || img.colorId === selectedColorId)
+    : images
+
+  // Fallback: if filter produces no images, show all
+  const displayImages = visibleImages.length > 0 ? visibleImages : images
+
   // manualIndex: index chosen by the user clicking thumbnails/dots
   // If null, we compute the active index from selectedVariantId
   const [manualIndex, setManualIndex] = useState<number | null>(null)
   const [isZoomed, setIsZoomed] = useState(false)
   const carouselRef = useRef<HTMLDivElement>(null)
 
-  // Compute the active index:
+  // Compute the active index within displayImages:
   // 1. If the user manually picked an image, use that
-  // 2. If a variant is selected and has a dedicated image, use its first image
-  // 3. Otherwise default to 0
-  const variantImageIndex = selectedVariantId
-    ? images.findIndex((img) => img.variantId === selectedVariantId)
-    : -1
-  const activeIndex =
-    manualIndex !== null
-      ? manualIndex
-      : variantImageIndex !== -1
-        ? variantImageIndex
-        : 0
+  // 2. Default to 0
+  const activeIndex = manualIndex !== null ? manualIndex : 0
 
-  // Reset manual selection whenever the variant changes (so we jump to the variant image)
+  // Reset manual selection whenever the color changes
+  const prevColorIdRef = useRef(selectedColorId)
   const prevVariantIdRef = useRef(selectedVariantId)
   useEffect(() => {
-    if (selectedVariantId !== prevVariantIdRef.current) {
+    if (selectedColorId !== prevColorIdRef.current || selectedVariantId !== prevVariantIdRef.current) {
+      prevColorIdRef.current = selectedColorId
       prevVariantIdRef.current = selectedVariantId
       setManualIndex(null)
     }
-  }, [selectedVariantId])
+  }, [selectedColorId, selectedVariantId])
 
   // Sync carousel scroll position on index change (mobile)
   useEffect(() => {
@@ -76,7 +80,7 @@ export function ProductGallery({ images, selectedVariantId, productName }: Produ
     setManualIndex(newIndex)
   }, [])
 
-  if (images.length === 0) {
+  if (displayImages.length === 0) {
     return (
       <div
         className="w-full bg-surface-2 rounded-lg flex items-center justify-center"
@@ -88,21 +92,21 @@ export function ProductGallery({ images, selectedVariantId, productName }: Produ
     )
   }
 
-  const activeImage = images[activeIndex]
+  const activeImage = displayImages[activeIndex] ?? displayImages[0]
 
   return (
     <div className="flex flex-col gap-4">
       {/* ── DESKTOP layout ─────────────────────────────────────────────────── */}
       <div className="hidden md:flex gap-4">
         {/* Thumbnails — vertical strip on the left */}
-        {images.length > 1 && (
+        {displayImages.length > 1 && (
           <div
             className="flex flex-col gap-2 w-[72px] shrink-0 overflow-y-auto max-h-[640px]"
             style={{ scrollbarWidth: 'thin' }}
             role="list"
             aria-label="Miniaturas del producto"
           >
-            {images.map((img, idx) => (
+            {displayImages.map((img, idx) => (
               <button
                 key={idx}
                 type="button"
@@ -184,7 +188,7 @@ export function ProductGallery({ images, selectedVariantId, productName }: Produ
             '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
           )}
         >
-          {images.map((img, idx) => (
+          {displayImages.map((img, idx) => (
             <div
               key={idx}
               className="relative w-full shrink-0 snap-start"
@@ -212,17 +216,17 @@ export function ProductGallery({ images, selectedVariantId, productName }: Produ
         </div>
 
         {/* Dots navigation */}
-        {images.length > 1 && (
+        {displayImages.length > 1 && (
           <div
             className="flex justify-center gap-1.5"
             role="group"
             aria-label="Navegación de imágenes"
           >
-            {images.map((_, idx) => (
+            {displayImages.map((_, idx) => (
               <button
                 key={idx}
                 type="button"
-                aria-label={`Imagen ${idx + 1} de ${images.length}`}
+                aria-label={`Imagen ${idx + 1} de ${displayImages.length}`}
                 aria-current={idx === activeIndex ? true : undefined}
                 onClick={() => setManualIndex(idx)}
                 className={cn(

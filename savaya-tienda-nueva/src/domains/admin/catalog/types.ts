@@ -41,6 +41,7 @@ export type AdminMediaItemForEdit = {
   isPrimary: boolean
   sortOrder: number
   variantId: string | null
+  colorId: string | null
 }
 
 export type AdminProductForEdit = {
@@ -134,6 +135,7 @@ export type MediaPayload = {
   altText: string | null
   isPrimary: boolean
   sortOrder: number
+  colorId?: string | null
 }
 
 export type SaveProductPayload = {

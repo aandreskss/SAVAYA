@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { cn } from '@/shared/lib/utils'
 import { deleteProductMediaAction } from '../../actions'
 import { toast } from '@/shared/ui'
+import type { ColorOption } from '../../types'
 
 export type MediaItem = {
   id?: string
@@ -13,11 +14,13 @@ export type MediaItem = {
   altText: string
   isPrimary: boolean
   sortOrder: number
+  colorId?: string | null
 }
 
 type Props = {
   productId?: string
   media: MediaItem[]
+  colors: ColorOption[]
   onChange: (media: MediaItem[]) => void
 }
 
@@ -41,7 +44,7 @@ function TrashIcon() {
   )
 }
 
-export function MediaTab({ productId, media, onChange }: Props) {
+export function MediaTab({ productId, media, colors, onChange }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -217,6 +220,28 @@ export function MediaTab({ productId, media, onChange }: Props) {
                     placeholder="Texto alternativo"
                     className="w-full text-xs px-2 py-1 border border-border rounded font-sans text-text-primary placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
                   />
+
+                  {/* Color assignment */}
+                  {colors.length > 0 && (
+                    <select
+                      value={item.colorId ?? ''}
+                      onChange={(e) =>
+                        onChange(
+                          media.map((m, i) =>
+                            i === index ? { ...m, colorId: e.target.value || null } : m,
+                          ),
+                        )
+                      }
+                      className="w-full text-xs px-2 py-1 border border-border rounded font-sans bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
+                    >
+                      <option value="">Todos los colores</option>
+                      {colors.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
 
                   <div className="flex items-center justify-between gap-1">
                     <div className="flex gap-1">
