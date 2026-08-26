@@ -1,3 +1,5 @@
+import { SalesReportWidget } from '@/domains/admin/analytics/SalesReportWidget'
+
 export default function AnalyticsAdminPage() {
   const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
   const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
@@ -93,8 +95,11 @@ export default function AnalyticsAdminPage() {
         </div>
       </div>
 
+      {/* Sales report download */}
+      <SalesReportWidget />
+
       {/* Info */}
-      <div className="bg-accent-gold-soft border border-accent-gold/20 rounded-xl px-4 py-3 text-sm text-text-secondary">
+      <div className="mt-6 bg-accent-gold-soft border border-accent-gold/20 rounded-xl px-4 py-3 text-sm text-text-secondary">
         Los datos de ventas y pedidos están disponibles en el <strong className="text-text-primary">Dashboard</strong> principal con KPIs en tiempo real.
         GA4 y Meta Pixel registran automáticamente los eventos de navegación, carrito y compra.
       </div>
