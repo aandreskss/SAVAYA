@@ -51,6 +51,7 @@ export type ListAdminProductsOptions = {
   minStock?: number
   maxStock?: number
   categoryId?: string
+  collectionId?: string
 }
 
 export async function listAdminProducts(
@@ -79,6 +80,10 @@ export async function listAdminProducts(
 
   const categoryCondition = opts.categoryId
     ? sql`AND p.category_id = ${opts.categoryId}::uuid`
+    : sql``
+
+  const collectionCondition = opts.collectionId
+    ? sql`AND EXISTS (SELECT 1 FROM product_collections pc WHERE pc.product_id = p.id AND pc.collection_id = ${opts.collectionId}::uuid)`
     : sql``
 
   const skuCondition = opts.sku
@@ -167,6 +172,7 @@ export async function listAdminProducts(
     ${searchCondition}
     ${statusCondition}
     ${categoryCondition}
+    ${collectionCondition}
     ${skuCondition}
     ${colorCondition}
     ${sizeCondition}

@@ -135,8 +135,16 @@ function BenefitIconEl({ icon }: { icon: string }) {
 
 type Props = BlockContent<'benefits_block'>
 
+const LG_COLS: Record<number, string> = {
+  1: 'lg:grid-cols-1',
+  2: 'lg:grid-cols-2',
+  3: 'lg:grid-cols-3',
+  4: 'lg:grid-cols-4',
+}
+
 export function BenefitsBlock({ title, benefits }: Props) {
-  const colCount = benefits.length <= 4 ? benefits.length : 3
+  const colCount = Math.min(benefits.length <= 4 ? benefits.length : 3, 4)
+  const lgCols = LG_COLS[colCount] ?? 'lg:grid-cols-4'
 
   return (
     <section className="px-4 md:px-10 py-12 md:py-16">
@@ -146,26 +154,23 @@ export function BenefitsBlock({ title, benefits }: Props) {
         </h2>
       )}
 
-      <div
-        className="grid grid-cols-2 gap-3 md:gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${Math.min(colCount, 4)}, minmax(0, 1fr))`,
-        }}
-      >
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${lgCols} gap-3 md:gap-4`}>
         {benefits.map((benefit, i) => (
           <div
             key={`${benefit.icon}-${i}`}
-            className="group flex flex-col items-center text-center gap-3 rounded-2xl border border-border/50 bg-surface-2/30 p-5 transition-all duration-200 hover:border-accent-gold/30 hover:bg-surface-2/70"
+            className="group flex flex-row sm:flex-col items-center gap-4 sm:gap-3 rounded-2xl border border-border/50 bg-surface-2/30 p-4 sm:p-5 transition-all duration-200 hover:border-accent-gold/30 hover:bg-surface-2/70"
           >
-            <div className="w-12 h-12 rounded-full bg-surface border border-border/60 flex items-center justify-center text-accent-gold shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:border-accent-gold/40 group-hover:bg-accent-gold/5">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-full bg-surface border border-border/60 flex items-center justify-center text-accent-gold transition-all duration-200 group-hover:border-accent-gold/40 group-hover:bg-accent-gold/5">
               <BenefitIconEl icon={benefit.icon} />
             </div>
-            <p className="font-sans text-[13px] font-bold text-text-primary leading-snug">{benefit.title}</p>
-            {benefit.description && (
-              <p className="font-sans text-xs text-text-secondary leading-relaxed">
-                {benefit.description}
-              </p>
-            )}
+            <div className="sm:text-center">
+              <p className="font-sans text-[13px] font-bold text-text-primary leading-snug">{benefit.title}</p>
+              {benefit.description && (
+                <p className="font-sans text-xs text-text-secondary leading-relaxed mt-1">
+                  {benefit.description}
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>

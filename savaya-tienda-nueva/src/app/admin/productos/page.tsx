@@ -4,6 +4,7 @@ import {
   getAllColors,
   getAllSizes,
   getAllCategoryOptions,
+  getAllCollectionOptions,
 } from '@/domains/admin/catalog/repository'
 import { ProductsTable } from '@/domains/admin/catalog/components/ProductsTable'
 
@@ -27,6 +28,8 @@ export default async function ProductosAdminPage({
   const maxStock = params.maxStock ?? ''
   const categoryId = params.categoryId ?? ''
   const categoryName = params.categoryName ?? ''
+  const collectionId = params.collectionId ?? ''
+  const collectionName = params.collectionName ?? ''
 
   const [{ rows, total }, colors, sizes] = await Promise.all([
     listAdminProducts({
@@ -42,16 +45,23 @@ export default async function ProductosAdminPage({
       minStock: minStock !== '' ? Number(minStock) : undefined,
       maxStock: maxStock !== '' ? Number(maxStock) : undefined,
       categoryId: categoryId || undefined,
+      collectionId: collectionId || undefined,
     }),
     getAllColors(),
     getAllSizes(),
   ])
 
-  // Resolve category name if navigated from categories tab (name in URL), or fall back to lookup
+  // Resolve category/collection names from URL param or DB fallback
   let resolvedCategoryName = categoryName
   if (categoryId && !resolvedCategoryName) {
     const cats = await getAllCategoryOptions()
     resolvedCategoryName = cats.find((c) => c.id === categoryId)?.name ?? ''
+  }
+
+  let resolvedCollectionName = collectionName
+  if (collectionId && !resolvedCollectionName) {
+    const cols = await getAllCollectionOptions()
+    resolvedCollectionName = cols.find((c) => c.id === collectionId)?.name ?? ''
   }
 
   return (
@@ -100,6 +110,8 @@ export default async function ProductosAdminPage({
         maxStock={maxStock}
         categoryId={categoryId}
         categoryName={resolvedCategoryName}
+        collectionId={collectionId}
+        collectionName={resolvedCollectionName}
         colors={colors}
         sizes={sizes}
       />

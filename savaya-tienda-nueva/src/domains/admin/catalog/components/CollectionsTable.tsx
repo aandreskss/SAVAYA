@@ -77,7 +77,18 @@ export function CollectionsTable({ rows }: Props) {
                   <td className="px-4 py-3">
                     {row.isFeatured && <Badge variant="warning" size="sm">Destacada</Badge>}
                   </td>
-                  <td className="px-4 py-3 font-sans text-sm text-text-primary">{row.productCount}</td>
+                  <td className="px-4 py-3">
+                    {row.productCount > 0 ? (
+                      <Link
+                        href={`/admin/productos?collectionId=${row.id}&collectionName=${encodeURIComponent(row.name)}`}
+                        className="font-sans text-sm font-medium text-accent-gold hover:underline underline-offset-2"
+                      >
+                        {row.productCount}
+                      </Link>
+                    ) : (
+                      <span className="font-sans text-sm text-text-secondary">0</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <Link href={`/admin/productos/colecciones/${row.id}`}>

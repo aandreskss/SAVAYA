@@ -34,6 +34,8 @@ type Props = {
   maxStock: string
   categoryId: string
   categoryName: string
+  collectionId: string
+  collectionName: string
   colors: ColorOption[]
   sizes: SizeOption[]
 }
@@ -88,7 +90,7 @@ export function ProductsTable({
   rows, total, page, limit,
   search, status, sku, colorId, sizeId,
   minPrice, maxPrice, minStock, maxStock,
-  categoryId, categoryName, colors, sizes,
+  categoryId, categoryName, collectionId, collectionName, colors, sizes,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -114,7 +116,7 @@ export function ProductsTable({
   const totalPages = Math.ceil(total / limit)
 
   // Count of active advanced filters (not search/status)
-  const advancedFilterCount = [sku, colorId, sizeId, minPrice, maxPrice, minStock, maxStock, categoryId]
+  const advancedFilterCount = [sku, colorId, sizeId, minPrice, maxPrice, minStock, maxStock, categoryId, collectionId]
     .filter(Boolean).length
 
   function pushParams(updates: Record<string, string>) {
@@ -130,6 +132,8 @@ export function ProductsTable({
       maxStock: localMaxStock,
       categoryId,
       categoryName,
+      collectionId,
+      collectionName,
     }
     const merged = { ...current, ...updates, page: updates.page ?? '1' }
     const sp = new URLSearchParams()
@@ -373,28 +377,47 @@ export function ProductsTable({
         </div>
       )}
 
-      {/* ── Category chip ── */}
-      {categoryId && categoryName && (
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-xs text-text-secondary">Categoría:</span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-accent-gold/10 text-accent-gold border border-accent-gold/20">
-            {categoryName}
-            <button
-              onClick={() => pushParams({ categoryId: '', categoryName: '', page: '1' })}
-              aria-label="Quitar filtro de categoría"
-              className="hover:text-accent-gold/60"
-            >
-              <XIcon />
-            </button>
-          </span>
+      {/* ── Category / Collection chips ── */}
+      {(categoryId && categoryName) || (collectionId && collectionName) ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {categoryId && categoryName && (
+            <>
+              <span className="text-xs text-text-secondary">Categoría:</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-accent-gold/10 text-accent-gold border border-accent-gold/20">
+                {categoryName}
+                <button
+                  onClick={() => pushParams({ categoryId: '', categoryName: '', page: '1' })}
+                  aria-label="Quitar filtro de categoría"
+                  className="hover:text-accent-gold/60"
+                >
+                  <XIcon />
+                </button>
+              </span>
+            </>
+          )}
+          {collectionId && collectionName && (
+            <>
+              <span className="text-xs text-text-secondary">Colección:</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-accent-gold/10 text-accent-gold border border-accent-gold/20">
+                {collectionName}
+                <button
+                  onClick={() => pushParams({ collectionId: '', collectionName: '', page: '1' })}
+                  aria-label="Quitar filtro de colección"
+                  className="hover:text-accent-gold/60"
+                >
+                  <XIcon />
+                </button>
+              </span>
+            </>
+          )}
         </div>
-      )}
+      ) : null}
 
       {/* ── Table ── */}
       {rows.length === 0 ? (
         <div className="border border-border rounded-xl p-12 text-center bg-surface">
           <p className="font-sans text-sm text-text-secondary">
-            {search || sku || colorId || sizeId || minPrice || maxPrice || minStock || maxStock || categoryId
+            {search || sku || colorId || sizeId || minPrice || maxPrice || minStock || maxStock || categoryId || collectionId
               ? 'Sin resultados para los filtros aplicados.'
               : 'Sin productos todavía.'}
           </p>
