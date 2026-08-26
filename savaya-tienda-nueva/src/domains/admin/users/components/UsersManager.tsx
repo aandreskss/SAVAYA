@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, type FormEvent } from 'react'
 import { Button, Modal, Badge } from '@/shared/ui'
 import { toast } from '@/shared/ui/Toast'
-import { setUserRolesAction } from '../actions'
+import { setUserRolesAction, createAdminUserAction } from '../actions'
 import type { AdminUser, AdminRole } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -32,6 +32,207 @@ const ROLE_BADGE: Record<string, 'warning' | 'error' | 'gold' | 'success' | 'out
   customer_service: 'outline',
   marketing: 'outline',
   analyst: 'outline',
+}
+
+const inputCls =
+  'w-full h-9 px-3 rounded-md border border-border bg-surface text-sm text-text-primary focus:outline-none focus:border-accent-gold'
+
+// ---------------------------------------------------------------------------
+// Create user modal
+// ---------------------------------------------------------------------------
+
+function CreateUserModal({
+  allRoles,
+  isSuperAdmin,
+  onCreated,
+  onClose,
+}: {
+  allRoles: AdminRole[]
+  isSuperAdmin: boolean
+  onCreated: (user: AdminUser) => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [selectedRoles, setSelectedRoles] = useState<Set<string>>(new Set())
+  const [showPassword, setShowPassword] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  function toggleRole(roleId: string) {
+    setSelectedRoles((prev) => {
+      const next = new Set(prev)
+      if (next.has(roleId)) next.delete(roleId)
+      else next.add(roleId)
+      return next
+    })
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (password !== confirm) {
+      toast.error('Las contraseñas no coinciden')
+      return
+    }
+    startTransition(async () => {
+      const res = await createAdminUserAction({
+        email,
+        name: name || undefined,
+        password,
+        roleIds: [...selectedRoles],
+      })
+      if (res.success) {
+        toast.success('Usuario creado')
+        onCreated(res.data)
+      } else {
+        toast.error(res.error)
+      }
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* Name + Email */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1">
+            Nombre <span className="text-text-secondary/50">(opcional)</span>
+          </label>
+          <input
+            className={inputCls}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ej: María González"
+            maxLength={100}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1">
+            Email <span className="text-error">*</span>
+          </label>
+          <input
+            type="email"
+            className={inputCls}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="correo@ejemplo.com"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Passwords */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1">
+            Contraseña <span className="text-error">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className={`${inputCls} pr-10`}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mín. 8 caracteres"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1">
+            Confirmar contraseña <span className="text-error">*</span>
+          </label>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            className={`${inputCls} ${confirm && confirm !== password ? 'border-error' : ''}`}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder="Repite la contraseña"
+            required
+          />
+          {confirm && confirm !== password && (
+            <p className="text-[11px] text-error mt-1">Las contraseñas no coinciden</p>
+          )}
+        </div>
+      </div>
+
+      {/* Roles */}
+      <div>
+        <label className="block text-xs font-medium text-text-secondary mb-2">
+          Roles asignados
+        </label>
+        <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1">
+          {allRoles.map((role) => {
+            const isSuperAdminRole = role.name === 'super_admin'
+            const disabled = isSuperAdminRole && !isSuperAdmin
+            return (
+              <label
+                key={role.id}
+                className={`flex items-start gap-3 p-2.5 border border-border rounded-lg cursor-pointer select-none transition-colors ${
+                  selectedRoles.has(role.id) ? 'bg-accent-gold/5 border-accent-gold/30' : 'hover:bg-surface-2'
+                } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  disabled={disabled}
+                  checked={selectedRoles.has(role.id)}
+                  onChange={() => !disabled && toggleRole(role.id)}
+                  className="mt-0.5 w-4 h-4 accent-[var(--color-accent-gold)]"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-text-primary">
+                      {ROLE_LABELS[role.name] ?? role.name}
+                    </span>
+                    {isSuperAdminRole && (
+                      <Badge variant="error" size="sm">Solo super_admin</Badge>
+                    )}
+                  </div>
+                  {role.description && (
+                    <p className="text-xs text-text-secondary mt-0.5">{role.description}</p>
+                  )}
+                </div>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-1">
+        <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          className="flex-1"
+          isLoading={isPending}
+          disabled={!email || !password || password !== confirm}
+        >
+          Crear usuario
+        </Button>
+      </div>
+    </form>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +340,13 @@ type Props = {
 export function UsersManager({ initialUsers, allRoles, currentUserId, isSuperAdmin }: Props) {
   const [users, setUsers] = useState(initialUsers)
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+
+  function handleCreated(user: AdminUser) {
+    setUsers((prev) => [user, ...prev])
+    setCreateModalOpen(false)
+  }
 
   function handleSave(userId: string, roleIds: string[]) {
     startTransition(async () => {
@@ -168,12 +375,17 @@ export function UsersManager({ initialUsers, allRoles, currentUserId, isSuperAdm
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-display text-3xl uppercase tracking-wide">Usuarios</h1>
-        <p className="text-sm text-text-secondary mt-1">
-          {adminUsers.length} {adminUsers.length === 1 ? 'administrador' : 'administradores'} ·{' '}
-          {noRoleUsers.length} sin rol
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl uppercase tracking-wide">Usuarios</h1>
+          <p className="text-sm text-text-secondary mt-1">
+            {adminUsers.length} {adminUsers.length === 1 ? 'administrador' : 'administradores'} ·{' '}
+            {noRoleUsers.length} sin rol
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setCreateModalOpen(true)}>
+          + Nuevo usuario
+        </Button>
       </div>
 
       {/* Admin users table */}
@@ -316,6 +528,21 @@ export function UsersManager({ initialUsers, allRoles, currentUserId, isSuperAdm
             isPending={isPending}
           />
         )}
+      </Modal>
+
+      {/* Create user modal */}
+      <Modal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="Nuevo usuario"
+        size="lg"
+      >
+        <CreateUserModal
+          allRoles={allRoles}
+          isSuperAdmin={isSuperAdmin}
+          onCreated={handleCreated}
+          onClose={() => setCreateModalOpen(false)}
+        />
       </Modal>
     </div>
   )
