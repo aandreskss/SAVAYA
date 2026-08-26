@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { logoutAdmin } from '@/domains/auth/actions'
 import { AdminSidebar, type NavItem } from '@/shared/ui/AdminSidebar'
@@ -17,6 +17,16 @@ interface Props {
 export function AdminShell({ navItems, userPermissions, userName, children }: Props) {
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+
+  // Admin has no gender theming — clear data-gender so [data-gender="hombre"] doesn't
+  // force dark mode when the user previously visited the /hombre storefront section.
+  useEffect(() => {
+    const prev = document.documentElement.dataset.gender ?? ''
+    document.documentElement.removeAttribute('data-gender')
+    return () => {
+      if (prev) document.documentElement.dataset.gender = prev
+    }
+  }, [])
 
   const toggleMobile = useCallback(() => setIsMobileOpen((prev) => !prev), [])
   const closeMobile = useCallback(() => setIsMobileOpen(false), [])

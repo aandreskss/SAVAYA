@@ -63,6 +63,28 @@ function initSelected(variants: VariantRow[]) {
   return { colorIds, sizeIds }
 }
 
+// Extract the SKU prefix for a color from its first active variant
+function extractPrefix(variants: VariantRow[], colorId: string): string {
+  const v = variants.find((r) => r.colorId === colorId && r.isActive !== false)
+  if (!v) return ''
+  const lastDash = v.sku.lastIndexOf('-')
+  return lastDash > 0 ? v.sku.slice(0, lastDash) : v.sku
+}
+
+// Build initial prefix map from current active variants
+function initPrefixes(variants: VariantRow[]): Record<string, string> {
+  const seen = new Set<string>()
+  const result: Record<string, string> = {}
+  for (const v of variants) {
+    if (v.isActive !== false && !seen.has(v.colorId)) {
+      seen.add(v.colorId)
+      const lastDash = v.sku.lastIndexOf('-')
+      result[v.colorId] = lastDash > 0 ? v.sku.slice(0, lastDash) : v.sku
+    }
+  }
+  return result
+}
+
 export function VariantsTab({
   variants,
   colors,
@@ -71,24 +93,20 @@ export function VariantsTab({
   productName,
   onChange,
 }: Props) {
-  // Selected color/size IDs are tracked independently from variant rows.
-  // This fixes the catch-22 where the user had to select both a color AND
-  // a size at the same time for anything to happen.
   const [selColors, setSelColors] = useState<Set<string>>(
     () => initSelected(variants).colorIds,
   )
   const [selSizes, setSelSizes] = useState<Set<string>>(
     () => initSelected(variants).sizeIds,
   )
+  // Per-color SKU prefix for bulk editing — separate from individual SKU state
+  const [skuPrefixes, setSkuPrefixes] = useState<Record<string, string>>(
+    () => initPrefixes(variants),
+  )
 
-  // Reconcile the cross-product of (newColors × newSizes) with existing variant rows.
-  // - Re-uses existing variant data (sku, price, etc.) when a combination already exists.
-  // - Creates new variant rows for new combinations.
-  // - Soft-deletes (isActive=false) saved variants whose color/size was deselected.
   function reconcile(newColors: Set<string>, newSizes: Set<string>) {
     const next: VariantRow[] = []
 
-    // Active combinations in the new cross-product
     for (const colorId of newColors) {
       const color = colors.find((c) => c.id === colorId)
       if (!color) continue
@@ -99,8 +117,6 @@ export function VariantsTab({
         if (existing) {
           next.push({ ...existing, isActive: true })
         } else {
-          // Derive SKU prefix from a sibling variant of the same color (preserving user edits).
-          // Sibling SKU format is expected to be "PREFIX-SIZE", so strip the last dash-segment.
           const sibling = variants.find((v) => v.colorId === colorId)
           let sku: string
           if (sibling) {
@@ -126,7 +142,6 @@ export function VariantsTab({
       }
     }
 
-    // Preserve saved variants that fell outside the new cross-product as soft-deleted
     for (const v of variants) {
       const inCrossProduct = newColors.has(v.colorId) && newSizes.has(v.sizeId)
       if (!inCrossProduct && v.id) {
@@ -143,6 +158,11 @@ export function VariantsTab({
     else next.add(colorId)
     setSelColors(next)
     reconcile(next, selSizes)
+    // Seed prefix for newly added color
+    if (!skuPrefixes[colorId]) {
+      const prefix = extractPrefix(variants, colorId)
+      if (prefix) setSkuPrefixes((prev) => ({ ...prev, [colorId]: prefix }))
+    }
   }
 
   function toggleSize(sizeId: string) {
@@ -157,8 +177,24 @@ export function VariantsTab({
     onChange(variants.map((v, i) => (i === index ? { ...v, ...patch } : v)))
   }
 
+  // Apply a new prefix to all active variants of a given color: sets each SKU to "{prefix}-{sizeName}"
+  function applySkuPrefix(colorId: string, prefix: string) {
+    setSkuPrefixes((prev) => ({ ...prev, [colorId]: prefix }))
+    onChange(
+      variants.map((v) => {
+        if (v.colorId !== colorId || v.isActive === false) return v
+        return { ...v, sku: prefix ? `${prefix}-${v.sizeName}` : v.sku }
+      }),
+    )
+  }
+
   const activeVariants = variants.filter((v) => v.isActive !== false)
   const hasSelections = selColors.size > 0 || selSizes.size > 0
+
+  // Unique colors that have at least one active variant, preserving selection order
+  const activeColorIds = Array.from(
+    new Set(activeVariants.map((v) => v.colorId)),
+  )
 
   return (
     <div className="space-y-6 py-2">
@@ -241,6 +277,45 @@ export function VariantsTab({
           <p className="font-sans text-sm font-medium text-text-primary mb-2">
             Variantes ({activeVariants.length})
           </p>
+
+          {/* Bulk SKU editor — one row per color */}
+          {activeColorIds.length > 0 && (
+            <div className="mb-3 rounded-lg border border-border bg-surface-2/40 px-3 py-2.5 space-y-2">
+              <p className="font-sans text-xs font-medium text-text-secondary uppercase tracking-wide">
+                Referencia base por color
+              </p>
+              {activeColorIds.map((colorId) => {
+                const sample = activeVariants.find((v) => v.colorId === colorId)
+                if (!sample) return null
+                const prefix = skuPrefixes[colorId] ?? ''
+                return (
+                  <div key={colorId} className="flex items-center gap-2">
+                    <span
+                      className="h-3 w-3 rounded-full border border-border shrink-0"
+                      style={{ backgroundColor: sample.colorHex }}
+                      aria-hidden="true"
+                    />
+                    <span className="font-sans text-xs text-text-secondary w-20 shrink-0 truncate">
+                      {sample.colorName}
+                    </span>
+                    <input
+                      type="text"
+                      value={prefix}
+                      placeholder="ej. SAVAYA-NGR"
+                      onChange={(e) => applySkuPrefix(colorId, e.target.value.toUpperCase())}
+                      className="flex-1 max-w-[200px] px-2 py-1 text-xs border border-border rounded font-mono bg-surface text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
+                    />
+                    {prefix && (
+                      <span className="font-mono text-xs text-text-muted">
+                        → {prefix}-35, {prefix}-36…
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[680px] text-sm">
               <thead className="bg-surface-2 border-b border-border">

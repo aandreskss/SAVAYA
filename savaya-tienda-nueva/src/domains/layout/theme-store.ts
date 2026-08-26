@@ -16,7 +16,11 @@ export const useThemeStore = create<ThemeStore>((set) => ({
   setTheme: (theme) => {
     set({ theme })
     try { localStorage.setItem('savaya-theme', theme) } catch { /* SSR guard */ }
-    document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : ''
+    if (theme === 'dark') {
+      document.documentElement.dataset.theme = 'dark'
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
   },
   setGender: (gender) => {
     set({ gender })
