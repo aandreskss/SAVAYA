@@ -37,39 +37,37 @@ export function ShopByCategory({ eyebrow, title, ctaText, ctaHref, categories }:
 
       {/* Bento grid: 1 large left + 2×2 right (for 4+ categories) */}
       {bento ? (
-        <div
-          className="grid gap-4"
-          style={{
-            gridTemplateColumns: 'minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr)',
-            gridTemplateRows: '240px 240px',
-          }}
-        >
+        <div className="grid gap-3 sm:gap-4
+          grid-cols-2
+          [grid-template-rows:200px_155px_155px]
+          sm:[grid-template-columns:minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]
+          sm:[grid-template-rows:240px_240px]
+        ">
           {categories.slice(0, 5).map((cat, i) => (
             <CategoryCard
               key={cat.slug}
               cat={cat}
               sizes={
                 i === 0
-                  ? '(max-width: 768px) calc(100vw - 32px), calc((100vw - 80px) * 0.45)'
-                  : '(max-width: 768px) calc(100vw - 32px), calc((100vw - 80px) * 0.27)'
+                  ? '(max-width: 640px) calc(100vw - 32px), (max-width: 768px) calc(100vw - 32px), calc((100vw - 80px) * 0.45)'
+                  : '(max-width: 640px) calc(50vw - 20px), (max-width: 768px) calc(50vw - 20px), calc((100vw - 80px) * 0.27)'
               }
-              className={i === 0 ? '[grid-row:span_2]' : ''}
+              className={i === 0 ? 'col-span-2 sm:col-span-1 sm:[grid-row:span_2]' : ''}
             />
           ))}
         </div>
       ) : (
-        <div
-          className="grid gap-4"
-          style={{
-            gridTemplateColumns: `repeat(${Math.min(count, 3)}, minmax(0, 1fr))`,
-          }}
-        >
+        <div className={`grid gap-3 sm:gap-4 ${
+          count === 1 ? 'grid-cols-1' :
+          count === 2 ? 'grid-cols-2' :
+          'grid-cols-2 sm:grid-cols-3'
+        }`}>
           {categories.map((cat) => (
             <CategoryCard
               key={cat.slug}
               cat={cat}
-              sizes="(max-width: 768px) calc(100vw - 32px), calc((100vw - 80px) / 3)"
-              className="min-h-[220px]"
+              sizes="(max-width: 640px) calc(50vw - 20px), (max-width: 768px) calc(50vw - 20px), calc((100vw - 80px) / 3)"
+              className="min-h-[180px] sm:min-h-[220px]"
             />
           ))}
         </div>

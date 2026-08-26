@@ -87,7 +87,18 @@ export function CategoriesTable({ rows }: Props) {
                       {row.isActive ? 'Activa' : 'Inactiva'}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 font-sans text-sm text-text-primary">{row.productCount}</td>
+                  <td className="px-4 py-3">
+                    {row.productCount > 0 ? (
+                      <Link
+                        href={`/admin/productos?categoryId=${row.id}&categoryName=${encodeURIComponent(row.name)}`}
+                        className="font-sans text-sm font-medium text-accent-gold hover:underline underline-offset-2"
+                      >
+                        {row.productCount}
+                      </Link>
+                    ) : (
+                      <span className="font-sans text-sm text-text-secondary">0</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <Link href={`/admin/productos/categorias/${row.id}`}>

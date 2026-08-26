@@ -43,6 +43,14 @@ export type ListAdminProductsOptions = {
   status?: 'all' | 'published' | 'draft' | 'archived'
   page?: number
   limit?: number
+  sku?: string
+  colorId?: string
+  sizeId?: string
+  minPrice?: number
+  maxPrice?: number
+  minStock?: number
+  maxStock?: number
+  categoryId?: string
 }
 
 export async function listAdminProducts(
@@ -68,6 +76,44 @@ export async function listAdminProducts(
         return sql``
     }
   })()
+
+  const categoryCondition = opts.categoryId
+    ? sql`AND p.category_id = ${opts.categoryId}::uuid`
+    : sql``
+
+  const skuCondition = opts.sku
+    ? sql`AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.sku ILIKE ${'%' + opts.sku + '%'} AND pv.is_active = true)`
+    : sql``
+
+  const colorCondition = opts.colorId
+    ? sql`AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.color_id = ${opts.colorId}::uuid AND pv.is_active = true)`
+    : sql``
+
+  const sizeCondition = opts.sizeId
+    ? sql`AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.size_id = ${opts.sizeId}::uuid AND pv.is_active = true)`
+    : sql``
+
+  const minPriceCondition = opts.minPrice !== undefined && opts.minPrice > 0
+    ? sql`AND p.base_price >= ${opts.minPrice}`
+    : sql``
+
+  const maxPriceCondition = opts.maxPrice !== undefined && opts.maxPrice > 0
+    ? sql`AND p.base_price <= ${opts.maxPrice}`
+    : sql``
+
+  const stockSub = sql`(
+    SELECT COALESCE(SUM(inv.quantity - inv.reserved), 0)
+    FROM product_variants pv JOIN inventory inv ON inv.variant_id = pv.id
+    WHERE pv.product_id = p.id AND pv.is_active = true
+  )`
+
+  const minStockCondition = opts.minStock !== undefined && opts.minStock >= 0
+    ? sql`AND ${stockSub} >= ${opts.minStock}`
+    : sql``
+
+  const maxStockCondition = opts.maxStock !== undefined && opts.maxStock >= 0
+    ? sql`AND ${stockSub} <= ${opts.maxStock}`
+    : sql``
 
   type Row = {
     id: string
@@ -120,6 +166,14 @@ export async function listAdminProducts(
     WHERE 1=1
     ${searchCondition}
     ${statusCondition}
+    ${categoryCondition}
+    ${skuCondition}
+    ${colorCondition}
+    ${sizeCondition}
+    ${minPriceCondition}
+    ${maxPriceCondition}
+    ${minStockCondition}
+    ${maxStockCondition}
     ORDER BY p.created_at DESC
     LIMIT ${limit} OFFSET ${offset}
   `)
