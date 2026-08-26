@@ -34,6 +34,7 @@ export type CustomerListItem = {
   email: string
   phone: string | null
   whatsapp: string | null
+  isActive: boolean
   totalOrders: number
   totalSpentUsd: string
   lastOrderAt: Date | null

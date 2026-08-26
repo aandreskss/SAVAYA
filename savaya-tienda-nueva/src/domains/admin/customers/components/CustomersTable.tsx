@@ -92,12 +92,19 @@ export function CustomersTable({ items, total, filters }: Props) {
               items.map((c) => (
                 <tr key={c.id} className="hover:bg-surface-2/50 transition-colors">
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/clientes/${c.id}`}
-                      className="font-medium text-text-primary hover:underline block leading-tight"
-                    >
-                      {c.firstName} {c.lastName}
-                    </Link>
+                    <div className="flex items-center gap-1.5 leading-tight">
+                      <Link
+                        href={`/admin/clientes/${c.id}`}
+                        className="font-medium text-text-primary hover:underline"
+                      >
+                        {c.firstName} {c.lastName}
+                      </Link>
+                      {!c.isActive && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-error/10 text-error shrink-0">
+                          Bloqueada
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-text-secondary">{c.email}</span>
                     {c.whatsapp && (
                       <a

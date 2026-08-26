@@ -1,6 +1,6 @@
 import { db, rawQuery } from '@/shared/lib/db'
 import { sql } from 'drizzle-orm'
-import { customerNotes, customerTags } from '@/domains/customers/schema'
+import { customers, customerNotes, customerTags } from '@/domains/customers/schema'
 import { auditLog } from '@/domains/audit-log/schema'
 import { eq, and } from 'drizzle-orm'
 import type {
@@ -42,6 +42,7 @@ export async function listAdminCustomers(
     email: string
     phone: string | null
     whatsapp: string | null
+    is_active: boolean
     total_orders: number
     total_spent_usd: string
     last_order_at: Date | null
@@ -57,6 +58,7 @@ export async function listAdminCustomers(
       c.email,
       c.phone,
       c.whatsapp,
+      c.is_active,
       c.total_orders,
       c.total_spent_usd,
       c.last_order_at,
@@ -67,7 +69,7 @@ export async function listAdminCustomers(
       (SELECT a.city  FROM addresses a WHERE a.customer_id = c.id AND a.is_default = true LIMIT 1) AS city,
       (SELECT a.state FROM addresses a WHERE a.customer_id = c.id AND a.is_default = true LIMIT 1) AS state
     FROM customers c
-    WHERE c.is_active = true
+    WHERE 1=1
       ${searchFilter}
       ${tagFilter}
     ORDER BY c.last_order_at DESC NULLS LAST, c.created_at DESC
@@ -77,7 +79,7 @@ export async function listAdminCustomers(
   const [{ count }] = await rawQuery<{ count: string }>(sql`
     SELECT COUNT(*)::text AS count
     FROM customers c
-    WHERE c.is_active = true
+    WHERE 1=1
       ${searchFilter}
       ${tagFilter}
   `)
@@ -90,6 +92,7 @@ export async function listAdminCustomers(
       email: r.email,
       phone: r.phone,
       whatsapp: r.whatsapp,
+      isActive: r.is_active,
       totalOrders: Number(r.total_orders),
       totalSpentUsd: r.total_spent_usd,
       lastOrderAt: r.last_order_at,
@@ -255,6 +258,68 @@ export async function addCustomerNote(
     authorEmail: actor.actorEmail,
     createdAt: note.createdAt,
   }
+}
+
+export async function updateAdminCustomer(
+  customerId: string,
+  data: { firstName: string; lastName: string; email: string; phone: string | null; whatsapp: string | null },
+  actor: ActorContext,
+): Promise<void> {
+  const [before] = await rawQuery<{ email: string }>(sql`SELECT email FROM customers WHERE id = ${customerId} LIMIT 1`)
+
+  await db.update(customers).set({
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email.toLowerCase().trim(),
+    phone: data.phone,
+    whatsapp: data.whatsapp,
+    updatedAt: new Date(),
+  }).where(eq(customers.id, customerId))
+
+  await db.insert(auditLog).values({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'customer.updated',
+    resourceType: 'customer',
+    resourceId: customerId,
+    before: { email: before?.email },
+    after: { firstName: data.firstName, lastName: data.lastName, email: data.email },
+    ip: actor.ip,
+  })
+}
+
+export async function setCustomerStatus(
+  customerId: string,
+  isActive: boolean,
+  actor: ActorContext,
+): Promise<void> {
+  await db.update(customers).set({ isActive, updatedAt: new Date() }).where(eq(customers.id, customerId))
+
+  await db.insert(auditLog).values({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: isActive ? 'customer.activated' : 'customer.blocked',
+    resourceType: 'customer',
+    resourceId: customerId,
+    after: { isActive },
+    ip: actor.ip,
+  })
+}
+
+export async function deleteAdminCustomer(
+  customerId: string,
+  actor: ActorContext,
+): Promise<void> {
+  await db.insert(auditLog).values({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'customer.deleted',
+    resourceType: 'customer',
+    resourceId: customerId,
+    ip: actor.ip,
+  })
+
+  await db.delete(customers).where(eq(customers.id, customerId))
 }
 
 export async function setCustomerTag(
