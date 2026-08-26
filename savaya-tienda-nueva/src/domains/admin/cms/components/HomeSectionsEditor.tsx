@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Toggle } from '@/shared/ui/Toggle'
 import { toast } from '@/shared/ui/toast-store'
 import { BlockContentForm } from './BlockContentForm'
+import { BlockPreview } from './BlockPreview'
 import {
   reorderSectionsAction,
   toggleSectionActiveAction,
@@ -287,6 +288,7 @@ export function HomeSectionsEditor({ initialSections }: Props) {
                 })}
               </p>
             </div>
+            <BlockPreview section={selectedSection} />
             <div className="p-5">
               <BlockContentForm
                 key={selectedSection.id}

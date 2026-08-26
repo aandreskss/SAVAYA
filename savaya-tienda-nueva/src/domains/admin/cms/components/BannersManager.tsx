@@ -5,6 +5,7 @@ import { Modal } from '@/shared/ui/Modal'
 import { Button } from '@/shared/ui/Button'
 import { Toggle } from '@/shared/ui/Toggle'
 import { toast } from '@/shared/ui/toast-store'
+import { ImageUploader } from './ImageUploader'
 import { createBannerAction, updateBannerAction, deleteBannerAction } from '../actions'
 import type { AdminBanner } from '../types'
 
@@ -99,29 +100,21 @@ function BannerForm({ initial, onSubmit, isPending, onCancel }: BannerFormProps)
         />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-          Imagen desktop — URL
-        </label>
-        <input
-          value={imageDesktopUrl}
-          onChange={(e) => setImageDesktopUrl(e.target.value)}
-          required
-          className={inputClass}
-        />
-      </div>
+      <ImageUploader
+        label="Imagen desktop"
+        hint="1920 × 700 px · horizontal"
+        value={imageDesktopUrl}
+        onChange={setImageDesktopUrl}
+        required
+      />
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-          Imagen mobile — URL
-        </label>
-        <input
-          value={imageMobileUrl}
-          onChange={(e) => setImageMobileUrl(e.target.value)}
-          required
-          className={inputClass}
-        />
-      </div>
+      <ImageUploader
+        label="Imagen mobile"
+        hint="750 × 1000 px · vertical"
+        value={imageMobileUrl}
+        onChange={setImageMobileUrl}
+        required
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">

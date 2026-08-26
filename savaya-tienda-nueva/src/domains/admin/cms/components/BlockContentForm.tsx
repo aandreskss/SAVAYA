@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/shared/ui/Button'
+import { ImageUploader } from './ImageUploader'
 import {
   AnnouncementBarSchema,
   HeroSchema,
@@ -239,22 +240,20 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
       </div>
-      <Field label="Imagen desktop — URL">
-        <input
-          value={imageDesktopUrl}
-          onChange={(e) => setImageDesktopUrl(e.target.value)}
-          required
-          className={inputClass}
-        />
-      </Field>
-      <Field label="Imagen mobile — URL">
-        <input
-          value={imageMobileUrl}
-          onChange={(e) => setImageMobileUrl(e.target.value)}
-          required
-          className={inputClass}
-        />
-      </Field>
+      <ImageUploader
+        label="Imagen desktop"
+        hint="1920 × 700 px · horizontal"
+        value={imageDesktopUrl}
+        onChange={setImageDesktopUrl}
+        required
+      />
+      <ImageUploader
+        label="Imagen mobile"
+        hint="750 × 1000 px · vertical"
+        value={imageMobileUrl}
+        onChange={setImageMobileUrl}
+        required
+      />
       <div className="grid grid-cols-2 gap-4">
         <Field label="Alt de la imagen">
           <input
@@ -397,12 +396,12 @@ function ShopByCategoryForm({ content, onSave, isPending }: SubFormProps) {
                 className={inputClass}
               />
             </div>
-            <input
-              placeholder="URL de imagen"
+            <ImageUploader
+              label="Imagen"
+              hint="800 × 1000 px · vertical"
               value={cat.imageUrl}
-              onChange={(e) => updateCategory(idx, 'imageUrl', e.target.value)}
+              onChange={(url) => updateCategory(idx, 'imageUrl', url)}
               required
-              className={inputClass}
             />
           </div>
         ))}
@@ -647,14 +646,13 @@ function EditorialBlockForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
       </div>
-      <Field label="URL de imagen">
-        <input
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          required
-          className={inputClass}
-        />
-      </Field>
+      <ImageUploader
+        label="Imagen"
+        hint={variant === 'split' ? '800 × 1000 px · vertical' : '1440 × 560 px · horizontal'}
+        value={imageUrl}
+        onChange={setImageUrl}
+        required
+      />
       <div className="grid grid-cols-2 gap-4">
         <Field label="Alt de la imagen">
           <input
@@ -756,14 +754,13 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
               className={inputClass}
             />
           </Field>
-          <Field label="URL de imagen">
-            <input
-              value={leftImageUrl}
-              onChange={(e) => setLeftImageUrl(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
+          <ImageUploader
+            label="Imagen"
+            hint="900 × 1100 px · vertical"
+            value={leftImageUrl}
+            onChange={setLeftImageUrl}
+            required
+          />
         </div>
         <div className="space-y-3">
           <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">
@@ -794,14 +791,13 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
               className={inputClass}
             />
           </Field>
-          <Field label="URL de imagen">
-            <input
-              value={rightImageUrl}
-              onChange={(e) => setRightImageUrl(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
+          <ImageUploader
+            label="Imagen"
+            hint="900 × 1100 px · vertical"
+            value={rightImageUrl}
+            onChange={setRightImageUrl}
+            required
+          />
           <label className="flex items-center gap-2 cursor-pointer mt-1">
             <input
               type="checkbox"
@@ -1160,12 +1156,12 @@ function SocialProofGridForm({ content, onSave, isPending }: SubFormProps) {
                 </button>
               )}
             </div>
-            <input
-              placeholder="URL de imagen"
+            <ImageUploader
+              label="Imagen"
+              hint="800 × 800 px · cuadrada"
               value={img.url}
-              onChange={(e) => updateImage(idx, 'url', e.target.value)}
+              onChange={(url) => updateImage(idx, 'url', url)}
               required
-              className={inputClass}
             />
             <div className="grid grid-cols-2 gap-2">
               <input
