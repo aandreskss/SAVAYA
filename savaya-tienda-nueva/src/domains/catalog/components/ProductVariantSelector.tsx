@@ -39,11 +39,15 @@ export function ProductVariantSelector({
   selectedVariantId,
   onVariantChange,
 }: ProductVariantSelectorProps) {
+  // Inactive variants are hidden from the storefront entirely.
+  // Active variants with no stock are shown with a diagonal line (isAvailable: false).
+  const activeVariants = variants.filter((v) => v.isActive)
+
   // Derive the selected color from the current variantId
   const selectedVariant = variants.find((v) => v.id === selectedVariantId)
 
-  // Extract unique colors from variants (preserving first occurrence order)
-  const uniqueColors = getUniqueColors(variants)
+  // Extract unique colors from ACTIVE variants only
+  const uniqueColors = getUniqueColors(activeVariants)
 
   // Auto-select color when there is only one — computed at init time, no effect needed
   const [selectedColorId, setSelectedColorId] = useState<string | undefined>(
@@ -57,7 +61,7 @@ export function ProductVariantSelector({
   function handleColorChange(colorId: string) {
     setSelectedColorId(colorId)
 
-    const sizesForColor = variants
+    const sizesForColor = activeVariants
       .filter((v) => v.color.id === colorId)
       .map((v) => v.size.id)
 
@@ -66,7 +70,7 @@ export function ProductVariantSelector({
       setSelectedSizeId(undefined)
     } else if (selectedSizeId) {
       // Try to find a matching variant with new color + same size
-      const matchingVariant = variants.find(
+      const matchingVariant = activeVariants.find(
         (v) => v.color.id === colorId && v.size.id === selectedSizeId,
       )
       if (matchingVariant) {
@@ -80,7 +84,7 @@ export function ProductVariantSelector({
 
     if (!selectedColorId) return
 
-    const matchingVariant = variants.find(
+    const matchingVariant = activeVariants.find(
       (v) => v.color.id === selectedColorId && v.size.id === sizeId,
     )
     if (matchingVariant) {
@@ -88,22 +92,21 @@ export function ProductVariantSelector({
     }
   }
 
-  // Build color options — a color is available if it has at least one active+in-stock variant
+  // A color is shown if it has at least one active variant.
+  // isAvailable = has at least one active variant with stock (no diagonal line).
   const colorOptions = uniqueColors.map((color) => ({
     id: color.id,
     name: color.name,
     hex: color.hex,
-    isAvailable: variants.some((v) => v.color.id === color.id && v.isAvailable),
+    isAvailable: activeVariants.some((v) => v.color.id === color.id && v.isAvailable),
   }))
 
-  // Build size options for the selected color
-  // A size is available if there's an active variant with stock for that color+size combo
+  // Size options for the selected color — active variants only, isAvailable = has stock.
   const sizeOptionsForColor = (() => {
     if (!selectedColorId) return []
 
-    // Collect all sizes that appear for this color (active variants only)
-    const sizesForColor = variants
-      .filter((v) => v.color.id === selectedColorId && v.isActive)
+    const sizesForColor = activeVariants
+      .filter((v) => v.color.id === selectedColorId)
       .map((v) => ({
         id: v.size.id,
         name: v.size.name,
