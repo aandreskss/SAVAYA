@@ -371,6 +371,31 @@ export async function getAllCollectionOptions(): Promise<CollectionOption[]> {
   return rows
 }
 
+export async function getAllProductSlugsForPicker(): Promise<{ name: string; slug: string }[]> {
+  return db
+    .select({ name: products.name, slug: products.slug })
+    .from(products)
+    .where(eq(products.isActive, true))
+    .orderBy(asc(products.name))
+    .limit(200)
+}
+
+export async function getAllCategorySlugsForPicker(): Promise<{ name: string; slug: string }[]> {
+  return db
+    .select({ name: categories.name, slug: categories.slug })
+    .from(categories)
+    .where(eq(categories.isActive, true))
+    .orderBy(asc(categories.name))
+}
+
+export async function getAllCollectionSlugsForPicker(): Promise<{ name: string; slug: string }[]> {
+  return db
+    .select({ name: collections.name, slug: collections.slug })
+    .from(collections)
+    .where(eq(collections.isActive, true))
+    .orderBy(asc(collections.name))
+}
+
 // ---------------------------------------------------------------------------
 // Create product
 // ---------------------------------------------------------------------------

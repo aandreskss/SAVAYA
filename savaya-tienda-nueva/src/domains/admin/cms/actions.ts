@@ -30,6 +30,11 @@ import {
   type PopupFormPayload,
 } from './validators'
 import type { ActionResult, AdminBanner, AdminPopup, AdminSection } from './types'
+import {
+  getAllCategorySlugsForPicker,
+  getAllCollectionSlugsForPicker,
+  getAllProductSlugsForPicker,
+} from '@/domains/admin/catalog/repository'
 
 async function getActor() {
   const session = await auth()
@@ -45,6 +50,37 @@ function parseDate(raw: string | null | undefined): Date | null {
   if (!raw) return null
   const d = new Date(raw)
   return isNaN(d.getTime()) ? null : d
+}
+
+// ---------------------------------------------------------------------------
+// URL picker — site-wide link options for CMS editors
+// ---------------------------------------------------------------------------
+
+export type SiteUrlOption = { label: string; url: string }
+export type SiteUrlOptions = {
+  categories: SiteUrlOption[]
+  collections: SiteUrlOption[]
+  products: SiteUrlOption[]
+}
+
+export async function getSiteUrlOptionsAction(): Promise<ActionResult<SiteUrlOptions>> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+
+  const [cats, colls, prods] = await Promise.all([
+    getAllCategorySlugsForPicker(),
+    getAllCollectionSlugsForPicker(),
+    getAllProductSlugsForPicker(),
+  ])
+
+  return {
+    success: true,
+    data: {
+      categories: cats.map((c) => ({ label: c.name, url: `/categoria/${c.slug}` })),
+      collections: colls.map((c) => ({ label: c.name, url: `/coleccion/${c.slug}` })),
+      products: prods.map((p) => ({ label: p.name, url: `/producto/${p.slug}` })),
+    },
+  }
 }
 
 // ---------------------------------------------------------------------------

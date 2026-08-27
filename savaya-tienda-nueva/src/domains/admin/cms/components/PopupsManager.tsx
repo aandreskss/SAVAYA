@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/Button'
 import { Toggle } from '@/shared/ui/Toggle'
 import { toast } from '@/shared/ui/toast-store'
 import { createPopupAction, updatePopupAction, deletePopupAction } from '../actions'
+import { UrlPicker } from '@/shared/ui/UrlPicker'
 import type { AdminPopup } from '../types'
 
 type Props = {
@@ -130,11 +131,7 @@ function PopupForm({ initial, onSubmit, isPending, onCancel }: PopupFormProps) {
           <label className="text-xs font-medium text-text-secondary uppercase tracking-wide">
             URL del CTA (opcional)
           </label>
-          <input
-            value={ctaUrl}
-            onChange={(e) => setCtaUrl(e.target.value)}
-            className={inputClass}
-          />
+          <UrlPicker value={ctaUrl} onChange={setCtaUrl} className={inputClass} />
         </div>
       </div>
 

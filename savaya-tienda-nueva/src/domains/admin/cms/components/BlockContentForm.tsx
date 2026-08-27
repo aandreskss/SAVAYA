@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { ImageUploader } from './ImageUploader'
+import { UrlPicker } from '@/shared/ui/UrlPicker'
 import {
   AnnouncementBarSchema,
   HeroSchema,
@@ -96,11 +97,7 @@ function AnnouncementBarForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
         <Field label="URL del enlace (opcional)">
-          <input
-            value={linkHref}
-            onChange={(e) => setLinkHref(e.target.value)}
-            className={inputClass}
-          />
+          <UrlPicker value={linkHref} onChange={setLinkHref} className={inputClass} />
         </Field>
       </div>
       <Field label="Color de fondo">
@@ -217,12 +214,7 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
         <Field label="CTA primario — URL">
-          <input
-            value={ctaPrimaryHref}
-            onChange={(e) => setCtaPrimaryHref(e.target.value)}
-            required
-            className={inputClass}
-          />
+          <UrlPicker value={ctaPrimaryHref} onChange={setCtaPrimaryHref} required className={inputClass} />
         </Field>
         <Field label="CTA secundario — texto (opcional)">
           <input
@@ -233,11 +225,7 @@ function HeroForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
         <Field label="CTA secundario — URL (opcional)">
-          <input
-            value={ctaSecondaryHref}
-            onChange={(e) => setCtaSecondaryHref(e.target.value)}
-            className={inputClass}
-          />
+          <UrlPicker value={ctaSecondaryHref} onChange={setCtaSecondaryHref} className={inputClass} />
         </Field>
       </div>
       <ImageUploader
@@ -516,11 +504,7 @@ function ProductCarouselForm({ content, onSave, isPending }: SubFormProps) {
         </Field>
       </div>
       <Field label="URL del CTA (opcional)">
-        <input
-          value={ctaHref}
-          onChange={(e) => setCtaHref(e.target.value)}
-          className={inputClass}
-        />
+        <UrlPicker value={ctaHref} onChange={setCtaHref} className={inputClass} />
       </Field>
       <Field label="Fondo">
         <select
@@ -639,11 +623,7 @@ function EditorialBlockForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
         <Field label="URL del CTA (opcional)">
-          <input
-            value={ctaHref}
-            onChange={(e) => setCtaHref(e.target.value)}
-            className={inputClass}
-          />
+          <UrlPicker value={ctaHref} onChange={setCtaHref} className={inputClass} />
         </Field>
       </div>
       <ImageUploader
@@ -747,12 +727,7 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
             />
           </Field>
           <Field label="URL">
-            <input
-              value={leftHref}
-              onChange={(e) => setLeftHref(e.target.value)}
-              required
-              className={inputClass}
-            />
+            <UrlPicker value={leftHref} onChange={setLeftHref} required className={inputClass} />
           </Field>
           <ImageUploader
             label="Imagen"
@@ -784,12 +759,7 @@ function SplitBlockForm({ content, onSave, isPending }: SubFormProps) {
             />
           </Field>
           <Field label="URL">
-            <input
-              value={rightHref}
-              onChange={(e) => setRightHref(e.target.value)}
-              required
-              className={inputClass}
-            />
+            <UrlPicker value={rightHref} onChange={setRightHref} required className={inputClass} />
           </Field>
           <ImageUploader
             label="Imagen"
@@ -1068,12 +1038,7 @@ function PromoBannerForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
         <Field label="URL del botón">
-          <input
-            value={ctaHref}
-            onChange={(e) => setCtaHref(e.target.value)}
-            required
-            className={inputClass}
-          />
+          <UrlPicker value={ctaHref} onChange={setCtaHref} required className={inputClass} />
         </Field>
       </div>
       <Button type="submit" isLoading={isPending} size="sm">
@@ -1172,10 +1137,10 @@ function SocialProofGridForm({ content, onSave, isPending }: SubFormProps) {
                 required
                 className={inputClass}
               />
-              <input
+              <UrlPicker
                 placeholder="Enlace (opcional)"
                 value={img.href ?? ''}
-                onChange={(e) => updateImage(idx, 'href', e.target.value)}
+                onChange={(url) => updateImage(idx, 'href', url)}
                 className={inputClass}
               />
             </div>

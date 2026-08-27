@@ -7,6 +7,7 @@ import { Toggle } from '@/shared/ui/Toggle'
 import { toast } from '@/shared/ui/toast-store'
 import { ImageUploader } from './ImageUploader'
 import { createBannerAction, updateBannerAction, deleteBannerAction } from '../actions'
+import { UrlPicker } from '@/shared/ui/UrlPicker'
 import type { AdminBanner } from '../types'
 
 type Props = {
@@ -132,11 +133,7 @@ function BannerForm({ initial, onSubmit, isPending, onCancel }: BannerFormProps)
           <label className="text-xs font-medium text-text-secondary uppercase tracking-wide">
             URL del CTA (opcional)
           </label>
-          <input
-            value={ctaUrl}
-            onChange={(e) => setCtaUrl(e.target.value)}
-            className={inputClass}
-          />
+          <UrlPicker value={ctaUrl} onChange={setCtaUrl} className={inputClass} />
         </div>
       </div>
 
