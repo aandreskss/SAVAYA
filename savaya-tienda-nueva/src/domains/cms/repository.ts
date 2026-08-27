@@ -1,6 +1,6 @@
 import { eq, and, lte, gte, or, isNull, asc } from 'drizzle-orm'
 import { db } from '@/shared/lib/db'
-import { pages, pageSections, banners } from './schema'
+import { pages, pageSections, banners, popups } from './schema'
 import type { BlockType } from './block-schemas'
 
 // ---------------------------------------------------------------------------
@@ -22,6 +22,17 @@ export type Banner = {
   ctaText: string | null
   ctaUrl: string | null
   sortOrder: number
+}
+
+export type ActivePopup = {
+  id: string
+  imageUrl: string
+  ctaText: string | null
+  ctaUrl: string | null
+  delaySeconds: number
+  showOnPages: string[] | null
+  maxShowsPerSession: number
+  updatedAt: Date
 }
 
 // ---------------------------------------------------------------------------
@@ -227,25 +238,67 @@ export async function getAnnouncementBarSection(): Promise<PageSection | null> {
  * A null endsAt means the banner runs indefinitely from startsAt.
  */
 export async function getBanners(now: Date): Promise<Banner[]> {
-  const rows = await db
-    .select({
-      id: banners.id,
-      title: banners.title,
-      imageDesktopUrl: banners.imageDesktopUrl,
-      imageMobileUrl: banners.imageMobileUrl,
-      ctaText: banners.ctaText,
-      ctaUrl: banners.ctaUrl,
-      sortOrder: banners.sortOrder,
-    })
-    .from(banners)
-    .where(
-      and(
-        eq(banners.isActive, true),
-        lte(banners.startsAt, now),
-        or(isNull(banners.endsAt), gte(banners.endsAt!, now)),
-      ),
-    )
-    .orderBy(asc(banners.sortOrder))
+  if (!process.env.DATABASE_URL) return []
 
-  return rows
+  try {
+    const rows = await db
+      .select({
+        id: banners.id,
+        title: banners.title,
+        imageDesktopUrl: banners.imageDesktopUrl,
+        imageMobileUrl: banners.imageMobileUrl,
+        ctaText: banners.ctaText,
+        ctaUrl: banners.ctaUrl,
+        sortOrder: banners.sortOrder,
+      })
+      .from(banners)
+      .where(
+        and(
+          eq(banners.isActive, true),
+          lte(banners.startsAt, now),
+          or(isNull(banners.endsAt), gte(banners.endsAt!, now)),
+        ),
+      )
+      .orderBy(asc(banners.sortOrder))
+
+    return rows
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Fetches the first active popup whose date window includes `now`.
+ * Returns null if none is active.
+ */
+export async function getActivePopup(now: Date): Promise<ActivePopup | null> {
+  if (!process.env.DATABASE_URL) return null
+
+  try {
+    const rows = await db
+      .select({
+        id: popups.id,
+        imageUrl: popups.imageUrl,
+        ctaText: popups.ctaText,
+        ctaUrl: popups.ctaUrl,
+        delaySeconds: popups.delaySeconds,
+        showOnPages: popups.showOnPages,
+        maxShowsPerSession: popups.maxShowsPerSession,
+        updatedAt: popups.updatedAt,
+      })
+      .from(popups)
+      .where(
+        and(
+          eq(popups.isActive, true),
+          or(isNull(popups.startsAt), lte(popups.startsAt!, now)),
+          or(isNull(popups.endsAt), gte(popups.endsAt!, now)),
+        ),
+      )
+      .limit(1)
+
+    return rows[0] ?? null
+  } catch (error) {
+    console.error('[cms/repository] getActivePopup failed:', error)
+    return null
+  }
 }

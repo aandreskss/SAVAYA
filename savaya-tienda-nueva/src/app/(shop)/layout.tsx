@@ -6,15 +6,18 @@ import { GenderSync } from '@/domains/layout/GenderSync'
 import { CartProvider } from '@/domains/cart/components/CartProvider'
 import { CartDrawer } from '@/domains/cart/components/CartDrawer'
 import { AnalyticsProvider } from '@/domains/analytics/AnalyticsProvider'
-import { getAnnouncementBarSection } from '@/domains/cms/repository'
+import { getAnnouncementBarSection, getActivePopup } from '@/domains/cms/repository'
 import { AnnouncementBar } from '@/domains/cms/blocks/AnnouncementBar'
+import { PopupBanner } from '@/domains/cms/blocks/PopupBanner'
 import { ToastContainer } from '@/shared/ui/Toast'
 import type { BlockContent } from '@/domains/cms/block-schemas'
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const [nonce, announcementSection] = await Promise.all([
+  const now = new Date()
+  const [nonce, announcementSection, activePopup] = await Promise.all([
     headers().then((h) => h.get('x-nonce') ?? ''),
     getAnnouncementBarSection(),
+    getActivePopup(now),
   ])
 
   return (
@@ -42,6 +45,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         <Footer />
       </div>
       <ToastContainer />
+      {activePopup && <PopupBanner {...activePopup} />}
     </CartProvider>
   )
 }

@@ -11,6 +11,8 @@ import { Newsletter } from './blocks/Newsletter'
 import { PromoBanner } from './blocks/PromoBanner'
 import { SocialProofGrid } from './blocks/SocialProofGrid'
 import { getProducts } from '@/domains/catalog/repository'
+import { getBanners } from './repository'
+import { BannerRow } from './blocks/BannerRow'
 import type { ProductCardProps } from '@/shared/ui'
 
 type Props = {
@@ -84,6 +86,11 @@ export async function BlockRenderer({ block }: Props) {
 
     case 'social_proof_grid':
       return <SocialProofGrid {...(block.content as BlockContent<'social_proof_grid'>)} />
+
+    case 'banner_row': {
+      const banners = await getBanners(new Date())
+      return banners.length > 0 ? <BannerRow banners={banners} /> : null
+    }
 
     default:
       return null

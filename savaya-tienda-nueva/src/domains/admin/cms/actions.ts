@@ -364,6 +364,7 @@ export async function createPopupAction(
       startsAt: parseDate(parsed.data.startsAt),
       endsAt: parseDate(parsed.data.endsAt),
     })
+    revalidatePath('/')
     revalidatePath('/admin/contenido')
     return { success: true, data: popup }
   } catch {
@@ -406,6 +407,7 @@ export async function updatePopupAction(
       startsAt: parseDate(parsed.data.startsAt),
       endsAt: parseDate(parsed.data.endsAt),
     })
+    revalidatePath('/')
     revalidatePath('/admin/contenido')
     return { success: true, data: undefined }
   } catch {

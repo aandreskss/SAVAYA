@@ -134,6 +134,9 @@ export const SocialProofGridSchema = z.object({
 // Block type → schema map (used for generic validation in service.ts)
 // ---------------------------------------------------------------------------
 
+// banner_row has no stored content — it fetches from the banners table at render time
+export const BannerRowSchema = z.object({})
+
 export const BLOCK_SCHEMAS = {
   announcement_bar: AnnouncementBarSchema,
   hero: HeroSchema,
@@ -145,6 +148,7 @@ export const BLOCK_SCHEMAS = {
   newsletter: NewsletterSchema,
   promo_banner: PromoBannerSchema,
   social_proof_grid: SocialProofGridSchema,
+  banner_row: BannerRowSchema,
 } as const
 
 export type BlockType = keyof typeof BLOCK_SCHEMAS
