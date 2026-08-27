@@ -9,6 +9,7 @@ import { CustomerTagBadge } from './CustomerTagBadge'
 import { TAG_CONFIG } from '../types'
 import type { CustomerListItem, AdminCustomerFilters, CustomerTag } from '../types'
 import { cn } from '@/shared/lib/utils'
+import { toWaPhone } from '@/shared/lib/phone'
 
 const TAG_OPTIONS = Object.entries(TAG_CONFIG) as [CustomerTag, { label: string; color: string }][]
 
@@ -108,7 +109,7 @@ export function CustomersTable({ items, total, filters }: Props) {
                     <span className="text-xs text-text-secondary">{c.email}</span>
                     {c.whatsapp && (
                       <a
-                        href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`}
+                        href={`https://wa.me/${toWaPhone(c.whatsapp)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-success block hover:underline"

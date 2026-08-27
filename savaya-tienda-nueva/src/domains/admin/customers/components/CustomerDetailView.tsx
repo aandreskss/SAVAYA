@@ -15,6 +15,7 @@ import {
   deleteCustomerAction,
 } from '../actions'
 import type { CustomerDetail, CustomerNote } from '../types'
+import { toWaPhone } from '@/shared/lib/phone'
 import type { OrderStatus } from '@/domains/orders/state-machine'
 
 const inputCls =
@@ -148,7 +149,7 @@ export function CustomerDetailView({ customer }: { customer: CustomerDetail }) {
             </a>
             {info.whatsapp && (
               <a
-                href={`https://wa.me/${info.whatsapp.replace(/\D/g, '')}`}
+                href={`https://wa.me/${toWaPhone(info.whatsapp)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-success hover:underline"

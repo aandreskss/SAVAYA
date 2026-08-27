@@ -17,6 +17,7 @@ import { toast } from '@/shared/ui/toast-store'
 import { VALID_TRANSITIONS } from '@/domains/orders/state-machine'
 import type { AdminOrderDetail } from '../types'
 import type { OrderStatus } from '@/domains/orders/state-machine'
+import { toWaPhone } from '@/shared/lib/phone'
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending_payment:       'Pago pendiente',
@@ -259,7 +260,7 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
               )}
               {order.customer.whatsapp && (
                 <a
-                  href={`https://wa.me/${order.customer.whatsapp.replace(/\D/g, '')}`}
+                  href={`https://wa.me/${toWaPhone(order.customer.whatsapp)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-success hover:underline block"
@@ -484,7 +485,7 @@ function WhatsAppNotifications({
     )
   }
 
-  const cleanPhone = whatsapp.replace(/\D/g, '')
+  const cleanPhone = toWaPhone(whatsapp)
 
   return (
     <div className="space-y-2">

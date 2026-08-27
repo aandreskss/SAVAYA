@@ -5,6 +5,7 @@ import { PaymentApprovedEmail } from './emails/PaymentApproved'
 import { PaymentRejectedEmail } from './emails/PaymentRejected'
 import { logNotification } from './repository'
 import type { OrderNotificationData, WhatsAppLinkOptions } from './types'
+import { toWaPhone } from '@/shared/lib/phone'
 
 // Lazy-initialized — does not crash if RESEND_API_KEY is absent in dev
 function getResend(): Resend | null {
@@ -207,7 +208,7 @@ export async function sendPaymentRejected(
 // ---------------------------------------------------------------------------
 
 export function buildWhatsAppOrderLink(options: WhatsAppLinkOptions): string {
-  const phone = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '584141100100').replace(/\D/g, '')
+  const phone = toWaPhone(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '584141100100')
   const text =
     `¡Hola SAVAYA! Acabo de hacer mi pedido y quiero confirmarlo.\n\n` +
     `📦 Pedido: ${options.orderNumber}\n` +
