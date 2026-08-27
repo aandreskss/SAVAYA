@@ -423,7 +423,7 @@ export async function createProduct(
             sizeId: v.sizeId,
             sku: v.sku,
             price: String(v.price),
-            compareAtPrice: v.compareAtPrice != null ? String(v.compareAtPrice) : null,
+            ...(v.compareAtPrice != null ? { compareAtPrice: String(v.compareAtPrice) } : {}),
             isActive: v.isActive,
           })),
         )
@@ -556,7 +556,7 @@ export async function updateProduct(
           sizeId: v.sizeId,
           sku: v.sku,
           price: String(v.price),
-          compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
+          ...(v.compareAtPrice != null ? { compareAtPrice: String(v.compareAtPrice) } : {}),
           isActive: v.isActive,
         })),
       )
@@ -716,7 +716,7 @@ export async function duplicateProduct(
           sizeId: v.sizeId,
           sku: `${v.sku}-C`,
           price: String(v.price),
-          compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
+          ...(v.compareAtPrice != null ? { compareAtPrice: String(v.compareAtPrice) } : {}),
           isActive: v.isActive,
         })),
       )
