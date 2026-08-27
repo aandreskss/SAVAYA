@@ -331,11 +331,12 @@ export function VariantsTab({
               </thead>
               <tbody className="divide-y divide-border bg-surface">
                 {variants.map((v, index) => {
-                  if (v.id && v.isActive === false) return null
-                  if (!v.id && v.isActive === false) return null
-
+                  const inactive = v.isActive === false
                   return (
-                    <tr key={index} className="hover:bg-surface-2/40 transition-colors">
+                    <tr
+                      key={index}
+                      className={`transition-colors ${inactive ? 'opacity-50 bg-surface-2/30' : 'hover:bg-surface-2/40'}`}
+                    >
                       <td className="px-3 py-2">
                         <span className="flex items-center gap-1.5">
                           <span
@@ -343,16 +344,21 @@ export function VariantsTab({
                             style={{ backgroundColor: v.colorHex }}
                             aria-hidden="true"
                           />
-                          <span className="font-sans text-sm">{v.colorName}</span>
+                          <span className={`font-sans text-sm ${inactive ? 'line-through text-text-secondary' : ''}`}>
+                            {v.colorName}
+                          </span>
                         </span>
                       </td>
-                      <td className="px-3 py-2 font-sans text-sm">{v.sizeName}</td>
+                      <td className={`px-3 py-2 font-sans text-sm ${inactive ? 'line-through text-text-secondary' : ''}`}>
+                        {v.sizeName}
+                      </td>
                       <td className="px-3 py-2">
                         <input
                           type="text"
                           value={v.sku}
                           onChange={(e) => updateVariant(index, { sku: e.target.value.toUpperCase() })}
-                          className="w-28 px-2 py-1 text-xs border border-border rounded font-mono bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
+                          disabled={inactive}
+                          className="w-28 px-2 py-1 text-xs border border-border rounded font-mono bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -362,7 +368,8 @@ export function VariantsTab({
                           onChange={(e) => updateVariant(index, { price: e.target.value })}
                           min="0"
                           step="0.01"
-                          className="w-20 px-2 py-1 text-xs border border-border rounded font-sans bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
+                          disabled={inactive}
+                          className="w-20 px-2 py-1 text-xs border border-border rounded font-sans bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -373,10 +380,11 @@ export function VariantsTab({
                           min="0"
                           step="0.01"
                           placeholder="—"
-                          className="w-20 px-2 py-1 text-xs border border-border rounded font-sans bg-surface text-text-primary placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
+                          disabled={inactive}
+                          className="w-20 px-2 py-1 text-xs border border-border rounded font-sans bg-surface text-text-primary placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </td>
-                      {!v.id && (
+                      {!v.id && !inactive && (
                         <td className="px-3 py-2">
                           <input
                             type="number"
@@ -386,6 +394,9 @@ export function VariantsTab({
                             className="w-16 px-2 py-1 text-xs border border-border rounded font-sans bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
                           />
                         </td>
+                      )}
+                      {!v.id && inactive && activeVariants.some((a) => !a.id) && (
+                        <td className="px-3 py-2" />
                       )}
                       <td className="px-3 py-2">
                         <Toggle
