@@ -82,10 +82,12 @@ export async function saveProductAction(
       return { success: true, data: { id } }
     }
   } catch (err) {
-    const raw = err instanceof Error ? err.message : ''
-    const message = raw.includes('product_variants_sku')
+    // Drizzle wraps the real Postgres error inside err.cause
+    const cause = err instanceof Error ? ((err as { cause?: unknown }).cause ?? err) : err
+    const raw = cause instanceof Error ? cause.message : (err instanceof Error ? err.message : 'Error desconocido')
+    const message = raw.includes('product_variants_sku') || raw.includes('unique') && raw.includes('sku')
       ? 'Uno o más SKUs ya están en uso. Cambia los SKUs de las variantes e intenta de nuevo.'
-      : raw.includes('products_slug')
+      : raw.includes('products_slug') || raw.includes('unique') && raw.includes('slug')
         ? 'El slug ya está en uso. Cambia el slug del producto.'
         : raw || 'Error al guardar el producto'
     return { success: false, error: message }
