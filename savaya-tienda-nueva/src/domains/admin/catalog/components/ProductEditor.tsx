@@ -93,6 +93,13 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
 
   function handleSave() {
     startTransition(async () => {
+      const activeVariants = variants.filter((v) => v.isActive !== false)
+      const badVariant = activeVariants.find((v) => !(parseFloat(v.price) > 0))
+      if (badVariant) {
+        toast.error(`El precio de la variante "${badVariant.sku}" debe ser mayor a 0`)
+        return
+      }
+
       const tags = general.tags
         .split(',')
         .map((t) => t.trim())
@@ -123,7 +130,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
           colorId: v.colorId,
           sizeId: v.sizeId,
           sku: v.sku,
-          price: parseFloat(v.price) || 0,
+          price: parseFloat(v.price),
           compareAtPrice: parseFloat(v.compareAtPrice) || null,
           isActive: v.isActive,
           initialStock: v.id ? 0 : (v.initialStock ?? 0),
