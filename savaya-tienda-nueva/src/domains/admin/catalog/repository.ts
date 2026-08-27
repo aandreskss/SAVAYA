@@ -9,7 +9,7 @@ import {
   colors,
   sizes,
 } from '@/domains/catalog/schema'
-import { inventory } from '@/domains/inventory/schema'
+import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { auditLog } from '@/domains/audit-log/schema'
 import { eq, inArray, desc, asc, sql, count } from 'drizzle-orm'
 import type {
@@ -509,10 +509,29 @@ export async function updateProduct(
     )
   }
 
-  // Hard-delete explicitly removed variants (inventory first due to FK)
+  // Delete explicitly removed variants.
+  // inventory_movements uses onDelete: 'restrict' (audit trail — never deleted), so variants
+  // that have movement history can only be soft-deleted. Variants with no movements are removed.
   if (data.deleteVariantIds && data.deleteVariantIds.length > 0) {
-    await db.delete(inventory).where(inArray(inventory.variantId, data.deleteVariantIds))
-    await db.delete(productVariants).where(inArray(productVariants.id, data.deleteVariantIds))
+    const withMovements = await db
+      .selectDistinct({ variantId: inventoryMovements.variantId })
+      .from(inventoryMovements)
+      .where(inArray(inventoryMovements.variantId, data.deleteVariantIds))
+
+    const hasMovements = new Set(withMovements.map((r) => r.variantId))
+    const toHardDelete = data.deleteVariantIds.filter((vid) => !hasMovements.has(vid))
+    const toSoftDelete = data.deleteVariantIds.filter((vid) => hasMovements.has(vid))
+
+    if (toSoftDelete.length > 0) {
+      await db
+        .update(productVariants)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(inArray(productVariants.id, toSoftDelete))
+    }
+    if (toHardDelete.length > 0) {
+      // inventory cascades automatically (onDelete: 'cascade')
+      await db.delete(productVariants).where(inArray(productVariants.id, toHardDelete))
+    }
   }
 
   // Sync variants
