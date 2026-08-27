@@ -544,10 +544,11 @@ export async function updateProduct(
       .where(eq(productVariants.id, v.id!))
   }
 
-  // Insert new variants
+  // Upsert new variants — ON CONFLICT (product_id, color_id, size_id) reactivates
+  // soft-deleted or otherwise orphaned variants instead of failing with a unique violation.
   const newVariants = data.variants.filter((v) => !v.id)
   if (newVariants.length > 0) {
-    const inserted = await db
+    const upserted = await db
       .insert(productVariants)
       .values(
         newVariants.map((v) => ({
@@ -560,15 +561,28 @@ export async function updateProduct(
           isActive: v.isActive,
         })),
       )
+      .onConflictDoUpdate({
+        target: [productVariants.productId, productVariants.colorId, productVariants.sizeId],
+        set: {
+          sku: sql`excluded.sku`,
+          price: sql`excluded.price`,
+          isActive: sql`excluded.is_active`,
+          updatedAt: new Date(),
+        },
+      })
       .returning({ id: productVariants.id })
 
-    await db.insert(inventory).values(
-      inserted.map((v, i) => ({
-        variantId: v.id,
-        quantity: newVariants[i].initialStock,
-        reserved: 0,
-      })),
-    )
+    // ON CONFLICT DO NOTHING so existing inventory records are not duplicated
+    await db
+      .insert(inventory)
+      .values(
+        upserted.map((v, i) => ({
+          variantId: v.id,
+          quantity: newVariants[i].initialStock,
+          reserved: 0,
+        })),
+      )
+      .onConflictDoNothing()
   }
 
   // Sync media: update existing, insert new

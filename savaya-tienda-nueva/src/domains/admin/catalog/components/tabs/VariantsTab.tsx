@@ -28,18 +28,16 @@ type Props = {
 }
 
 function generateSku(productName: string, colorName: string, sizeName: string): string {
-  const prodAbbrev = productName
+  const words = productName
     .trim()
     .split(/\s+/)
-    .slice(0, 3)
-    .map((w) =>
-      w
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
-        .charAt(0)
-        .toUpperCase(),
-    )
-    .join('')
+    .filter(Boolean)
+    .map((w) => w.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase())
+
+  // One word → take first 4 chars; multi-word → first char of each word (up to 4 words)
+  const prodAbbrev = words.length === 1
+    ? (words[0].slice(0, 4) || 'PRD')
+    : words.slice(0, 4).map((w) => w.charAt(0)).join('')
 
   const colorAbbrev = colorName
     .normalize('NFD')
