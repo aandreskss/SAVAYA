@@ -572,7 +572,8 @@ export async function updateProduct(
       })
       .returning({ id: productVariants.id })
 
-    // ON CONFLICT DO NOTHING so existing inventory records are not duplicated
+    // ON CONFLICT DO UPDATE so that if a previous attempt left an inventory
+    // record with quantity=0, the user's actual initialStock value gets applied.
     await db
       .insert(inventory)
       .values(
@@ -582,7 +583,10 @@ export async function updateProduct(
           reserved: 0,
         })),
       )
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: inventory.variantId,
+        set: { quantity: sql`excluded.quantity` },
+      })
   }
 
   // Sync media: update existing, insert new
