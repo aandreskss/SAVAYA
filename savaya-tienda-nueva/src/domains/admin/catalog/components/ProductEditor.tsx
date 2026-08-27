@@ -131,7 +131,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
           sizeId: v.sizeId,
           sku: v.sku,
           price: parseFloat(v.price),
-          compareAtPrice: parseFloat(v.compareAtPrice) || null,
+          compareAtPrice: (() => { const p = parseFloat(v.compareAtPrice); return isNaN(p) || p <= 0 ? null : p })(),
           isActive: v.isActive,
           initialStock: v.id ? 0 : (v.initialStock ?? 0),
         })),

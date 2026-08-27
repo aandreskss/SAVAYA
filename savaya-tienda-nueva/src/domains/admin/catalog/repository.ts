@@ -381,87 +381,89 @@ export async function createProduct(
   actorEmail: string,
   ip: string,
 ): Promise<string> {
-  const [product] = await db
-    .insert(products)
-    .values({
-      name: data.name,
-      slug: data.slug,
-      description: data.description,
-      categoryId: data.categoryId,
-      gender: data.gender,
-      productType: data.productType,
-      basePrice: String(data.basePrice),
-      compareAtPrice: data.compareAtPrice ? String(data.compareAtPrice) : null,
-      isFeatured: data.isFeatured,
-      isNew: data.isNew,
-      isActive: data.isActive,
-      tags: data.tags,
-      seoTitle: data.seoTitle,
-      seoDescription: data.seoDescription,
-      seoKeywords: data.seoKeywords,
-      metaImageUrl: data.metaImageUrl,
-      publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
-    })
-    .returning({ id: products.id })
+  return await db.transaction(async (tx) => {
+    const [product] = await tx
+      .insert(products)
+      .values({
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        categoryId: data.categoryId,
+        gender: data.gender,
+        productType: data.productType,
+        basePrice: String(data.basePrice),
+        compareAtPrice: data.compareAtPrice != null ? String(data.compareAtPrice) : null,
+        isFeatured: data.isFeatured,
+        isNew: data.isNew,
+        isActive: data.isActive,
+        tags: data.tags,
+        seoTitle: data.seoTitle,
+        seoDescription: data.seoDescription,
+        seoKeywords: data.seoKeywords,
+        metaImageUrl: data.metaImageUrl,
+        publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
+      })
+      .returning({ id: products.id })
 
-  const id = product.id
+    const id = product.id
 
-  if (data.collectionIds.length > 0) {
-    await db.insert(productCollections).values(
-      data.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
-    )
-  }
+    if (data.collectionIds.length > 0) {
+      await tx.insert(productCollections).values(
+        data.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
+      )
+    }
 
-  if (data.variants.length > 0) {
-    const insertedVariants = await db
-      .insert(productVariants)
-      .values(
-        data.variants.map((v) => ({
-          productId: id,
-          colorId: v.colorId,
-          sizeId: v.sizeId,
-          sku: v.sku,
-          price: String(v.price),
-          compareAtPrice: v.compareAtPrice ? String(v.compareAtPrice) : null,
-          isActive: v.isActive,
+    if (data.variants.length > 0) {
+      const insertedVariants = await tx
+        .insert(productVariants)
+        .values(
+          data.variants.map((v) => ({
+            productId: id,
+            colorId: v.colorId,
+            sizeId: v.sizeId,
+            sku: v.sku,
+            price: String(v.price),
+            compareAtPrice: v.compareAtPrice != null ? String(v.compareAtPrice) : null,
+            isActive: v.isActive,
+          })),
+        )
+        .returning({ id: productVariants.id })
+
+      await tx.insert(inventory).values(
+        insertedVariants.map((v, i) => ({
+          variantId: v.id,
+          quantity: data.variants[i].initialStock,
+          reserved: 0,
         })),
       )
-      .returning({ id: productVariants.id })
+    }
 
-    await db.insert(inventory).values(
-      insertedVariants.map((v, i) => ({
-        variantId: v.id,
-        quantity: data.variants[i].initialStock,
-        reserved: 0,
-      })),
-    )
-  }
+    if (data.media.length > 0) {
+      await tx.insert(productMedia).values(
+        data.media.map((m) => ({
+          productId: id,
+          cloudinaryPublicId: m.cloudinaryPublicId,
+          url: m.url,
+          altText: m.altText,
+          isPrimary: m.isPrimary,
+          sortOrder: m.sortOrder,
+          colorId: m.colorId ?? null,
+        })),
+      )
+    }
 
-  if (data.media.length > 0) {
-    await db.insert(productMedia).values(
-      data.media.map((m) => ({
-        productId: id,
-        cloudinaryPublicId: m.cloudinaryPublicId,
-        url: m.url,
-        altText: m.altText,
-        isPrimary: m.isPrimary,
-        sortOrder: m.sortOrder,
-        colorId: m.colorId ?? null,
-      })),
-    )
-  }
+    await tx.insert(auditLog).values({
+      actorId,
+      actorEmail,
+      action: 'product.create',
+      resourceType: 'product',
+      resourceId: id,
+      after: { name: data.name, slug: data.slug },
+      ip,
+    })
 
-  await db.insert(auditLog).values({
-    actorId,
-    actorEmail,
-    action: 'product.create',
-    resourceType: 'product',
-    resourceId: id,
-    after: { name: data.name, slug: data.slug },
-    ip,
+    return id
   })
-
-  return id
 }
 
 // ---------------------------------------------------------------------------

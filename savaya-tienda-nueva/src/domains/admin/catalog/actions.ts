@@ -82,7 +82,12 @@ export async function saveProductAction(
       return { success: true, data: { id } }
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al guardar el producto'
+    const raw = err instanceof Error ? err.message : ''
+    const message = raw.includes('product_variants_sku')
+      ? 'Uno o más SKUs ya están en uso. Cambia los SKUs de las variantes e intenta de nuevo.'
+      : raw.includes('products_slug')
+        ? 'El slug ya está en uso. Cambia el slug del producto.'
+        : raw || 'Error al guardar el producto'
     return { success: false, error: message }
   }
 }
