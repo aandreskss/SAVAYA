@@ -25,6 +25,7 @@ type Props = {
   basePrice: string
   productName: string
   onChange: (variants: VariantRow[]) => void
+  onDeleteExistingVariant?: (id: string) => void
 }
 
 function generateSku(productName: string, colorName: string, sizeName: string): string {
@@ -90,6 +91,7 @@ export function VariantsTab({
   basePrice,
   productName,
   onChange,
+  onDeleteExistingVariant,
 }: Props) {
   const [selColors, setSelColors] = useState<Set<string>>(
     () => initSelected(variants).colorIds,
@@ -184,6 +186,23 @@ export function VariantsTab({
         return { ...v, sku: prefix ? `${prefix}-${v.sizeName}` : v.sku }
       }),
     )
+  }
+
+  function deleteVariant(index: number) {
+    const variant = variants[index]
+    const remaining = variants.filter((_, i) => i !== index)
+
+    // Deselect color from selector if no remaining variant uses it
+    if (!remaining.some((v) => v.colorId === variant.colorId)) {
+      setSelColors((prev) => { const next = new Set(prev); next.delete(variant.colorId); return next })
+    }
+    // Deselect size from selector if no remaining variant uses it
+    if (!remaining.some((v) => v.sizeId === variant.sizeId)) {
+      setSelSizes((prev) => { const next = new Set(prev); next.delete(variant.sizeId); return next })
+    }
+
+    if (variant.id) onDeleteExistingVariant?.(variant.id)
+    onChange(remaining)
   }
 
   const activeVariants = variants.filter((v) => v.isActive !== false)
@@ -327,6 +346,7 @@ export function VariantsTab({
                     <th className="px-3 py-2.5 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider">Stock inicial</th>
                   )}
                   <th className="px-3 py-2.5 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider">Activa</th>
+                  <th className="px-3 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-surface">
@@ -404,6 +424,22 @@ export function VariantsTab({
                           checked={v.isActive}
                           onChange={(checked) => updateVariant(index, { isActive: checked })}
                         />
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => deleteVariant(index)}
+                          title="Eliminar variante"
+                          className="p-1 rounded text-text-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   )

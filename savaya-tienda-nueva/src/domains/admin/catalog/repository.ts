@@ -509,6 +509,12 @@ export async function updateProduct(
     )
   }
 
+  // Hard-delete explicitly removed variants (inventory first due to FK)
+  if (data.deleteVariantIds && data.deleteVariantIds.length > 0) {
+    await db.delete(inventory).where(inArray(inventory.variantId, data.deleteVariantIds))
+    await db.delete(productVariants).where(inArray(productVariants.id, data.deleteVariantIds))
+  }
+
   // Sync variants
   const existingRows = await db
     .select({ id: productVariants.id })

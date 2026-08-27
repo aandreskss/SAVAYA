@@ -51,6 +51,7 @@ export const SaveProductSchema = z.object({
   publishedAt: z.string().datetime().nullable(),
   variants: z.array(VariantSchema).max(200),
   media: z.array(MediaSchema).max(20),
+  deleteVariantIds: z.array(z.string().uuid()).optional().default([]),
 })
 
 export type SaveProductInput = z.infer<typeof SaveProductSchema>

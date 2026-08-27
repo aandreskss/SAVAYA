@@ -90,6 +90,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
   const [media, setMedia] = useState<MediaItem[]>(() => initMedia(product))
   const [variants, setVariants] = useState<VariantRow[]>(() => initVariants(product))
   const [seo, setSeo] = useState<SeoTabState>(() => initSeo(product))
+  const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([])
 
   function handleSave() {
     startTransition(async () => {
@@ -125,6 +126,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
         seoKeywords: seo.seoKeywords || null,
         metaImageUrl: seo.metaImageUrl || null,
         publishedAt: seo.publishMode === 'draft' ? null : (seo.publishedAt || null),
+        deleteVariantIds: deletedVariantIds,
         variants: variants.map((v) => ({
           id: v.id,
           colorId: v.colorId,
@@ -153,12 +155,17 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
         return
       }
 
+      setDeletedVariantIds([])
       toast.success(product ? 'Producto actualizado' : 'Producto creado')
 
       if (!product) {
         router.push(`/admin/productos/${result.data.id}`)
       }
     })
+  }
+
+  function handleDeleteExistingVariant(id: string) {
+    setDeletedVariantIds((prev) => [...prev, id])
   }
 
   const tabs = [
@@ -197,6 +204,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
           basePrice={general.basePrice}
           productName={general.name}
           onChange={setVariants}
+          onDeleteExistingVariant={handleDeleteExistingVariant}
         />
       ),
     },

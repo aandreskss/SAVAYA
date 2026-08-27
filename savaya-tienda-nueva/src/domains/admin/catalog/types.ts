@@ -160,6 +160,7 @@ export type SaveProductPayload = {
   publishedAt: string | null
   variants: VariantPayload[]
   media: MediaPayload[]
+  deleteVariantIds?: string[]
 }
 
 export type SaveCategoryPayload = {
