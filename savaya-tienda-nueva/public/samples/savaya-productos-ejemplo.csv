@@ -1,0 +1,26 @@
+tipo,nombre,categoria,genero,precio_base,precio_comparacion,descripcion,color,hex_color,talla,sku_ref,precio,cantidad
+producto,Sandalia Elegante,Damas,women,75.00,95.00,Sandalia elegante importada — ideal para ocasiones especiales,,,,,,
+variante,,,,,,,Rojo,#C0392B,36,SAN-001,,10
+variante,,,,,,,Rojo,#C0392B,37,SAN-001,,12
+variante,,,,,,,Rojo,#C0392B,38,SAN-001,,8
+variante,,,,,,,Azul,#2980B9,36,SAN-001,,6
+variante,,,,,,,Azul,#2980B9,37,SAN-001,,9
+variante,,,,,,,Azul,#2980B9,38,SAN-001,,5
+variante,,,,,,,Blanco,#F5F5F5,36,SAN-002,,4
+variante,,,,,,,Blanco,#F5F5F5,37,SAN-002,,7
+variante,,,,,,,Negro,#1C1C1C,36,SAN-002,,6
+variante,,,,,,,Negro,#1C1C1C,37,SAN-002,,8
+producto,Tenis Sport,Deportivo,unisex,55.00,,Tenis deportivo unisex para uso diario,,,,,,
+variante,,,,,,,Blanco,#F5F5F5,38,TEN-SPT,,15
+variante,,,,,,,Blanco,#F5F5F5,39,TEN-SPT,,10
+variante,,,,,,,Blanco,#F5F5F5,40,TEN-SPT,,8
+variante,,,,,,,Negro,#1C1C1C,38,TEN-SPT,,12
+variante,,,,,,,Negro,#1C1C1C,39,TEN-SPT,,7
+variante,,,,,,,Negro,#1C1C1C,40,TEN-SPT,,5
+producto,Mocasín Clásico,Caballeros,men,65.00,80.00,Mocasín de cuero sintético para caballeros,,,,,,
+variante,,,,,,,Marrón,#8B4513,40,MOC-001,,6
+variante,,,,,,,Marrón,#8B4513,41,MOC-001,,8
+variante,,,,,,,Marrón,#8B4513,42,MOC-001,,5
+variante,,,,,,,Negro,#1C1C1C,40,MOC-001,,4
+variante,,,,,,,Negro,#1C1C1C,41,MOC-001,,6
+variante,,,,,,,Negro,#1C1C1C,42,MOC-001,,3

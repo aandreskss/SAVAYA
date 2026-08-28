@@ -88,6 +88,12 @@ export default async function ProductosAdminPage({
         >
           Colecciones
         </Link>
+        <Link
+          href="/admin/productos/importar"
+          className="pb-2.5 font-sans text-sm text-text-secondary hover:text-text-primary transition-colors ml-auto"
+        >
+          Importar CSV
+        </Link>
       </div>
 
       <p className="text-text-secondary text-sm mb-6">
