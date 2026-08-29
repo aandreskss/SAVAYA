@@ -157,7 +157,36 @@ Esta sección documenta decisiones que ya se tomaron y están en el código. No 
 - **Soft delete vs hard delete**: una variante con historial en `inventory_movements` se desactiva (`isActive: false`), nunca se borra — la tabla de movimientos es audit trail append-only. Solo se borra físicamente si no tiene ningún movimiento. Esta lógica vive en `updateProduct` de `src/domains/admin/catalog/repository.ts`.
 - **Variantes inactivas en storefront**: no se muestran (desaparecen del selector, no aparecen tachadas). Solo las activas sin stock se muestran tachadas con línea diagonal. Esta distinción está en `ProductVariantSelector.tsx`.
 
-### 8.6 Base de datos — guardas defensivas
+### 8.6 Importación masiva de productos (CSV)
+
+Ruta: `POST /api/admin/catalog/import` → `src/app/api/admin/catalog/import/route.ts`  
+Helpers: `src/domains/admin/catalog/import-helpers.ts`  
+UI: `src/domains/admin/catalog/components/ImportProductsForm.tsx`  
+Página admin: `/admin/productos/importar` → `src/app/admin/productos/importar/page.tsx`  
+Plantilla: `public/samples/savaya-productos-ejemplo.csv`
+
+**Formato CSV — dos niveles con columna `tipo`:**
+- `tipo=producto`: nombre, categoria, genero, precio_base, precio_comparacion, descripcion
+- `tipo=variante`: color, hex_color, talla, sku_ref, precio, cantidad
+- Filas variante pertenecen al último producto declarado arriba
+
+**Lógica de SKU (`resolveVariantSkus` en import-helpers.ts):**
+- `sku_ref` compartido por múltiples colores → SKU = `{sku_ref}-{COLOR_ABBR}-{talla}` (ej. `SAN-001-ROJ-36`)
+- `sku_ref` exclusivo de un color → SKU = `{sku_ref}-{talla}` (ej. `SAN-002-36`)
+- `COLOR_ABBR` = primeras 3 letras del color sin tildes en mayúsculas
+- Colisiones de abreviatura → sufijo `-2`, `-3`…
+- Si `sku_ref` está vacío → usa `slugify(nombre)` como prefijo
+
+**Flujo del route handler:**
+1. Auth (`catalog:write`)
+2. Parseo CSV → `parseImportCsv()` → grupos producto+variantes
+3. Por grupo: check duplicado por nombre (ilike) → lookup categoría → upsert colores y tallas (ilike, crea si no existe) → genera SKUs → slug único
+4. Transacción: INSERT products (isActive=false, publishedAt=null) + productVariants + inventory + inventoryMovements(purchase) + auditLog
+5. Retorna `{ total, created, skipped, errors, variantsCreated, results }`
+
+**Iconos:** este proyecto NO tiene `lucide-react`. Usar caracteres Unicode (↑ ↓ ✓ ✕ ⚠ ↺) o SVG inline — nunca importar lucide.
+
+### 8.7 Base de datos — guardas defensivas
 
 - Toda función del storefront repository que haga queries debe tener:
   1. `if (!process.env.DATABASE_URL) return <fallback>`
