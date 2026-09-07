@@ -14,6 +14,7 @@ import {
   unpublishProduct,
   duplicateProduct,
   bulkDeleteProducts,
+  bulkUpdateProductsStatus,
   deleteMediaRecord,
   createCategory,
   updateCategory,
@@ -26,6 +27,7 @@ import {
   type CollectionProductSummary,
 } from './repository'
 import type { SaveProductPayload, SaveCategoryPayload, SaveCollectionPayload, ActionResult } from './types'
+import type { BulkStatusAction } from './repository'
 
 async function getActorContext() {
   const session = await auth()
@@ -174,6 +176,29 @@ export async function duplicateProductAction(id: string): Promise<ActionResult<{
     return { success: true, data: { id: newId } }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Error al duplicar' }
+  }
+}
+
+export async function bulkUpdateProductsStatusAction(
+  ids: string[],
+  action: BulkStatusAction,
+): Promise<ActionResult<{ updated: number }>> {
+  const actor = await getActorContext()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!hasPermission(actor.permissions, 'catalog:write')) {
+    return { success: false, error: 'Sin permiso para modificar productos' }
+  }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { success: false, error: 'Selecciona al menos un producto' }
+  }
+
+  try {
+    const result = await bulkUpdateProductsStatus(ids, action, actor.actorId, actor.actorEmail, actor.ip)
+    revalidatePath('/admin/productos')
+    revalidatePath('/categoria', 'layout')
+    return { success: true, data: result }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Error al actualizar productos' }
   }
 }
 

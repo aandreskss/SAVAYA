@@ -16,7 +16,9 @@ import {
   unpublishProductAction,
   duplicateProductAction,
   bulkDeleteProductsAction,
+  bulkUpdateProductsStatusAction,
 } from '../actions'
+import type { BulkStatusAction } from '../repository'
 import type { AdminProductRow, ColorOption, SizeOption } from '../types'
 
 type Props = {
@@ -98,6 +100,8 @@ export function ProductsTable({
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<AdminProductRow | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkStatusAction, setBulkStatusAction] = useState<BulkStatusAction>('publish')
+  const [isBulkStatus, setIsBulkStatus] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(
@@ -226,6 +230,26 @@ export function ProductsTable({
     })
   }
 
+  async function handleBulkStatus() {
+    setIsBulkStatus(true)
+    const ids = [...selected]
+    const result = await bulkUpdateProductsStatusAction(ids, bulkStatusAction)
+    setIsBulkStatus(false)
+    if (!result.success) {
+      toast.error(result.error ?? 'Error al actualizar')
+      return
+    }
+    setSelected(new Set())
+    const labels: Record<BulkStatusAction, string> = {
+      publish: 'publicados',
+      unpublish: 'pasados a borrador',
+      archive: 'archivados',
+      restore: 'restaurados',
+    }
+    toast.success(`${result.data?.updated ?? ids.length} producto${ids.length !== 1 ? 's' : ''} ${labels[bulkStatusAction]}`)
+    router.refresh()
+  }
+
   async function handleBulkDelete() {
     setIsBulkDeleting(true)
     const ids = [...selected]
@@ -318,22 +342,47 @@ export function ProductsTable({
 
       {/* ── Bulk action bar ── */}
       {selected.size > 0 && (
-        <div className="flex items-center justify-between gap-4 mb-3 px-4 py-2.5 rounded-lg bg-accent-gold/10 border border-accent-gold/30">
-          <span className="font-sans text-sm text-accent-gold font-medium">
+        <div className="flex flex-wrap items-center gap-3 mb-3 px-4 py-2.5 rounded-lg bg-accent-gold/10 border border-accent-gold/30">
+          <span className="font-sans text-sm text-accent-gold font-medium shrink-0">
             {selected.size} producto{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelected(new Set())}
-              className="font-sans text-xs text-text-secondary hover:text-text-primary transition-colors"
+          <button
+            onClick={() => setSelected(new Set())}
+            className="font-sans text-xs text-text-secondary hover:text-text-primary transition-colors shrink-0"
+          >
+            Deseleccionar todo
+          </button>
+
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Bulk status change */}
+            <select
+              value={bulkStatusAction}
+              onChange={(e) => setBulkStatusAction(e.target.value as BulkStatusAction)}
+              disabled={isBulkStatus}
+              className="h-8 px-2 pr-6 appearance-none rounded border border-border bg-surface font-sans text-xs text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold disabled:opacity-50"
             >
-              Deseleccionar todo
+              <option value="publish">Publicar</option>
+              <option value="unpublish">Pasar a borrador</option>
+              <option value="restore">Restaurar</option>
+              <option value="archive">Archivar</option>
+            </select>
+            <button
+              onClick={handleBulkStatus}
+              disabled={isBulkStatus}
+              className="h-8 px-3 rounded text-xs font-sans font-medium border border-accent-gold text-accent-gold hover:bg-accent-gold/10 transition-colors disabled:opacity-50"
+            >
+              {isBulkStatus ? '...' : 'Aplicar'}
             </button>
+
+            <span className="w-px h-5 bg-border shrink-0" aria-hidden="true" />
+
+            {/* Bulk delete */}
             <button
               onClick={() => setBulkDeleteOpen(true)}
-              className="px-3 py-1.5 rounded text-xs font-sans font-medium bg-error/10 border border-error/30 text-error hover:bg-error/20 hover:border-error transition-colors"
+              disabled={isBulkStatus}
+              className="h-8 px-3 rounded text-xs font-sans font-medium bg-error/10 border border-error/30 text-error hover:bg-error/20 hover:border-error transition-colors disabled:opacity-50"
             >
-              Eliminar {selected.size} producto{selected.size !== 1 ? 's' : ''}
+              Eliminar {selected.size}
             </button>
           </div>
         </div>

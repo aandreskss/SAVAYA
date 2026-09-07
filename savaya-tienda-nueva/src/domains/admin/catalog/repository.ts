@@ -842,6 +842,47 @@ export async function deleteMediaRecord(mediaId: string): Promise<string | null>
 }
 
 // ---------------------------------------------------------------------------
+// Bulk status update
+// ---------------------------------------------------------------------------
+
+export type BulkStatusAction = 'publish' | 'unpublish' | 'archive' | 'restore'
+
+export async function bulkUpdateProductsStatus(
+  ids: string[],
+  action: BulkStatusAction,
+  actorId: string,
+  actorEmail: string,
+  ip: string,
+): Promise<{ updated: number }> {
+  if (ids.length === 0) return { updated: 0 }
+
+  const now = new Date()
+  const patch = ((): { isActive: boolean; publishedAt?: Date | null; updatedAt: Date } => {
+    switch (action) {
+      case 'publish':   return { isActive: true,  publishedAt: now,  updatedAt: now }
+      case 'unpublish': return { isActive: true,  publishedAt: null, updatedAt: now }
+      case 'archive':   return { isActive: false, updatedAt: now }
+      case 'restore':   return { isActive: true,  updatedAt: now }
+    }
+  })()
+
+  await db.update(products).set(patch).where(inArray(products.id, ids))
+
+  await db.insert(auditLog).values(
+    ids.map((id) => ({
+      actorId,
+      actorEmail,
+      action: `product.${action}`,
+      resourceType: 'product',
+      resourceId: id,
+      ip,
+    })),
+  )
+
+  return { updated: ids.length }
+}
+
+// ---------------------------------------------------------------------------
 // Bulk delete products
 // ---------------------------------------------------------------------------
 
