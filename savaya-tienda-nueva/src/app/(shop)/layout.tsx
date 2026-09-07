@@ -6,6 +6,7 @@ import { GenderSync } from '@/domains/layout/GenderSync'
 import { CartProvider } from '@/domains/cart/components/CartProvider'
 import { CartDrawer } from '@/domains/cart/components/CartDrawer'
 import { AnalyticsProvider } from '@/domains/analytics/AnalyticsProvider'
+import { SiteTracker } from '@/domains/analytics/SiteTracker'
 import { getAnnouncementBarSection, getActivePopup } from '@/domains/cms/repository'
 import { AnnouncementBar } from '@/domains/cms/blocks/AnnouncementBar'
 import { PopupBanner } from '@/domains/cms/blocks/PopupBanner'
@@ -27,6 +28,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         metaPixelId={process.env.NEXT_PUBLIC_META_PIXEL_ID}
         nonce={nonce}
       />
+      <SiteTracker />
       <GenderSync />
       <div className="min-h-screen flex flex-col">
         {/* Announcement bar — sits above the sticky navbar, scrolls away */}

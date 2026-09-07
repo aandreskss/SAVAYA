@@ -3,7 +3,6 @@ import {
   text,
   timestamp,
   uuid,
-  uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
@@ -36,6 +35,29 @@ export const orderAttributions = pgTable(
   (t) => [
     index('order_attributions_utm_source_idx').on(t.utmSource),
     index('order_attributions_utm_campaign_idx').on(t.utmCampaign),
+  ],
+)
+
+export const pageViews = pgTable(
+  'page_views',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    path: text('path').notNull(),
+    referrer: text('referrer'),
+    sessionId: text('session_id'),
+    country: text('country'),
+    city: text('city'),
+    deviceType: text('device_type'),
+    browser: text('browser'),
+    os: text('os'),
+    // append-only — no updatedAt
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('page_views_path_idx').on(t.path),
+    index('page_views_created_at_idx').on(t.createdAt),
+    index('page_views_country_idx').on(t.country),
+    index('page_views_session_id_idx').on(t.sessionId),
   ],
 )
 
