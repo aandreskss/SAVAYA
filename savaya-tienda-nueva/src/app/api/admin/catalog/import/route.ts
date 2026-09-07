@@ -274,11 +274,16 @@ export async function POST(request: Request) {
       if (typeof productId === 'string') {
         await db.delete(products).where(eq(products.id, productId)).catch(() => {})
       }
+      const cause = e instanceof Error ? ((e as { cause?: unknown }).cause ?? e) : e
+      const raw = cause instanceof Error ? cause.message : (e instanceof Error ? e.message : 'Error desconocido')
+      const friendly = raw.includes('product_variants_sku') || (raw.includes('unique') && raw.includes('sku'))
+        ? `SKU duplicado: ${raw.match(/Key \(sku\)=\(([^)]+)\)/)?.[1] ?? 'uno de los SKUs ya existe'} — cambia el sku_ref en el CSV`
+        : raw
       results.push({
         nombre: group.nombre,
         status: 'error',
         variantsCreated: 0,
-        message: e instanceof Error ? e.message : 'Error desconocido',
+        message: friendly,
       })
     }
   }
