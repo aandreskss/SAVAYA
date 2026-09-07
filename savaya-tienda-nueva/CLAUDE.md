@@ -186,6 +186,13 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 
 **Iconos:** este proyecto NO tiene `lucide-react`. Usar caracteres Unicode (↑ ↓ ✓ ✕ ⚠ ↺) o SVG inline — nunca importar lucide.
 
+### 8.8 Edición de colores en el tab de variantes
+
+- `updateColor(id, name, hex, hex2)` en `src/domains/admin/catalog/repository.ts` y `updateColorAction` en `actions.ts` son las únicas vías para modificar un color existente.
+- Al guardar una edición de color, `VariantsTab` actualiza **dos cosas en el mismo callback**: la lista `colors` vía `onColorsChange` y todos los `VariantRow` que referencian ese `colorId` (campos `colorName`, `colorHex`, `colorHex2`). Nunca actualices solo uno de los dos o el UI queda inconsistente.
+- El formulario de edición se muestra **sobre** los pills de color (no debajo de la tabla de variantes). El botón lápiz aparece en hover por cada pill; clic de nuevo cancela.
+- Cuando `editingColorId` está activo, abrir el formulario de "Nuevo color" lo cancela automáticamente (`setShowColorForm(false)` dentro de `openEditColor`), y viceversa.
+
 ### 8.7 Base de datos — guardas defensivas
 
 - Toda función del storefront repository que haga queries debe tener:
