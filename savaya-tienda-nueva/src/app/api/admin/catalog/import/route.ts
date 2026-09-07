@@ -110,6 +110,7 @@ export async function POST(request: Request) {
       continue
     }
 
+    let productId: string | null = null
     try {
       // 1. Duplicate check
       const existing = await db
@@ -195,80 +196,84 @@ export async function POST(request: Request) {
         slug = `${baseSlug}-${Date.now().toString(36).slice(-4)}`
       }
 
-      // 6. Transaction: product + variants + inventory
+      // 6. Insert product + variants + inventory sequentially
+      // (neon-http driver does not support db.transaction — cleanup on error instead)
       let variantsCreated = 0
 
-      await db.transaction(async (tx) => {
-        const [prod] = await tx
-          .insert(products)
+      const [prod] = await db
+        .insert(products)
+        .values({
+          name: group.nombre,
+          slug,
+          description: group.descripcion,
+          categoryId,
+          gender: group.genero,
+          basePrice: String(group.precioBase),
+          compareAtPrice:
+            group.precioComparacion != null ? String(group.precioComparacion) : null,
+          isActive: false,
+          isFeatured: false,
+          isNew: false,
+          publishedAt: null,
+        })
+        .returning({ id: products.id })
+
+      productId = prod!.id
+
+      for (const v of validVariants) {
+        const colorId = colorMap.get(v.color)!
+        const sizeId = sizeMap.get(v.talla)!
+        const sku = skuMap.get(v)!
+        const price = v.precio ?? group.precioBase
+
+        const [variant] = await db
+          .insert(productVariants)
           .values({
-            name: group.nombre,
-            slug,
-            description: group.descripcion,
-            categoryId,
-            gender: group.genero,
-            basePrice: String(group.precioBase),
-            compareAtPrice:
-              group.precioComparacion != null ? String(group.precioComparacion) : null,
-            isActive: false,
-            isFeatured: false,
-            isNew: false,
-            publishedAt: null,
+            productId,
+            colorId,
+            sizeId,
+            sku,
+            price: String(price),
+            isActive: true,
           })
-          .returning({ id: products.id })
+          .returning({ id: productVariants.id })
 
-        const productId = prod!.id
+        await db.insert(inventory).values({
+          variantId: variant!.id,
+          quantity: v.cantidad,
+          reserved: 0,
+        })
 
-        for (const v of validVariants) {
-          const colorId = colorMap.get(v.color)!
-          const sizeId = sizeMap.get(v.talla)!
-          const sku = skuMap.get(v)!
-          const price = v.precio ?? group.precioBase
-
-          const [variant] = await tx
-            .insert(productVariants)
-            .values({
-              productId,
-              colorId,
-              sizeId,
-              sku,
-              price: String(price),
-              isActive: true,
-            })
-            .returning({ id: productVariants.id })
-
-          await tx.insert(inventory).values({
+        if (v.cantidad > 0) {
+          await db.insert(inventoryMovements).values({
             variantId: variant!.id,
+            type: 'purchase',
             quantity: v.cantidad,
-            reserved: 0,
+            reason: 'Importación masiva CSV',
+            performedBy: actorId,
           })
-
-          if (v.cantidad > 0) {
-            await tx.insert(inventoryMovements).values({
-              variantId: variant!.id,
-              type: 'purchase',
-              quantity: v.cantidad,
-              reason: 'Importación masiva CSV',
-              performedBy: actorId,
-            })
-          }
-
-          variantsCreated++
         }
 
-        await tx.insert(auditLog).values({
-          actorId,
-          actorEmail,
-          action: 'product.bulk_import',
-          resourceType: 'product',
-          resourceId: productId,
-          after: { name: group.nombre, variantsCreated, slug },
-          ip,
-        })
+        variantsCreated++
+      }
+
+      await db.insert(auditLog).values({
+        actorId,
+        actorEmail,
+        action: 'product.bulk_import',
+        resourceType: 'product',
+        resourceId: productId,
+        after: { name: group.nombre, variantsCreated, slug },
+        ip,
       })
 
       results.push({ nombre: group.nombre, status: 'created', variantsCreated })
     } catch (e) {
+      // If product was created before the failure, delete it so we don't leave orphans.
+      // FK cascade handles variants/inventory/movements cleanup.
+      if (typeof productId === 'string') {
+        await db.delete(products).where(eq(products.id, productId)).catch(() => {})
+      }
       results.push({
         nombre: group.nombre,
         status: 'error',
