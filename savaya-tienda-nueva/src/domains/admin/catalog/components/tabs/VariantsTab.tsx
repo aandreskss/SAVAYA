@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Toggle } from '@/shared/ui/Toggle'
 import { toast } from '@/shared/ui'
-import { createColorAction } from '../../actions'
+import { createColorAction, updateColorAction } from '../../actions'
 import type { ColorOption, SizeOption } from '../../types'
 
 export type VariantRow = {
@@ -154,6 +154,14 @@ export function VariantsTab({
   const [newColorHex2, setNewColorHex2] = useState('')
   const [isBicolor, setIsBicolor] = useState(false)
   const [isCreatingColor, startCreatingColor] = useTransition()
+
+  // Edit color form state
+  const [editingColorId, setEditingColorId] = useState<string | null>(null)
+  const [editColorName, setEditColorName] = useState('')
+  const [editColorHex, setEditColorHex] = useState('#000000')
+  const [editColorHex2, setEditColorHex2] = useState('')
+  const [editIsBicolor, setEditIsBicolor] = useState(false)
+  const [isSavingColor, startSavingColor] = useTransition()
 
   function reconcile(newColors: Set<string>, newSizes: Set<string>) {
     const next: VariantRow[] = []
@@ -323,6 +331,50 @@ export function VariantsTab({
     })
   }
 
+  function openEditColor(colorId: string) {
+    const color = colors.find((c) => c.id === colorId)
+    if (!color) return
+    setEditingColorId(colorId)
+    setEditColorName(color.name)
+    setEditColorHex(color.hex ?? '#000000')
+    const hasSecond = !!color.hex2
+    setEditIsBicolor(hasSecond)
+    setEditColorHex2(color.hex2 ?? '')
+    setShowColorForm(false)
+  }
+
+  function cancelEditColor() {
+    setEditingColorId(null)
+  }
+
+  function handleSaveColor() {
+    if (!editingColorId || !editColorName.trim()) return
+    startSavingColor(async () => {
+      const result = await updateColorAction(
+        editingColorId,
+        editColorName.trim(),
+        editColorHex || null,
+        editIsBicolor && editColorHex2 ? editColorHex2 : null,
+      )
+      if (!result.success) {
+        toast.error(result.error ?? 'Error al guardar color')
+        return
+      }
+      const updated = result.data!
+      // Update colors list
+      onColorsChange?.(colors.map((c) => (c.id === updated.id ? updated : c)))
+      // Update all variant rows that use this color
+      const updatedVariants = variants.map((v) =>
+        v.colorId === updated.id
+          ? { ...v, colorName: updated.name, colorHex: updated.hex, colorHex2: updated.hex2 }
+          : v,
+      )
+      onChange(updatedVariants)
+      setEditingColorId(null)
+      toast.success(`Color "${updated.name}" actualizado`)
+    })
+  }
+
   const activeVariants = variants.filter((v) => v.isActive !== false)
   const hasSelections = selColors.size > 0 || selSizes.size > 0
 
@@ -415,23 +467,116 @@ export function VariantsTab({
           </div>
         )}
 
+        {/* Edit color form */}
+        {editingColorId && (
+          <div className="mb-3 p-3 rounded-lg border border-accent-gold/40 bg-surface-2 space-y-3">
+            <p className="font-sans text-xs font-medium text-text-secondary uppercase tracking-wide">Editar color</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Nombre</label>
+                <input
+                  type="text"
+                  value={editColorName}
+                  onChange={(e) => setEditColorName(e.target.value)}
+                  className="h-8 w-full px-2 text-xs border border-border rounded bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Color principal</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={editColorHex}
+                    onChange={(e) => setEditColorHex(e.target.value)}
+                    className="h-8 w-10 rounded border border-border cursor-pointer bg-surface p-0.5"
+                  />
+                  <span className="font-mono text-xs text-text-secondary">{editColorHex}</span>
+                </div>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editIsBicolor}
+                onChange={(e) => setEditIsBicolor(e.target.checked)}
+                className="accent-accent-gold"
+              />
+              <span className="font-sans text-xs text-text-primary">Bicolor (dos tonos)</span>
+            </label>
+
+            {editIsBicolor && (
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Segundo color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={editColorHex2 || '#ffffff'}
+                    onChange={(e) => setEditColorHex2(e.target.value)}
+                    className="h-8 w-10 rounded border border-border cursor-pointer bg-surface p-0.5"
+                  />
+                  <span className="font-mono text-xs text-text-secondary">{editColorHex2 || '#ffffff'}</span>
+                  <ColorDot hex={editColorHex} hex2={editColorHex2 || '#ffffff'} size="md" />
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelEditColor}
+                className="h-8 px-3 rounded text-xs font-sans border border-border text-text-secondary hover:bg-surface-2 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveColor}
+                disabled={isSavingColor || !editColorName.trim()}
+                className="h-8 px-3 rounded text-xs font-sans font-medium bg-accent-gold text-brand-black hover:bg-accent-gold/90 transition-colors disabled:opacity-50"
+              >
+                {isSavingColor ? '...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
           {colors.map((color) => {
             const selected = selColors.has(color.id)
+            const isEditing = editingColorId === color.id
             return (
-              <button
-                key={color.id}
-                type="button"
-                onClick={() => toggleColor(color.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-sans border transition-colors duration-150 ${
-                  selected
-                    ? 'border-accent-gold bg-accent-gold text-text-primary-inverse'
-                    : 'border-border bg-surface text-text-primary hover:border-border-hover'
-                }`}
-              >
-                <ColorDot hex={color.hex} hex2={color.hex2} />
-                {color.name}
-              </button>
+              <div key={color.id} className="flex items-center gap-1 group">
+                <button
+                  type="button"
+                  onClick={() => toggleColor(color.id)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-sans border transition-colors duration-150 ${
+                    isEditing
+                      ? 'border-accent-gold/60 bg-surface-2 text-text-primary'
+                      : selected
+                        ? 'border-accent-gold bg-accent-gold text-text-primary-inverse'
+                        : 'border-border bg-surface text-text-primary hover:border-border-hover'
+                  }`}
+                >
+                  <ColorDot hex={color.hex} hex2={color.hex2} />
+                  {color.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => isEditing ? cancelEditColor() : openEditColor(color.id)}
+                  title={isEditing ? 'Cancelar edición' : 'Editar color'}
+                  className={`p-1 rounded transition-colors opacity-0 group-hover:opacity-100 ${
+                    isEditing
+                      ? 'opacity-100 text-accent-gold'
+                      : 'text-text-muted hover:text-text-primary hover:bg-surface-2'
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              </div>
             )
           })}
           {colors.length === 0 && !showColorForm && (

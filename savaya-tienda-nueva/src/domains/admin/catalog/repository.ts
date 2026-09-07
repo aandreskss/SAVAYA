@@ -359,6 +359,20 @@ export async function createColor(
   return row!
 }
 
+export async function updateColor(
+  id: string,
+  name: string,
+  hex: string | null,
+  hex2: string | null,
+): Promise<ColorOption> {
+  const [row] = await db
+    .update(colors)
+    .set({ name: name.trim(), hex: hex || null, hex2: hex2 || null })
+    .where(eq(colors.id, id))
+    .returning({ id: colors.id, name: colors.name, hex: colors.hex, hex2: colors.hex2 })
+  return row!
+}
+
 export async function getAllSizes(): Promise<SizeOption[]> {
   const rows = await db
     .select({ id: sizes.id, name: sizes.name, sortOrder: sizes.sortOrder })
