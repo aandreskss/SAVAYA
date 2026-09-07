@@ -13,6 +13,7 @@ import {
   publishProduct,
   unpublishProduct,
   duplicateProduct,
+  bulkDeleteProducts,
   deleteMediaRecord,
   createCategory,
   updateCategory,
@@ -173,6 +174,26 @@ export async function duplicateProductAction(id: string): Promise<ActionResult<{
     return { success: true, data: { id: newId } }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Error al duplicar' }
+  }
+}
+
+export async function bulkDeleteProductsAction(ids: string[]): Promise<ActionResult<{ deleted: number }>> {
+  const actor = await getActorContext()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!hasPermission(actor.permissions, 'catalog:delete')) {
+    return { success: false, error: 'Sin permiso para eliminar productos' }
+  }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { success: false, error: 'Selecciona al menos un producto' }
+  }
+
+  try {
+    const result = await bulkDeleteProducts(ids, actor.actorId, actor.actorEmail, actor.ip)
+    revalidatePath('/admin/productos')
+    revalidatePath('/categoria', 'layout')
+    return { success: true, data: result }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Error al eliminar productos' }
   }
 }
 

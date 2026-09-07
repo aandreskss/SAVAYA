@@ -15,6 +15,7 @@ import {
   publishProductAction,
   unpublishProductAction,
   duplicateProductAction,
+  bulkDeleteProductsAction,
 } from '../actions'
 import type { AdminProductRow, ColorOption, SizeOption } from '../types'
 
@@ -96,6 +97,9 @@ export function ProductsTable({
   const [isPending, startTransition] = useTransition()
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<AdminProductRow | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(
     !!(sku || colorId || sizeId || minPrice || maxPrice || minStock || maxStock),
   )
@@ -197,6 +201,46 @@ export function ProductsTable({
     }, 500)
   }
 
+  const allPageIds = rows.map((r) => r.id)
+  const allSelected = allPageIds.length > 0 && allPageIds.every((id) => selected.has(id))
+  const someSelected = allPageIds.some((id) => selected.has(id))
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev)
+        allPageIds.forEach((id) => next.delete(id))
+        return next
+      })
+    } else {
+      setSelected((prev) => new Set([...prev, ...allPageIds]))
+    }
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleBulkDelete() {
+    setIsBulkDeleting(true)
+    const ids = [...selected]
+    const result = await bulkDeleteProductsAction(ids)
+    setIsBulkDeleting(false)
+    setBulkDeleteOpen(false)
+    if (!result.success) {
+      toast.error(result.error ?? 'Error al eliminar')
+      return
+    }
+    setSelected(new Set())
+    toast.success(`${result.data?.deleted ?? ids.length} producto${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}`)
+    router.refresh()
+  }
+
   async function handleAction(id: string, action: () => Promise<{ success: boolean; error?: string }>) {
     setPendingId(id)
     startTransition(async () => {
@@ -271,6 +315,29 @@ export function ProductsTable({
           </Link>
         </div>
       </div>
+
+      {/* ── Bulk action bar ── */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between gap-4 mb-3 px-4 py-2.5 rounded-lg bg-accent-gold/10 border border-accent-gold/30">
+          <span className="font-sans text-sm text-accent-gold font-medium">
+            {selected.size} producto{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelected(new Set())}
+              className="font-sans text-xs text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Deseleccionar todo
+            </button>
+            <button
+              onClick={() => setBulkDeleteOpen(true)}
+              className="px-3 py-1.5 rounded text-xs font-sans font-medium bg-error/10 border border-error/30 text-error hover:bg-error/20 hover:border-error transition-colors"
+            >
+              Eliminar {selected.size} producto{selected.size !== 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Advanced filter panel ── */}
       {filtersOpen && (
@@ -430,6 +497,16 @@ export function ProductsTable({
           <table className="w-full min-w-[700px] text-sm" role="grid">
             <thead className="bg-surface-2 border-b border-border">
               <tr>
+                <th scope="col" className="pl-4 pr-2 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected }}
+                    onChange={toggleAll}
+                    aria-label="Seleccionar todos en esta página"
+                    className="w-4 h-4 rounded border-border accent-accent-gold cursor-pointer"
+                  />
+                </th>
                 <th scope="col" className="px-4 py-3 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider w-16">Imagen</th>
                 <th scope="col" className="px-4 py-3 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider">Producto</th>
                 <th scope="col" className="px-4 py-3 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider">Estado</th>
@@ -445,7 +522,16 @@ export function ProductsTable({
                 const isPublished = row.isActive && row.publishedAt && new Date(row.publishedAt) <= new Date()
 
                 return (
-                  <tr key={row.id} className="hover:bg-surface-2/50 transition-colors">
+                  <tr key={row.id} className={`hover:bg-surface-2/50 transition-colors ${selected.has(row.id) ? 'bg-accent-gold/5' : ''}`}>
+                    <td className="pl-4 pr-2 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row.id)}
+                        onChange={() => toggleOne(row.id)}
+                        aria-label={`Seleccionar ${row.name}`}
+                        className="w-4 h-4 rounded border-border accent-accent-gold cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="relative h-12 w-9 rounded overflow-hidden bg-surface-2 border border-border shrink-0">
                         {row.primaryImageUrl ? (
@@ -558,6 +644,26 @@ export function ProductsTable({
           />
         </div>
       )}
+
+      {/* Bulk delete confirmation modal */}
+      <Modal isOpen={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)} title="Eliminar productos" size="sm">
+        <div className="space-y-4">
+          <p className="font-sans text-sm text-text-primary">
+            ¿Eliminar permanentemente <strong>{selected.size} producto{selected.size !== 1 ? 's' : ''}</strong>? Esta acción no se puede deshacer. Se eliminarán el inventario, variantes e imágenes asociadas.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" size="sm" onClick={() => setBulkDeleteOpen(false)}>Cancelar</Button>
+            <Button
+              variant="danger"
+              size="sm"
+              isLoading={isBulkDeleting}
+              onClick={handleBulkDelete}
+            >
+              Eliminar {selected.size} producto{selected.size !== 1 ? 's' : ''}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Archive confirmation modal */}
       <Modal isOpen={!!archiveTarget} onClose={() => setArchiveTarget(null)} title="Archivar producto" size="sm">

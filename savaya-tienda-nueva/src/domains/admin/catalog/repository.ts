@@ -842,6 +842,50 @@ export async function deleteMediaRecord(mediaId: string): Promise<string | null>
 }
 
 // ---------------------------------------------------------------------------
+// Bulk delete products
+// ---------------------------------------------------------------------------
+
+export async function bulkDeleteProducts(
+  ids: string[],
+  actorId: string,
+  actorEmail: string,
+  ip: string,
+): Promise<{ deleted: number }> {
+  if (ids.length === 0) return { deleted: 0 }
+
+  // Fetch variant IDs first — needed to delete inventoryMovements (onDelete: 'restrict')
+  const variantRows = await db
+    .select({ id: productVariants.id })
+    .from(productVariants)
+    .where(inArray(productVariants.productId, ids))
+
+  const variantIds = variantRows.map((v) => v.id)
+
+  if (variantIds.length > 0) {
+    await db.delete(inventoryMovements).where(inArray(inventoryMovements.variantId, variantIds))
+    await db.delete(inventory).where(inArray(inventory.variantId, variantIds))
+    await db.delete(productVariants).where(inArray(productVariants.productId, ids))
+  }
+
+  await db.delete(productMedia).where(inArray(productMedia.productId, ids))
+  await db.delete(productCollections).where(inArray(productCollections.productId, ids))
+  await db.delete(products).where(inArray(products.id, ids))
+
+  await db.insert(auditLog).values(
+    ids.map((id) => ({
+      actorId,
+      actorEmail,
+      action: 'product.delete',
+      resourceType: 'product',
+      resourceId: id,
+      ip,
+    })),
+  )
+
+  return { deleted: ids.length }
+}
+
+// ---------------------------------------------------------------------------
 // Category CRUD
 // ---------------------------------------------------------------------------
 
