@@ -240,6 +240,44 @@ export function VariantsTab({
     )
   }
 
+  function changeVariantColor(index: number, newColorId: string) {
+    const color = colors.find((c) => c.id === newColorId)
+    if (!color) return
+
+    const variant = variants[index]
+    const duplicate = variants.some(
+      (v, i) => i !== index && v.colorId === newColorId && v.sizeId === variant.sizeId && v.isActive !== false,
+    )
+    if (duplicate) {
+      toast.error(`Ya existe una variante ${color.name} / ${variant.sizeName}`)
+      return
+    }
+
+    const oldColorId = variant.colorId
+    const updated = variants.map((v, i) =>
+      i === index
+        ? { ...v, colorId: newColorId, colorName: color.name, colorHex: color.hex ?? null, colorHex2: color.hex2 ?? null }
+        : v,
+    )
+    onChange(updated)
+
+    const nextColors = new Set(selColors)
+    nextColors.add(newColorId)
+    const oldColorStillUsed = updated.some((v) => v.colorId === oldColorId && v.isActive !== false)
+    if (!oldColorStillUsed) nextColors.delete(oldColorId)
+    setSelColors(nextColors)
+
+    setSkuPrefixes((prev) => {
+      const next = { ...prev }
+      if (!next[newColorId]) {
+        const lastDash = variant.sku.lastIndexOf('-')
+        next[newColorId] = lastDash > 0 ? variant.sku.slice(0, lastDash) : variant.sku
+      }
+      if (!oldColorStillUsed) delete next[oldColorId]
+      return next
+    })
+  }
+
   function deleteVariant(index: number) {
     const variant = variants[index]
     const remaining = variants.filter((_, i) => i !== index)
@@ -508,12 +546,25 @@ export function VariantsTab({
                       className={`transition-colors ${inactive ? 'opacity-50 bg-surface-2/30' : 'hover:bg-surface-2/40'}`}
                     >
                       <td className="px-3 py-2">
-                        <span className="flex items-center gap-1.5">
-                          <ColorDot hex={v.colorHex} hex2={v.colorHex2} />
-                          <span className={`font-sans text-sm ${inactive ? 'line-through text-text-secondary' : ''}`}>
-                            {v.colorName}
+                        {inactive ? (
+                          <span className="flex items-center gap-1.5">
+                            <ColorDot hex={v.colorHex} hex2={v.colorHex2} />
+                            <span className="font-sans text-sm line-through text-text-secondary">{v.colorName}</span>
                           </span>
-                        </span>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <ColorDot hex={v.colorHex} hex2={v.colorHex2} />
+                            <select
+                              value={v.colorId}
+                              onChange={(e) => changeVariantColor(index, e.target.value)}
+                              className="text-xs border border-border rounded bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold px-1.5 py-1 max-w-[130px]"
+                            >
+                              {colors.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </td>
                       <td className={`px-3 py-2 font-sans text-sm ${inactive ? 'line-through text-text-secondary' : ''}`}>
                         {v.sizeName}
