@@ -1,14 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Toggle } from '@/shared/ui/Toggle'
+import { toast } from '@/shared/ui'
+import { createColorAction } from '../../actions'
 import type { ColorOption, SizeOption } from '../../types'
 
 export type VariantRow = {
   id?: string
   colorId: string
   colorName: string
-  colorHex: string
+  colorHex: string | null
+  colorHex2: string | null
   sizeId: string
   sizeName: string
   sku: string
@@ -16,6 +19,45 @@ export type VariantRow = {
   compareAtPrice: string
   isActive: boolean
   initialStock: number
+}
+
+// Renders a color circle — split diagonally when hex2 is present
+function ColorDot({
+  hex,
+  hex2,
+  size = 'sm',
+}: {
+  hex: string | null
+  hex2?: string | null
+  size?: 'sm' | 'md'
+}) {
+  const dim = size === 'md' ? 'h-5 w-5' : 'h-3.5 w-3.5'
+  const base = hex ?? '#888888'
+  if (!hex2) {
+    return (
+      <span
+        className={`${dim} rounded-full border border-white/20 shrink-0 inline-block`}
+        style={{ backgroundColor: base }}
+        aria-hidden="true"
+      />
+    )
+  }
+  const id = `cd-${base.replace('#', '')}-${hex2.replace('#', '')}`
+  return (
+    <svg className={`${dim} rounded-full shrink-0`} viewBox="0 0 16 16" aria-hidden="true">
+      <defs>
+        <clipPath id={`${id}-l`}>
+          <polygon points="0,0 8,0 0,16" />
+        </clipPath>
+        <clipPath id={`${id}-r`}>
+          <polygon points="8,0 16,0 16,16 0,16" />
+        </clipPath>
+      </defs>
+      <circle cx="8" cy="8" r="8" fill={base} clipPath={`url(#${id}-l)`} />
+      <circle cx="8" cy="8" r="8" fill={hex2} clipPath={`url(#${id}-r)`} />
+      <circle cx="8" cy="8" r="7.5" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1" />
+    </svg>
+  )
 }
 
 type Props = {
@@ -26,6 +68,7 @@ type Props = {
   productName: string
   onChange: (variants: VariantRow[]) => void
   onDeleteExistingVariant?: (id: string) => void
+  onColorsChange?: (colors: ColorOption[]) => void
 }
 
 function generateSku(productName: string, colorName: string, sizeName: string): string {
@@ -92,6 +135,7 @@ export function VariantsTab({
   productName,
   onChange,
   onDeleteExistingVariant,
+  onColorsChange,
 }: Props) {
   const [selColors, setSelColors] = useState<Set<string>>(
     () => initSelected(variants).colorIds,
@@ -99,10 +143,17 @@ export function VariantsTab({
   const [selSizes, setSelSizes] = useState<Set<string>>(
     () => initSelected(variants).sizeIds,
   )
-  // Per-color SKU prefix for bulk editing — separate from individual SKU state
   const [skuPrefixes, setSkuPrefixes] = useState<Record<string, string>>(
     () => initPrefixes(variants),
   )
+
+  // New color form state
+  const [showColorForm, setShowColorForm] = useState(false)
+  const [newColorName, setNewColorName] = useState('')
+  const [newColorHex, setNewColorHex] = useState('#000000')
+  const [newColorHex2, setNewColorHex2] = useState('')
+  const [isBicolor, setIsBicolor] = useState(false)
+  const [isCreatingColor, startCreatingColor] = useTransition()
 
   function reconcile(newColors: Set<string>, newSizes: Set<string>) {
     const next: VariantRow[] = []
@@ -129,7 +180,8 @@ export function VariantsTab({
           next.push({
             colorId,
             colorName: color.name,
-            colorHex: color.hex ?? '#888',
+            colorHex: color.hex ?? null,
+            colorHex2: color.hex2 ?? null,
             sizeId,
             sizeName: size.name,
             sku,
@@ -205,6 +257,34 @@ export function VariantsTab({
     onChange(remaining)
   }
 
+  function handleCreateColor() {
+    if (!newColorName.trim()) return
+    startCreatingColor(async () => {
+      const result = await createColorAction(
+        newColorName.trim(),
+        newColorHex || null,
+        isBicolor && newColorHex2 ? newColorHex2 : null,
+      )
+      if (!result.success) {
+        toast.error(result.error ?? 'Error al crear color')
+        return
+      }
+      const created = result.data!
+      onColorsChange?.([...colors, created])
+      setShowColorForm(false)
+      setNewColorName('')
+      setNewColorHex('#000000')
+      setNewColorHex2('')
+      setIsBicolor(false)
+      // Auto-select the new color
+      const next = new Set(selColors)
+      next.add(created.id)
+      setSelColors(next)
+      reconcile(next, selSizes)
+      toast.success(`Color "${created.name}" creado`)
+    })
+  }
+
   const activeVariants = variants.filter((v) => v.isActive !== false)
   const hasSelections = selColors.size > 0 || selSizes.size > 0
 
@@ -217,35 +297,109 @@ export function VariantsTab({
     <div className="space-y-6 py-2">
       {/* Color selector */}
       <div>
-        <p className="font-sans text-sm font-medium text-text-primary mb-2">Colores</p>
-        {colors.length === 0 ? (
-          <p className="text-xs text-text-secondary">No hay colores configurados.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {colors.map((color) => {
-              const selected = selColors.has(color.id)
-              return (
-                <button
-                  key={color.id}
-                  type="button"
-                  onClick={() => toggleColor(color.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-sans border transition-colors duration-150 ${
-                    selected
-                      ? 'border-accent-gold bg-accent-gold text-text-primary-inverse'
-                      : 'border-border bg-surface text-text-primary hover:border-border-hover'
-                  }`}
-                >
-                  <span
-                    className="h-3.5 w-3.5 rounded-full border border-white/20 shrink-0"
-                    style={{ backgroundColor: color.hex ?? '#888' }}
-                    aria-hidden="true"
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-sans text-sm font-medium text-text-primary">Colores</p>
+          <button
+            type="button"
+            onClick={() => setShowColorForm((v) => !v)}
+            className="font-sans text-xs text-accent-gold hover:underline"
+          >
+            {showColorForm ? 'Cancelar' : '+ Nuevo color'}
+          </button>
+        </div>
+
+        {/* Inline new-color form */}
+        {showColorForm && (
+          <div className="mb-3 p-3 rounded-lg border border-border bg-surface-2 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Nombre</label>
+                <input
+                  type="text"
+                  value={newColorName}
+                  onChange={(e) => setNewColorName(e.target.value)}
+                  placeholder="ej. Negro con Dorado"
+                  className="h-8 w-full px-2 text-xs border border-border rounded bg-surface text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-gold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Color principal</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={newColorHex}
+                    onChange={(e) => setNewColorHex(e.target.value)}
+                    className="h-8 w-10 rounded border border-border cursor-pointer bg-surface p-0.5"
                   />
-                  {color.name}
-                </button>
-              )
-            })}
+                  <span className="font-mono text-xs text-text-secondary">{newColorHex}</span>
+                </div>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isBicolor}
+                onChange={(e) => setIsBicolor(e.target.checked)}
+                className="accent-accent-gold"
+              />
+              <span className="font-sans text-xs text-text-primary">Bicolor (dos tonos)</span>
+            </label>
+
+            {isBicolor && (
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Segundo color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={newColorHex2 || '#ffffff'}
+                    onChange={(e) => setNewColorHex2(e.target.value)}
+                    className="h-8 w-10 rounded border border-border cursor-pointer bg-surface p-0.5"
+                  />
+                  <span className="font-mono text-xs text-text-secondary">{newColorHex2 || '#ffffff'}</span>
+                  {newColorHex && (
+                    <ColorDot hex={newColorHex} hex2={newColorHex2 || '#ffffff'} size="md" />
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleCreateColor}
+                disabled={isCreatingColor || !newColorName.trim()}
+                className="h-8 px-3 rounded text-xs font-sans font-medium bg-accent-gold text-brand-black hover:bg-accent-gold/90 transition-colors disabled:opacity-50"
+              >
+                {isCreatingColor ? '...' : 'Crear color'}
+              </button>
+            </div>
           </div>
         )}
+
+        <div className="flex flex-wrap gap-2">
+          {colors.map((color) => {
+            const selected = selColors.has(color.id)
+            return (
+              <button
+                key={color.id}
+                type="button"
+                onClick={() => toggleColor(color.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-sans border transition-colors duration-150 ${
+                  selected
+                    ? 'border-accent-gold bg-accent-gold text-text-primary-inverse'
+                    : 'border-border bg-surface text-text-primary hover:border-border-hover'
+                }`}
+              >
+                <ColorDot hex={color.hex} hex2={color.hex2} />
+                {color.name}
+              </button>
+            )
+          })}
+          {colors.length === 0 && !showColorForm && (
+            <p className="text-xs text-text-secondary">No hay colores. Crea el primero con "+ Nuevo color".</p>
+          )}
+        </div>
       </div>
 
       {/* Size selector */}
@@ -307,11 +461,7 @@ export function VariantsTab({
                 const prefix = skuPrefixes[colorId] ?? ''
                 return (
                   <div key={colorId} className="flex items-center gap-2">
-                    <span
-                      className="h-3 w-3 rounded-full border border-border shrink-0"
-                      style={{ backgroundColor: sample.colorHex }}
-                      aria-hidden="true"
-                    />
+                    <ColorDot hex={sample.colorHex} hex2={sample.colorHex2} />
                     <span className="font-sans text-xs text-text-secondary w-20 shrink-0 truncate">
                       {sample.colorName}
                     </span>
@@ -359,11 +509,7 @@ export function VariantsTab({
                     >
                       <td className="px-3 py-2">
                         <span className="flex items-center gap-1.5">
-                          <span
-                            className="h-3 w-3 rounded-full border border-border shrink-0"
-                            style={{ backgroundColor: v.colorHex }}
-                            aria-hidden="true"
-                          />
+                          <ColorDot hex={v.colorHex} hex2={v.colorHex2} />
                           <span className={`font-sans text-sm ${inactive ? 'line-through text-text-secondary' : ''}`}>
                             {v.colorName}
                           </span>

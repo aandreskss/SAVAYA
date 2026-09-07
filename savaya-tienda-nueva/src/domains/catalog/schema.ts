@@ -81,6 +81,7 @@ export const colors = pgTable('colors', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').unique().notNull(),
   hex: text('hex'),
+  hex2: text('hex2'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

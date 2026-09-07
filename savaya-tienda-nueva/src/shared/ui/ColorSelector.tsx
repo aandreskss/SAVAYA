@@ -6,6 +6,7 @@ export type ColorOption = {
   id: string
   name: string
   hex: string
+  hex2?: string | null
   isAvailable: boolean
 }
 
@@ -52,14 +53,24 @@ export function ColorSelector({
               }}
               className={cn(
                 'relative inline-flex items-center justify-center',
-                'w-8 h-8 rounded-full shrink-0',
+                'w-8 h-8 rounded-full shrink-0 overflow-hidden',
                 'transition-all duration-150',
                 'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2',
                 isSelected && 'ring-2 ring-offset-2 ring-accent-gold ring-offset-surface',
                 !color.isAvailable && 'cursor-not-allowed opacity-60',
               )}
-              style={{ backgroundColor: color.hex }}
+              style={!color.hex2 ? { backgroundColor: color.hex } : undefined}
             >
+              {color.hex2 && (
+                <svg viewBox="0 0 32 32" className="absolute inset-0 w-full h-full" aria-hidden="true">
+                  <defs>
+                    <clipPath id={`cs-l-${color.id}`}><polygon points="0,0 16,0 0,32" /></clipPath>
+                    <clipPath id={`cs-r-${color.id}`}><polygon points="16,0 32,0 32,32 0,32" /></clipPath>
+                  </defs>
+                  <circle cx="16" cy="16" r="16" fill={color.hex} clipPath={`url(#cs-l-${color.id})`} />
+                  <circle cx="16" cy="16" r="16" fill={color.hex2} clipPath={`url(#cs-r-${color.id})`} />
+                </svg>
+              )}
               {/* Diagonal para colores no disponibles */}
               {!color.isAvailable && (
                 <svg

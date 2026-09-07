@@ -250,6 +250,7 @@ export async function getAdminProductForEdit(id: string): Promise<AdminProductFo
         colorId: colors.id,
         colorName: colors.name,
         colorHex: colors.hex,
+        colorHex2: colors.hex2,
         sizeId: sizes.id,
         sizeName: sizes.name,
         sku: productVariants.sku,
@@ -311,7 +312,8 @@ export async function getAdminProductForEdit(id: string): Promise<AdminProductFo
       id: v.id,
       colorId: v.colorId,
       colorName: v.colorName,
-      colorHex: v.colorHex ?? '#888888',
+      colorHex: v.colorHex ?? null,
+      colorHex2: v.colorHex2 ?? null,
       sizeId: v.sizeId,
       sizeName: v.sizeName,
       sku: v.sku,
@@ -339,10 +341,22 @@ export async function getAdminProductForEdit(id: string): Promise<AdminProductFo
 
 export async function getAllColors(): Promise<ColorOption[]> {
   const rows = await db
-    .select({ id: colors.id, name: colors.name, hex: colors.hex })
+    .select({ id: colors.id, name: colors.name, hex: colors.hex, hex2: colors.hex2 })
     .from(colors)
     .orderBy(asc(colors.name))
   return rows
+}
+
+export async function createColor(
+  name: string,
+  hex: string | null,
+  hex2: string | null,
+): Promise<ColorOption> {
+  const [row] = await db
+    .insert(colors)
+    .values({ name: name.trim(), hex: hex || null, hex2: hex2 || null })
+    .returning({ id: colors.id, name: colors.name, hex: colors.hex, hex2: colors.hex2 })
+  return row!
 }
 
 export async function getAllSizes(): Promise<SizeOption[]> {

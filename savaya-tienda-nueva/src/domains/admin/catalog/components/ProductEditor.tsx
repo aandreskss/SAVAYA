@@ -60,6 +60,7 @@ function initVariants(product?: AdminProductForEdit): VariantRow[] {
     colorId: v.colorId,
     colorName: v.colorName,
     colorHex: v.colorHex,
+    colorHex2: v.colorHex2,
     sizeId: v.sizeId,
     sizeName: v.sizeName,
     sku: v.sku,
@@ -82,7 +83,7 @@ function initSeo(product?: AdminProductForEdit): SeoTabState {
   }
 }
 
-export function ProductEditor({ product, colors, sizes, categories, collections }: Props) {
+export function ProductEditor({ product, colors: initialColors, sizes, categories, collections }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -91,6 +92,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
   const [variants, setVariants] = useState<VariantRow[]>(() => initVariants(product))
   const [seo, setSeo] = useState<SeoTabState>(() => initSeo(product))
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([])
+  const [colors, setColors] = useState<ColorOption[]>(initialColors)
 
   function handleSave() {
     startTransition(async () => {
@@ -205,6 +207,7 @@ export function ProductEditor({ product, colors, sizes, categories, collections 
           productName={general.name}
           onChange={setVariants}
           onDeleteExistingVariant={handleDeleteExistingVariant}
+          onColorsChange={setColors}
         />
       ),
     },

@@ -15,6 +15,7 @@ import {
   duplicateProduct,
   bulkDeleteProducts,
   bulkUpdateProductsStatus,
+  createColor,
   deleteMediaRecord,
   createCategory,
   updateCategory,
@@ -176,6 +177,30 @@ export async function duplicateProductAction(id: string): Promise<ActionResult<{
     return { success: true, data: { id: newId } }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Error al duplicar' }
+  }
+}
+
+export async function createColorAction(
+  name: string,
+  hex: string | null,
+  hex2: string | null,
+): Promise<ActionResult<{ id: string; name: string; hex: string | null; hex2: string | null }>> {
+  const actor = await getActorContext()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!hasPermission(actor.permissions, 'catalog:write')) {
+    return { success: false, error: 'Sin permiso para crear colores' }
+  }
+  if (!name.trim()) return { success: false, error: 'El nombre del color es requerido' }
+
+  try {
+    const color = await createColor(name, hex, hex2)
+    return { success: true, data: color }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error'
+    return {
+      success: false,
+      error: msg.includes('unique') ? `Ya existe un color llamado "${name}"` : msg,
+    }
   }
 }
 

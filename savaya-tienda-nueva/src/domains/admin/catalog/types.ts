@@ -23,7 +23,8 @@ export type AdminVariantForEdit = {
   id: string
   colorId: string
   colorName: string
-  colorHex: string
+  colorHex: string | null
+  colorHex2: string | null
   sizeId: string
   sizeName: string
   sku: string
@@ -94,6 +95,7 @@ export type ColorOption = {
   id: string
   name: string
   hex: string | null
+  hex2: string | null
 }
 
 export type SizeOption = {
