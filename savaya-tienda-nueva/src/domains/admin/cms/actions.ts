@@ -17,6 +17,7 @@ import {
   createAdminPopup,
   updateAdminPopup,
   deleteAdminPopup,
+  upsertGenderHeroSection,
 } from './repository'
 import {
   ReorderSectionsSchema,
@@ -428,5 +429,45 @@ export async function deletePopupAction(id: string): Promise<ActionResult> {
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Error al eliminar el popup' }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gender hero banners (/hombre and /mujer)
+// ---------------------------------------------------------------------------
+
+export type GenderHeroPayload = {
+  imageDesktopUrl: string
+  overlayOpacity: number
+  ctaPrimaryText: string
+  ctaPrimaryHref: string
+  ctaSecondaryText: string
+  ctaSecondaryHref: string
+}
+
+export async function updateGenderHeroAction(
+  slug: 'hombre' | 'mujer',
+  payload: GenderHeroPayload,
+): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para editar contenido' }
+  }
+
+  try {
+    await upsertGenderHeroSection(slug, {
+      imageDesktopUrl: payload.imageDesktopUrl,
+      overlayOpacity: payload.overlayOpacity,
+      ctaPrimaryText: payload.ctaPrimaryText,
+      ctaPrimaryHref: payload.ctaPrimaryHref,
+      ctaSecondaryText: payload.ctaSecondaryText || undefined,
+      ctaSecondaryHref: payload.ctaSecondaryHref || undefined,
+    })
+    revalidatePath(`/${slug}`)
+    revalidatePath('/admin/contenido')
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: `Error al guardar el banner de /${slug}` }
   }
 }

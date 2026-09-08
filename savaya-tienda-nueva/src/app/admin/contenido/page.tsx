@@ -1,27 +1,38 @@
 import { Suspense } from 'react'
 import { Skeleton } from '@/shared/ui/Skeleton'
-import { getAdminSections, listAdminBanners, listAdminPopups } from '@/domains/admin/cms/repository'
+import { getAdminSections, listAdminBanners, listAdminPopups, getGenderHeroContent } from '@/domains/admin/cms/repository'
 import { ContenidoView } from '@/domains/admin/cms/components/ContenidoView'
+import type { GenderHero } from '@/domains/cms/repository'
 
 export const metadata = {
   title: 'Contenido | Admin SAVAYA',
 }
 
 async function ContenidoData() {
-  const [sections, banners, popups] = await Promise.all([
+  const [sections, banners, popups, hombreHero, mujerHero] = await Promise.all([
     getAdminSections('home'),
     listAdminBanners(),
     listAdminPopups(),
+    getGenderHeroContent('hombre'),
+    getGenderHeroContent('mujer'),
   ])
 
-  return <ContenidoView sections={sections} banners={banners} popups={popups} />
+  return (
+    <ContenidoView
+      sections={sections}
+      banners={banners}
+      popups={popups}
+      hombreHero={hombreHero as GenderHero | null}
+      mujerHero={mujerHero as GenderHero | null}
+    />
+  )
 }
 
 function ContenidoSkeleton() {
   return (
     <div className="space-y-6">
       <div className="flex gap-1 border-b border-border pb-0">
-        {Array.from({ length: 3 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} variant="text" height={40} className="w-28" />
         ))}
       </div>
@@ -39,7 +50,7 @@ export default function ContenidoAdminPage() {
       <div className="mb-8">
         <h1 className="font-display text-3xl uppercase tracking-wide mb-1">Contenido</h1>
         <p className="text-sm text-text-secondary">
-          Gestiona los bloques de la página home, banners y popups.
+          Gestiona los bloques de la página home, banners de género, banners y popups.
         </p>
       </div>
       <Suspense fallback={<ContenidoSkeleton />}>

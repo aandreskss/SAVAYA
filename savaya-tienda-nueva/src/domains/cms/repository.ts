@@ -1,4 +1,13 @@
 import { eq, and, lte, gte, or, isNull, asc } from 'drizzle-orm'
+
+export type GenderHero = {
+  imageDesktopUrl: string
+  overlayOpacity: number
+  ctaPrimaryText: string
+  ctaPrimaryHref: string
+  ctaSecondaryText: string | null
+  ctaSecondaryHref: string | null
+}
 import { db } from '@/shared/lib/db'
 import { pages, pageSections, banners, popups } from './schema'
 import type { BlockType } from './block-schemas'
@@ -229,6 +238,41 @@ export async function getAnnouncementBarSection(): Promise<PageSection | null> {
 
     return (rows[0] as PageSection) ?? null
   } catch {
+    return null
+  }
+}
+
+/**
+ * Fetches the hero section for /hombre or /mujer from the DB.
+ * Returns null if the page/section hasn't been configured yet (storefront uses hardcoded fallback).
+ */
+export async function getGenderHeroSection(slug: 'hombre' | 'mujer'): Promise<GenderHero | null> {
+  if (!process.env.DATABASE_URL) return null
+
+  try {
+    const [page] = await db
+      .select({ id: pages.id })
+      .from(pages)
+      .where(and(eq(pages.slug, slug), eq(pages.isActive, true)))
+      .limit(1)
+
+    if (!page) return null
+
+    const [section] = await db
+      .select({ content: pageSections.content })
+      .from(pageSections)
+      .where(
+        and(
+          eq(pageSections.pageId, page.id),
+          eq(pageSections.isActive, true),
+          eq(pageSections.type, 'hero'),
+        ),
+      )
+      .limit(1)
+
+    return section ? (section.content as GenderHero) : null
+  } catch (error) {
+    console.error(`[cms/repository] getGenderHeroSection(${slug}) failed:`, error)
     return null
   }
 }

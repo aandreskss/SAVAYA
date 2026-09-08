@@ -8,7 +8,7 @@ import type { ShippingOption, ShippingZoneType, ShippingData } from '../types'
 const ZONE_LABELS: Record<ShippingZoneType, { title: string; desc: string; icon: string }> = {
   local_delivery: {
     title: 'Delivery local',
-    desc: 'Entrega a domicilio en Carabobo',
+    desc: 'Entrega a domicilio en Valencia',
     icon: '🛵',
   },
   national_agency: {

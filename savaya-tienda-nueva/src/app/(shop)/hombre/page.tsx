@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getProducts, getAvailableFilters } from '@/domains/catalog/repository'
+import { getGenderHeroSection } from '@/domains/cms/repository'
 import {
   parsePLPSearchParams,
   searchParamsToFilters,
@@ -46,10 +47,18 @@ export default async function HombrePage({ searchParams }: Props) {
     limit: LIMIT,
   }
 
-  const [{ items, total }, availableFilters] = await Promise.all([
+  const [{ items, total }, availableFilters, hero] = await Promise.all([
     getProducts(filters),
     getAvailableFilters(),
+    getGenderHeroSection('hombre'),
   ])
+
+  const heroImage = hero?.imageDesktopUrl ?? 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=1600&q=80'
+  const heroOverlay = hero?.overlayOpacity ?? 0.88
+  const cta1Text = hero?.ctaPrimaryText ?? 'Ver Sneakers'
+  const cta1Href = hero?.ctaPrimaryHref ?? '/hombre/categoria/sneakers'
+  const cta2Text = hero?.ctaSecondaryText ?? 'Botas'
+  const cta2Href = hero?.ctaSecondaryHref ?? '/hombre/categoria/botas'
 
   const totalPages = Math.ceil(total / LIMIT)
 
@@ -71,19 +80,17 @@ export default async function HombrePage({ searchParams }: Props) {
       {/* Hero Banner Masculino */}
       <div className="relative w-full h-[340px] md:h-[460px] overflow-hidden rounded-2xl mb-10">
         <Image
-          src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=1600&q=80"
+          src={heroImage}
           alt="Colección Masculina SVY FOR MEN"
           fill
           className="object-cover object-center"
           priority
         />
-        {/* Gradient overlay — muy oscuro, masculino */}
         <div
           aria-hidden="true"
           className="absolute inset-0"
           style={{
-            background:
-              'linear-gradient(to right, rgba(8,8,6,0.88) 0%, rgba(8,8,6,0.4) 55%, rgba(8,8,6,0.1) 100%), linear-gradient(to top, rgba(8,8,6,0.6) 0%, transparent 50%)',
+            background: `linear-gradient(to right, rgba(8,8,6,${heroOverlay}) 0%, rgba(8,8,6,${(heroOverlay * 0.45).toFixed(2)}) 55%, rgba(8,8,6,0.1) 100%), linear-gradient(to top, rgba(8,8,6,0.6) 0%, transparent 50%)`,
           }}
         />
 
@@ -111,17 +118,19 @@ export default async function HombrePage({ searchParams }: Props) {
           </p>
           <div className="flex gap-3 flex-wrap">
             <Link
-              href="/hombre/categoria/sneakers"
+              href={cta1Href}
               className="inline-flex items-center bg-white text-[#0C0C08] text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white/90 transition-colors"
             >
-              Ver Sneakers
+              {cta1Text}
             </Link>
-            <Link
-              href="/hombre/categoria/botas"
-              className="inline-flex items-center border border-white/40 text-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
-            >
-              Botas
-            </Link>
+            {cta2Text && (
+              <Link
+                href={cta2Href}
+                className="inline-flex items-center border border-white/40 text-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
+              >
+                {cta2Text}
+              </Link>
+            )}
           </div>
         </div>
 

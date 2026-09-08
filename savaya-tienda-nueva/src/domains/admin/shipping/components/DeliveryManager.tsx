@@ -320,16 +320,19 @@ type RateFormState = {
   cityId: string
   minOrderUsd: string
   maxOrderUsd: string
+  isFree: boolean
   rateUsd: string
   freeShippingThresholdUsd: string
 }
 
 function defaultRateForm(r?: AdminShippingRate): RateFormState {
+  const isFree = r != null && Number(r.rateUsd) === 0
   return {
     cityId: r?.cityId ?? '',
     minOrderUsd: r ? String(r.minOrderUsd) : '0',
     maxOrderUsd: r?.maxOrderUsd != null ? String(r.maxOrderUsd) : '',
-    rateUsd: r ? String(r.rateUsd) : '',
+    isFree,
+    rateUsd: r && !isFree ? String(r.rateUsd) : '',
     freeShippingThresholdUsd:
       r?.freeShippingThresholdUsd != null ? String(r.freeShippingThresholdUsd) : '',
   }
@@ -359,10 +362,11 @@ function RateForm({
           cityId: form.cityId || null,
           minOrderUsd: Number(form.minOrderUsd) || 0,
           maxOrderUsd: form.maxOrderUsd ? Number(form.maxOrderUsd) : null,
-          rateUsd: Number(form.rateUsd),
-          freeShippingThresholdUsd: form.freeShippingThresholdUsd
-            ? Number(form.freeShippingThresholdUsd)
-            : null,
+          rateUsd: form.isFree ? 0 : Number(form.rateUsd),
+          freeShippingThresholdUsd:
+            !form.isFree && form.freeShippingThresholdUsd
+              ? Number(form.freeShippingThresholdUsd)
+              : null,
         })
       }}
       className="flex flex-col gap-4"
@@ -384,6 +388,7 @@ function RateForm({
           </select>
         </div>
       )}
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={labelCls}>Monto mínimo (USD)</label>
@@ -410,35 +415,53 @@ function RateForm({
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+
+      {/* Free shipping toggle */}
+      <label className="flex items-center gap-2.5 cursor-pointer select-none p-3 rounded-lg border border-border bg-surface-2 hover:border-border-hover transition-colors">
+        <input
+          type="checkbox"
+          checked={form.isFree}
+          onChange={(e) => setForm((f) => ({ ...f, isFree: e.target.checked, rateUsd: '', freeShippingThresholdUsd: '' }))}
+          className="w-4 h-4 accent-[var(--color-accent-gold)]"
+        />
         <div>
-          <label className={labelCls}>Costo envío (USD) *</label>
-          <input
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            className={inputCls}
-            placeholder="0.00"
-            value={form.rateUsd}
-            onChange={(e) => setForm((f) => ({ ...f, rateUsd: e.target.value }))}
-          />
+          <p className="text-sm font-medium text-text-primary">Envío gratuito</p>
+          <p className="text-xs text-text-secondary">El cliente no paga costo de envío</p>
         </div>
-        <div>
-          <label className={labelCls}>Gratis desde (USD)</label>
-          <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            className={inputCls}
-            placeholder="Sin umbral"
-            value={form.freeShippingThresholdUsd}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, freeShippingThresholdUsd: e.target.value }))
-            }
-          />
+      </label>
+
+      {!form.isFree && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Costo envío (USD) *</label>
+            <input
+              required
+              type="number"
+              min="0.01"
+              step="0.01"
+              className={inputCls}
+              placeholder="0.00"
+              value={form.rateUsd}
+              onChange={(e) => setForm((f) => ({ ...f, rateUsd: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Gratis desde (USD)</label>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              className={inputCls}
+              placeholder="Sin umbral"
+              value={form.freeShippingThresholdUsd}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, freeShippingThresholdUsd: e.target.value }))
+              }
+            />
+          </div>
         </div>
-      </div>
+      )}
+
       <Button type="submit" isLoading={isPending} className="w-full">
         {initial ? 'Guardar tarifa' : 'Agregar tarifa'}
       </Button>
@@ -1068,12 +1091,18 @@ export function DeliveryManager({ initialZones }: Props) {
                                                 : '+'}
                                             </td>
                                             <td className="py-2 pr-4 tabular-nums font-semibold">
-                                              ${rate.rateUsd.toFixed(2)}
+                                              {rate.rateUsd === 0 ? (
+                                                <span className="text-[var(--color-success)] font-semibold">Gratis</span>
+                                              ) : (
+                                                `$${rate.rateUsd.toFixed(2)}`
+                                              )}
                                             </td>
                                             <td className="py-2 pr-4 tabular-nums text-text-secondary">
-                                              {rate.freeShippingThresholdUsd != null
-                                                ? `$${rate.freeShippingThresholdUsd.toFixed(0)}`
-                                                : '—'}
+                                              {rate.rateUsd === 0
+                                                ? '—'
+                                                : rate.freeShippingThresholdUsd != null
+                                                  ? `$${rate.freeShippingThresholdUsd.toFixed(0)}`
+                                                  : '—'}
                                             </td>
                                             <td className="py-2 text-right whitespace-nowrap">
                                               <button

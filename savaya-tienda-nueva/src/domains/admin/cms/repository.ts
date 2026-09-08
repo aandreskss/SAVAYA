@@ -1,4 +1,4 @@
-import { eq, asc, desc } from 'drizzle-orm'
+import { eq, asc, desc, and } from 'drizzle-orm'
 import { db } from '@/shared/lib/db'
 import { pages, pageSections, pageSectionTypeEnum, banners, popups } from '@/domains/cms/schema'
 import type { AdminSection, AdminBanner, AdminPopup } from './types'
@@ -95,6 +95,66 @@ export async function createSection(
 
 export async function deleteSection(sectionId: string): Promise<void> {
   await db.delete(pageSections).where(eq(pageSections.id, sectionId))
+}
+
+export async function upsertGenderHeroSection(
+  slug: 'hombre' | 'mujer',
+  content: unknown,
+): Promise<void> {
+  let [page] = await db
+    .select({ id: pages.id })
+    .from(pages)
+    .where(eq(pages.slug, slug))
+    .limit(1)
+
+  if (!page) {
+    const title = slug === 'hombre' ? 'Hombre' : 'Mujer'
+    ;[page] = await db
+      .insert(pages)
+      .values({ slug, title, isActive: true })
+      .returning({ id: pages.id })
+  }
+
+  const [existing] = await db
+    .select({ id: pageSections.id })
+    .from(pageSections)
+    .where(and(eq(pageSections.pageId, page.id), eq(pageSections.type, 'hero')))
+    .limit(1)
+
+  if (existing) {
+    await db
+      .update(pageSections)
+      .set({ content: content as Record<string, unknown>, updatedAt: new Date() })
+      .where(eq(pageSections.id, existing.id))
+  } else {
+    await db.insert(pageSections).values({
+      pageId: page.id,
+      type: 'hero',
+      content: content as Record<string, unknown>,
+      sortOrder: 0,
+      isActive: true,
+    })
+  }
+}
+
+export async function getGenderHeroContent(
+  slug: 'hombre' | 'mujer',
+): Promise<unknown | null> {
+  const [page] = await db
+    .select({ id: pages.id })
+    .from(pages)
+    .where(eq(pages.slug, slug))
+    .limit(1)
+
+  if (!page) return null
+
+  const [section] = await db
+    .select({ content: pageSections.content })
+    .from(pageSections)
+    .where(and(eq(pageSections.pageId, page.id), eq(pageSections.type, 'hero')))
+    .limit(1)
+
+  return section?.content ?? null
 }
 
 // ---------------------------------------------------------------------------
