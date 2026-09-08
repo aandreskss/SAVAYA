@@ -209,3 +209,45 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
   1. `if (!process.env.DATABASE_URL) return <fallback>`
   2. `try/catch` con `console.error('[dominio/repo] función failed:', error)` y return del fallback.
 - El admin repository no necesita ese patrón (si el admin no tiene DB, que falle explícitamente).
+
+### 8.10 Productos VIP
+
+- **Columna `is_vip` boolean** en la tabla `products` (migración `0008_vip_smart_collections.sql`). Default `false`.
+- **`ProductCard`**: cuando `isVip=true` muestra ring dorado (`ring-2 ring-[#CA8C31] ring-offset-2`) sobre la imagen + pill "★ VIP" en esquina superior izquierda. Badges normales (`new`, `sale`, etc.) se suprimen cuando `isVip=true` — nunca los muestres juntos.
+- **`VipProductsSection`** (`src/domains/catalog/components/VipProductsSection.tsx`): server component que consulta `{ onlyVip: true, limit: 6, sortBy: 'featured' }`. Se inserta en la home inmediatamente después del bloque `hero` junto con `CategoryPillsRow`. Si no hay productos VIP, devuelve `null` silenciosamente.
+- **Storefront**: todo `<ProductCard>` en todas las PLPs debe recibir `isVip={product.isVip}` y calcular badges como `badges={product.isVip ? undefined : [...]}`.
+- **Filtro en repositorio**: `getProducts` acepta `onlyVip?: boolean` que agrega `WHERE is_vip = true`. El storefront `/catalogo` acepta `?vip=1` como searchParam para filtrar VIP.
+
+### 8.11 Smart Collections (colecciones con filtros automáticos)
+
+- **Columna `filter_rules` JSONB** en la tabla `collections`. Null = colección manual; cuando tiene valor, los productos se generan dinámicamente.
+- **Tipo `CollectionFilterRules`** (`src/domains/catalog/repository.ts`): `{ onlyNew?, onlyFeatured?, onlyVip?, colorIds?, sizeIds?, priceMin?, priceMax? } | null | undefined`.
+- **Storefront** (`src/app/(shop)/coleccion/[slug]/page.tsx`): si `collection.filterRules` tiene valor, construye `ProductFilters` desde las reglas (sin `collectionSlug`) y pasa a `getProducts`. Si no tiene valor, usa `{ collectionSlug: slug }` normal. Los filtros de URL pueden refinar encima de las reglas (sort, etc.).
+- **Admin `CollectionEditor`**: contiene `FilterRulesPanel` que permite activar filtros automáticos con toggles (onlyNew/Featured/Vip), pills de color/talla, rango de precio. Cuando `filterState.enabled = true`, el `ProductsPanel` manual se oculta automáticamente. `filterStateToRules()` convierte el estado local al JSONB que se guarda.
+- **`listAdminCollections`** devuelve `hasFilterRules: boolean` para que la lista de colecciones pueda mostrar un indicador.
+
+### 8.12 Cloudinary — upload de imágenes de colección
+
+- **Ruta de firma**: `GET /api/admin/catalog/upload-collection-signature` — misma estructura que `/api/admin/catalog/upload-signature` (productos) pero usa carpeta `savaya/categories` y `publicId = collection-{uuid}`. Requiere permiso `catalog:write`.
+- **Componente `CollectionImageUpload`** (inline en `CollectionEditor.tsx`): zona drag-and-drop + click. Al montar sin imagen muestra un área punteada de 112px. Con imagen muestra preview `h-32 object-cover` con overlay hover de "Cambiar" y botón ✕. Hint de tamaño recomendado: **1600 × 600 px · ratio 8:3**.
+- **Flujo de upload**: `GET signature` → si `isDev` usa `URL.createObjectURL` localmente → si prod hace `POST FormData` a `https://api.cloudinary.com/v1_1/{cloudName}/image/upload` → extrae `secure_url`.
+- **Patrón de firma (SHA-1)**: `folder={folder}&public_id={publicId}&timestamp={timestamp}` + apiSecret. Los parámetros deben ir **ordenados alfabéticamente** antes de concatenar el secret.
+- **Carpetas Cloudinary por entidad**: products → `savaya/products`, collections → `savaya/categories`, banners/cms → `savaya/banners` / `savaya/cms`. No mezcles carpetas entre entidades.
+
+### 8.13 Inventario — selección y exportación CSV
+
+- **Selección múltiple**: `InventoryTable` mantiene `selectedIds: Set<string>` (por `variantId`). Checkbox en cada fila + checkbox de cabecera con estado indeterminate (via `ref callback`: `el.indeterminate = someDisplaySelected`). El estado indeterminate no es controlable por React attr, debe setearse directo en el DOM.
+- **Exportación CSV**: `downloadCsv(selected: InventoryRow[])` — crea Blob `text/csv`, genera URL con `URL.createObjectURL`, dispara descarga vía `<a>.click()`, revoca con `URL.revokeObjectURL`. Sin dependencias externas. Columnas: `sku, producto, color, talla, stock_actual, cantidad` (cantidad pre-rellena con stock actual para facilitar edición).
+- **Formato compatible**: el CSV exportado usa el mismo formato que acepta `InventoryImportModal` (`sku` + `cantidad`), de modo que el flujo es: exportar → editar cantidad → reimportar.
+- **Barra de selección**: aparece solo cuando `selectedIds.size > 0`. Muestra conteo, botón "Deseleccionar ×" y botón dorado "Descargar CSV (N)".
+
+### 8.14 Imagen de portada en página de colección (storefront)
+
+- `getCollectionBySlug` devuelve `imageUrl: string | null` — ya incluido en el SELECT y en el tipo `CollectionDetail`.
+- La página `/coleccion/[slug]` renderiza la imagen como banner **entre el breadcrumb y el título** (`h-40 md:h-60 object-cover`, `rounded-xl`). Si `imageUrl` es null, el banner no se renderiza y el margen superior del título ajusta automáticamente.
+- No uses `<Image>` de Next.js para este banner (la URL viene de Cloudinary y ya está optimizada); usa `<img>` con el comentario `{/* eslint-disable-next-line @next/next/no-img-element */}`.
+
+### 8.15 ProductCarousel — inicialización de estado de scroll
+
+- `canScrollRight` se inicializa en `true` pero debe medirse desde el DOM real al montar. Sin `useEffect`, las flechas de navegación aparecen en desktop (donde el contenedor es un `md:grid` sin overflow) y no hacen nada al clic.
+- **Siempre agrega `useEffect(() => { updateScrollState() }, [updateScrollState])`** junto al `onScroll` handler. Esto garantiza que las flechas solo aparezcan cuando realmente hay contenido fuera del viewport.
