@@ -19,6 +19,7 @@ export type ProductCardProps = {
   images: { url: string; alt: string }[]
   availableColors: { id: string; name: string; hex: string }[]
   badges?: ProductBadge[]
+  isVip?: boolean
   isInWishlist?: boolean
   onWishlistToggle?: (id: string) => void
   priority?: boolean
@@ -57,6 +58,7 @@ export function ProductCard({
   images,
   availableColors,
   badges,
+  isVip = false,
   isInWishlist = false,
   onWishlistToggle,
   priority = false,
@@ -84,11 +86,23 @@ export function ProductCard({
       >
         {/* Imagen */}
         <div
-          className="relative w-full overflow-hidden rounded-[24px] bg-surface-2"
+          className={cn(
+            'relative w-full overflow-hidden rounded-[24px] bg-surface-2',
+            isVip && 'ring-2 ring-[#CA8C31] ring-offset-2 ring-offset-background',
+          )}
           style={{ aspectRatio: '1/1' }}
         >
-          {/* Badge — dark pill top-left */}
-          {firstBadge && (
+          {/* VIP Badge — gold pill top-left */}
+          {isVip && (
+            <div className="absolute top-3 left-3 z-10">
+              <span className="inline-flex items-center gap-1 bg-[#CA8C31] text-[#0C0C08] text-[10px] font-extrabold px-2.5 py-1 rounded-pill">
+                ★ VIP
+              </span>
+            </div>
+          )}
+
+          {/* Regular badge — dark pill top-left (only if not VIP) */}
+          {!isVip && firstBadge && (
             <div className="absolute top-3 left-3 z-10">
               <span className="inline-block bg-brand-black text-white text-[10px] font-extrabold px-2.5 py-1 rounded-pill">
                 {BADGE_CONFIG[firstBadge].label.toUpperCase()}

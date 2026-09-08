@@ -13,6 +13,8 @@ import {
   searchProductsForCollectionAction,
 } from '../actions'
 import type { CollectionProductSummary } from '../repository'
+import type { CollectionFilterRules } from '../validators'
+import type { ColorOption, SizeOption } from '../types'
 
 type CollectionData = {
   id?: string
@@ -22,6 +24,7 @@ type CollectionData = {
   imageUrl: string | null
   isActive: boolean
   isFeatured: boolean
+  filterRules?: CollectionFilterRules
   startsAt: Date | null
   endsAt: Date | null
 }
@@ -29,6 +32,8 @@ type CollectionData = {
 type Props = {
   collection?: CollectionData
   initialProducts?: CollectionProductSummary[]
+  colors?: ColorOption[]
+  sizes?: SizeOption[]
 }
 
 function toDatetimeLocal(d: Date | null): string {
@@ -59,7 +64,244 @@ function PlusIcon() {
 }
 
 // ---------------------------------------------------------------------------
-// Products panel (only shown for existing collections)
+// Filter Rules Panel
+// ---------------------------------------------------------------------------
+
+type FilterState = {
+  enabled: boolean
+  onlyNew: boolean
+  onlyFeatured: boolean
+  onlyVip: boolean
+  colorIds: string[]
+  sizeIds: string[]
+  priceMin: string
+  priceMax: string
+}
+
+function initFilterState(rules: CollectionFilterRules): FilterState {
+  if (!rules) {
+    return {
+      enabled: false,
+      onlyNew: false,
+      onlyFeatured: false,
+      onlyVip: false,
+      colorIds: [],
+      sizeIds: [],
+      priceMin: '',
+      priceMax: '',
+    }
+  }
+  return {
+    enabled: true,
+    onlyNew: rules.onlyNew ?? false,
+    onlyFeatured: rules.onlyFeatured ?? false,
+    onlyVip: rules.onlyVip ?? false,
+    colorIds: rules.colorIds ?? [],
+    sizeIds: rules.sizeIds ?? [],
+    priceMin: rules.priceMin != null ? String(rules.priceMin) : '',
+    priceMax: rules.priceMax != null ? String(rules.priceMax) : '',
+  }
+}
+
+function filterStateToRules(state: FilterState): CollectionFilterRules {
+  if (!state.enabled) return null
+  const rules: NonNullable<CollectionFilterRules> = {}
+  if (state.onlyNew) rules.onlyNew = true
+  if (state.onlyFeatured) rules.onlyFeatured = true
+  if (state.onlyVip) rules.onlyVip = true
+  if (state.colorIds.length > 0) rules.colorIds = state.colorIds
+  if (state.sizeIds.length > 0) rules.sizeIds = state.sizeIds
+  const min = parseFloat(state.priceMin)
+  const max = parseFloat(state.priceMax)
+  if (!isNaN(min) && min >= 0) rules.priceMin = min
+  if (!isNaN(max) && max > 0) rules.priceMax = max
+  return rules
+}
+
+function FilterRulesPanel({
+  state,
+  colors,
+  sizes,
+  onChange,
+}: {
+  state: FilterState
+  colors: ColorOption[]
+  sizes: SizeOption[]
+  onChange: (patch: Partial<FilterState>) => void
+}) {
+  function toggleColor(id: string) {
+    const next = state.colorIds.includes(id)
+      ? state.colorIds.filter((c) => c !== id)
+      : [...state.colorIds, id]
+    onChange({ colorIds: next })
+  }
+
+  function toggleSize(id: string) {
+    const next = state.sizeIds.includes(id)
+      ? state.sizeIds.filter((s) => s !== id)
+      : [...state.sizeIds, id]
+    onChange({ sizeIds: next })
+  }
+
+  return (
+    <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-lg uppercase tracking-wide text-text-primary">
+            Filtros automáticos
+          </h2>
+          <p className="font-sans text-xs text-text-secondary mt-0.5">
+            Cuando están activos, los productos se generan dinámicamente según estas reglas
+          </p>
+        </div>
+        <Toggle
+          label=""
+          checked={state.enabled}
+          onChange={(v) => onChange({ enabled: v })}
+        />
+      </div>
+
+      {state.enabled && (
+        <div className="space-y-5 pt-1 border-t border-border">
+          {/* Boolean toggles */}
+          <div>
+            <p className="font-sans text-sm font-medium text-text-primary mb-3">
+              Mostrar solo…
+            </p>
+            <div className="flex flex-wrap gap-6">
+              <Toggle
+                label="Nuevos ingresos"
+                checked={state.onlyNew}
+                onChange={(v) => onChange({ onlyNew: v })}
+              />
+              <Toggle
+                label="Destacados"
+                checked={state.onlyFeatured}
+                onChange={(v) => onChange({ onlyFeatured: v })}
+              />
+              <Toggle
+                label="VIP ★"
+                checked={state.onlyVip}
+                onChange={(v) => onChange({ onlyVip: v })}
+              />
+            </div>
+          </div>
+
+          {/* Colors */}
+          {colors.length > 0 && (
+            <div>
+              <p className="font-sans text-sm font-medium text-text-primary mb-2">
+                Filtrar por color
+                {state.colorIds.length > 0 && (
+                  <span className="text-text-secondary font-normal ml-2">
+                    ({state.colorIds.length} seleccionado{state.colorIds.length !== 1 ? 's' : ''})
+                  </span>
+                )}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {colors.map((color) => {
+                  const selected = state.colorIds.includes(color.id)
+                  return (
+                    <button
+                      key={color.id}
+                      type="button"
+                      onClick={() => toggleColor(color.id)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-sans font-medium border transition-colors duration-150 ${
+                        selected
+                          ? 'bg-accent-gold text-text-primary-inverse border-accent-gold'
+                          : 'bg-surface text-text-primary border-border hover:border-border-hover'
+                      }`}
+                    >
+                      {color.hex && (
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border border-border/40 shrink-0"
+                          style={{ backgroundColor: color.hex }}
+                        />
+                      )}
+                      {color.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Sizes */}
+          {sizes.length > 0 && (
+            <div>
+              <p className="font-sans text-sm font-medium text-text-primary mb-2">
+                Filtrar por talla
+                {state.sizeIds.length > 0 && (
+                  <span className="text-text-secondary font-normal ml-2">
+                    ({state.sizeIds.length} seleccionada{state.sizeIds.length !== 1 ? 's' : ''})
+                  </span>
+                )}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {sizes.map((size) => {
+                  const selected = state.sizeIds.includes(size.id)
+                  return (
+                    <button
+                      key={size.id}
+                      type="button"
+                      onClick={() => toggleSize(size.id)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-sans font-medium border transition-colors duration-150 ${
+                        selected
+                          ? 'bg-accent-gold text-text-primary-inverse border-accent-gold'
+                          : 'bg-surface text-text-primary border-border hover:border-border-hover'
+                      }`}
+                    >
+                      {size.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Price range */}
+          <div>
+            <p className="font-sans text-sm font-medium text-text-primary mb-2">
+              Rango de precio (USD)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Precio mínimo"
+                type="number"
+                min="0"
+                step="0.01"
+                value={state.priceMin}
+                onChange={(e) => onChange({ priceMin: e.target.value })}
+                leftAddon={<span className="text-sm font-medium">$</span>}
+                placeholder="0"
+              />
+              <Input
+                label="Precio máximo"
+                type="number"
+                min="0"
+                step="0.01"
+                value={state.priceMax}
+                onChange={(e) => onChange({ priceMax: e.target.value })}
+                leftAddon={<span className="text-sm font-medium">$</span>}
+                placeholder="Sin límite"
+              />
+            </div>
+          </div>
+
+          {/* Info notice */}
+          <div className="rounded-lg bg-surface-2 border border-border px-4 py-3 font-sans text-xs text-text-secondary">
+            <strong className="text-text-primary">Nota:</strong> Cuando los filtros automáticos están
+            activos, la lista manual de productos no se usa. Los productos se seleccionan
+            dinámicamente de todo el catálogo en tiempo real.
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Products panel (only shown for existing collections without filter rules)
 // ---------------------------------------------------------------------------
 
 function ProductsPanel({
@@ -229,7 +471,7 @@ function ProductsPanel({
 // CollectionEditor
 // ---------------------------------------------------------------------------
 
-export function CollectionEditor({ collection, initialProducts = [] }: Props) {
+export function CollectionEditor({ collection, initialProducts = [], colors = [], sizes = [] }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -241,6 +483,9 @@ export function CollectionEditor({ collection, initialProducts = [] }: Props) {
   const [isFeatured, setIsFeatured] = useState(collection?.isFeatured ?? false)
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(collection?.startsAt ?? null))
   const [endsAt, setEndsAt] = useState(toDatetimeLocal(collection?.endsAt ?? null))
+  const [filterState, setFilterState] = useState<FilterState>(() =>
+    initFilterState(collection?.filterRules),
+  )
 
   function handleNameChange(n: string) {
     setName(n)
@@ -257,6 +502,7 @@ export function CollectionEditor({ collection, initialProducts = [] }: Props) {
         imageUrl: imageUrl || null,
         isActive,
         isFeatured,
+        filterRules: filterStateToRules(filterState),
         startsAt: startsAt ? new Date(startsAt).toISOString() : null,
         endsAt: endsAt ? new Date(endsAt).toISOString() : null,
       })
@@ -272,6 +518,8 @@ export function CollectionEditor({ collection, initialProducts = [] }: Props) {
       }
     })
   }
+
+  const hasFilterRules = filterState.enabled
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -367,8 +615,16 @@ export function CollectionEditor({ collection, initialProducts = [] }: Props) {
         )}
       </div>
 
-      {/* Products panel — only for existing collections */}
-      {collection?.id && (
+      {/* Filter rules panel */}
+      <FilterRulesPanel
+        state={filterState}
+        colors={colors}
+        sizes={sizes}
+        onChange={(patch) => setFilterState((s) => ({ ...s, ...patch }))}
+      />
+
+      {/* Products panel — only for existing collections without filter rules */}
+      {collection?.id && !hasFilterRules && (
         <ProductsPanel
           collectionId={collection.id}
           collectionSlug={collection.slug}

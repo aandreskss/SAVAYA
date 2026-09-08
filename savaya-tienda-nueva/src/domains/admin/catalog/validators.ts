@@ -38,6 +38,7 @@ export const SaveProductSchema = z.object({
   compareAtPrice: z.number().positive().nullable(),
   isFeatured: z.boolean().default(false),
   isNew: z.boolean().default(false),
+  isVip: z.boolean().default(false),
   isActive: z.boolean().default(true),
   tags: z.array(z.string().trim().max(50)).max(20),
   seoTitle: z.string().max(70).nullable(),
@@ -77,6 +78,18 @@ export const SaveCategorySchema = z.object({
 
 export type SaveCategoryInput = z.infer<typeof SaveCategorySchema>
 
+const CollectionFilterRulesSchema = z.object({
+  onlyNew: z.boolean().optional(),
+  onlyFeatured: z.boolean().optional(),
+  onlyVip: z.boolean().optional(),
+  colorIds: z.array(z.string().uuid()).optional(),
+  sizeIds: z.array(z.string().uuid()).optional(),
+  priceMin: z.number().nonnegative().nullable().optional(),
+  priceMax: z.number().positive().nullable().optional(),
+}).nullable().optional()
+
+export type CollectionFilterRules = z.infer<typeof CollectionFilterRulesSchema>
+
 export const SaveCollectionSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, 'El nombre es requerido').max(100),
@@ -93,6 +106,7 @@ export const SaveCollectionSchema = z.object({
     .or(z.literal('').transform((): null => null)),
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
+  filterRules: CollectionFilterRulesSchema,
   startsAt: z.string().datetime().nullable(),
   endsAt: z.string().datetime().nullable(),
 })

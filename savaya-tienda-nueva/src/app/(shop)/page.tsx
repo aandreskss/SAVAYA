@@ -4,6 +4,7 @@ import { getHomeBlocks } from '@/domains/cms/service'
 import { BlockRenderer } from '@/domains/cms/BlockRenderer'
 import { listActiveCategories } from '@/domains/catalog/repository'
 import { CategoryPillsRow } from '@/domains/catalog/components/CategoryPillsRow'
+import { VipProductsSection } from '@/domains/catalog/components/VipProductsSection'
 
 // ISR: revalidate every hour — CMS blocks are edited infrequently
 export const revalidate = 3600
@@ -22,7 +23,12 @@ export default async function HomePage() {
       {blocks.map((block) => (
         <Fragment key={block.id}>
           <BlockRenderer block={block} />
-          {block.type === 'hero' && <CategoryPillsRow categories={categories} />}
+          {block.type === 'hero' && (
+            <>
+              <CategoryPillsRow categories={categories} />
+              <VipProductsSection />
+            </>
+          )}
         </Fragment>
       ))}
     </main>

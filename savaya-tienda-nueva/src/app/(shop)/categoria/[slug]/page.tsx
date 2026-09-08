@@ -158,10 +158,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                     compareAtPrice={product.compareAtPrice}
                     images={product.images}
                     availableColors={product.availableColors}
+                    isVip={product.isVip}
                     badges={
-                      product.isNew
+                      !product.isVip && product.isNew
                         ? ['new']
-                        : product.compareAtPrice
+                        : !product.isVip && product.compareAtPrice
                           ? ['sale']
                           : undefined
                     }

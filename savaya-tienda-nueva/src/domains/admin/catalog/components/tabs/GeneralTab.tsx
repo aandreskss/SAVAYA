@@ -18,6 +18,7 @@ export type GeneralTabState = {
   compareAtPrice: string
   isFeatured: boolean
   isNew: boolean
+  isVip: boolean
   isActive: boolean
   tags: string
 }
@@ -181,6 +182,11 @@ export function GeneralTab({ state, categories, collections, onChange }: Props) 
           label="Nuevo"
           checked={state.isNew}
           onChange={(v) => onChange({ isNew: v })}
+        />
+        <Toggle
+          label="VIP ★"
+          checked={state.isVip ?? false}
+          onChange={(v) => onChange({ isVip: v })}
         />
       </div>
     </div>

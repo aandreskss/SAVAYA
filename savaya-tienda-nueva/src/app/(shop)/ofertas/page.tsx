@@ -110,7 +110,8 @@ export default async function OfertasPage({ searchParams }: Props) {
                   compareAtPrice={product.compareAtPrice}
                   images={product.images}
                   availableColors={product.availableColors}
-                  badges={['sale']}
+                  isVip={product.isVip}
+                  badges={product.isVip ? undefined : ['sale']}
                   priority={index < 4}
                 />
               ))}

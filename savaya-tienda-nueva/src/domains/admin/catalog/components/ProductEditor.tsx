@@ -37,6 +37,7 @@ function initGeneral(product?: AdminProductForEdit): GeneralTabState {
     compareAtPrice: product?.compareAtPrice ? String(product.compareAtPrice) : '',
     isFeatured: product?.isFeatured ?? false,
     isNew: product?.isNew ?? false,
+    isVip: product?.isVip ?? false,
     isActive: product?.isActive ?? true,
     tags: product?.tags?.join(', ') ?? '',
   }
@@ -121,6 +122,7 @@ export function ProductEditor({ product, colors: initialColors, sizes, categorie
         compareAtPrice: parseFloat(general.compareAtPrice) || null,
         isFeatured: general.isFeatured,
         isNew: general.isNew,
+        isVip: general.isVip,
         isActive: general.isActive,
         tags,
         seoTitle: seo.seoTitle || null,

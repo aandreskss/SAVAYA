@@ -11,6 +11,7 @@ export type AdminProductRow = {
   isActive: boolean
   isFeatured: boolean
   isNew: boolean
+  isVip: boolean
   publishedAt: Date | null
   categoryName: string | null
   primaryImageUrl: string | null
@@ -59,6 +60,7 @@ export type AdminProductForEdit = {
   isActive: boolean
   isFeatured: boolean
   isNew: boolean
+  isVip: boolean
   tags: string[]
   seoTitle: string | null
   seoDescription: string | null
@@ -86,6 +88,7 @@ export type AdminCollectionRow = {
   slug: string
   isActive: boolean
   isFeatured: boolean
+  hasFilterRules: boolean
   productCount: number
   startsAt: Date | null
   endsAt: Date | null
@@ -153,6 +156,7 @@ export type SaveProductPayload = {
   compareAtPrice: number | null
   isFeatured: boolean
   isNew: boolean
+  isVip: boolean
   isActive: boolean
   tags: string[]
   seoTitle: string | null
@@ -176,6 +180,8 @@ export type SaveCategoryPayload = {
   sortOrder: number
 }
 
+import type { CollectionFilterRules } from './validators'
+
 export type SaveCollectionPayload = {
   id?: string
   name: string
@@ -184,6 +190,7 @@ export type SaveCollectionPayload = {
   imageUrl: string | null
   isActive: boolean
   isFeatured: boolean
+  filterRules: CollectionFilterRules
   startsAt: string | null
   endsAt: string | null
 }

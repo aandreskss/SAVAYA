@@ -110,7 +110,8 @@ export default async function NuevosPage({ searchParams }: Props) {
                   compareAtPrice={product.compareAtPrice}
                   images={product.images}
                   availableColors={product.availableColors}
-                  badges={['new']}
+                  isVip={product.isVip}
+                  badges={product.isVip ? undefined : ['new']}
                   priority={index < 4}
                 />
               ))}

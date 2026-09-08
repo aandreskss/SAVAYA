@@ -75,6 +75,7 @@ export function RecentlyViewed({ currentProductId }: { currentProductId: string 
             compareAtPrice={product.compareAtPrice}
             images={product.images}
             availableColors={product.availableColors}
+            isVip={product.isVip}
           />
         ))}
       </div>

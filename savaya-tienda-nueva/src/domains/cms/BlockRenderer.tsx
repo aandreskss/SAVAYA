@@ -44,7 +44,12 @@ async function fetchCarouselProducts(
       compareAtPrice: p.compareAtPrice,
       images: p.images,
       availableColors: p.availableColors,
-      badges: p.isNew ? (['new'] as const) : p.compareAtPrice ? (['sale'] as const) : undefined,
+      isVip: p.isVip,
+      badges: !p.isVip && p.isNew
+        ? (['new'] as const)
+        : !p.isVip && p.compareAtPrice
+          ? (['sale'] as const)
+          : undefined,
     }))
   } catch {
     return []

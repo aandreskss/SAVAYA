@@ -129,6 +129,7 @@ export async function listAdminProducts(
     is_active: boolean
     is_featured: boolean
     is_new: boolean
+    is_vip: boolean
     published_at: Date | null
     category_name: string | null
     primary_image_url: string | null
@@ -148,6 +149,7 @@ export async function listAdminProducts(
       p.is_active,
       p.is_featured,
       p.is_new,
+      p.is_vip,
       p.published_at,
       c.name AS category_name,
       (
@@ -198,6 +200,7 @@ export async function listAdminProducts(
       isActive: r.is_active,
       isFeatured: r.is_featured,
       isNew: r.is_new,
+      isVip: r.is_vip,
       publishedAt: r.published_at,
       categoryName: r.category_name,
       primaryImageUrl: r.primary_image_url,
@@ -228,6 +231,7 @@ export async function getAdminProductForEdit(id: string): Promise<AdminProductFo
       isActive: products.isActive,
       isFeatured: products.isFeatured,
       isNew: products.isNew,
+      isVip: products.isVip,
       tags: products.tags,
       seoTitle: products.seoTitle,
       seoDescription: products.seoDescription,
@@ -302,6 +306,7 @@ export async function getAdminProductForEdit(id: string): Promise<AdminProductFo
     isActive: product.isActive,
     isFeatured: product.isFeatured,
     isNew: product.isNew,
+    isVip: product.isVip,
     tags: product.tags ?? [],
     seoTitle: product.seoTitle,
     seoDescription: product.seoDescription,
@@ -448,6 +453,7 @@ export async function createProduct(
         compareAtPrice: data.compareAtPrice != null ? String(data.compareAtPrice) : null,
         isFeatured: data.isFeatured,
         isNew: data.isNew,
+        isVip: data.isVip,
         isActive: data.isActive,
         tags: data.tags,
         seoTitle: data.seoTitle,
@@ -543,6 +549,7 @@ export async function updateProduct(
       compareAtPrice: data.compareAtPrice ? String(data.compareAtPrice) : null,
       isFeatured: data.isFeatured,
       isNew: data.isNew,
+      isVip: data.isVip,
       isActive: data.isActive,
       tags: data.tags,
       seoTitle: data.seoTitle,
@@ -1109,6 +1116,7 @@ export async function listAdminCollections(): Promise<AdminCollectionRow[]> {
     slug: string
     is_active: boolean
     is_featured: boolean
+    filter_rules: unknown
     starts_at: Date | null
     ends_at: Date | null
     product_count: string
@@ -1121,6 +1129,7 @@ export async function listAdminCollections(): Promise<AdminCollectionRow[]> {
       c.slug,
       c.is_active,
       c.is_featured,
+      c.filter_rules,
       c.starts_at,
       c.ends_at,
       (SELECT COUNT(*) FROM product_collections pc WHERE pc.collection_id = c.id) AS product_count
@@ -1134,6 +1143,7 @@ export async function listAdminCollections(): Promise<AdminCollectionRow[]> {
     slug: r.slug,
     isActive: r.is_active,
     isFeatured: r.is_featured,
+    hasFilterRules: r.filter_rules != null,
     productCount: num(r.product_count),
     startsAt: r.starts_at,
     endsAt: r.ends_at,
@@ -1164,6 +1174,7 @@ export async function createCollection(
       imageUrl: data.imageUrl,
       isActive: data.isActive,
       isFeatured: data.isFeatured,
+      filterRules: data.filterRules ?? null,
       startsAt: data.startsAt ? new Date(data.startsAt) : null,
       endsAt: data.endsAt ? new Date(data.endsAt) : null,
     })
@@ -1198,6 +1209,7 @@ export async function updateCollection(
       imageUrl: data.imageUrl,
       isActive: data.isActive,
       isFeatured: data.isFeatured,
+      filterRules: data.filterRules ?? null,
       startsAt: data.startsAt ? new Date(data.startsAt) : null,
       endsAt: data.endsAt ? new Date(data.endsAt) : null,
       updatedAt: new Date(),

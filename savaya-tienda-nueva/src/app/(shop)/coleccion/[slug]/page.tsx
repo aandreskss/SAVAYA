@@ -4,6 +4,7 @@ import {
   getCollectionBySlug,
   getProducts,
   getAvailableFilters,
+  type ProductFilters,
 } from '@/domains/catalog/repository'
 import {
   parsePLPSearchParams,
@@ -55,10 +56,25 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   if (!collection) notFound()
 
   const parsedParams = parsePLPSearchParams(rawParams)
+  const urlFilters = searchParamsToFilters(parsedParams)
 
-  const filters = {
-    ...searchParamsToFilters(parsedParams),
-    collectionSlug: slug,
+  // Smart collection: when filterRules is set, use rule-based filtering instead of manual product list
+  let filters: ProductFilters
+  if (collection.filterRules) {
+    const rules = collection.filterRules
+    filters = {
+      ...urlFilters,
+      collectionSlug: undefined,
+      onlyNew: rules.onlyNew || urlFilters.onlyNew,
+      onlyFeatured: rules.onlyFeatured || undefined,
+      onlyVip: rules.onlyVip || undefined,
+      colorIds: rules.colorIds?.length ? rules.colorIds : urlFilters.colorIds,
+      sizeIds: rules.sizeIds?.length ? rules.sizeIds : urlFilters.sizeIds,
+      minPrice: rules.priceMin != null ? rules.priceMin : urlFilters.minPrice,
+      maxPrice: rules.priceMax != null ? rules.priceMax : urlFilters.maxPrice,
+    }
+  } else {
+    filters = { ...urlFilters, collectionSlug: slug }
   }
 
   const [{ items, total }, availableFilters] = await Promise.all([
@@ -153,10 +169,11 @@ export default async function CollectionPage({ params, searchParams }: Props) {
                     compareAtPrice={product.compareAtPrice}
                     images={product.images}
                     availableColors={product.availableColors}
+                    isVip={product.isVip}
                     badges={
-                      product.isNew
+                      !product.isVip && product.isNew
                         ? ['new']
-                        : product.compareAtPrice
+                        : !product.isVip && product.compareAtPrice
                           ? ['sale']
                           : undefined
                     }

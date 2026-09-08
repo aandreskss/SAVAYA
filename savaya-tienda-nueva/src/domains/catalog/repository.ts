@@ -37,6 +37,8 @@ export type ProductFilters = {
   maxPrice?: number
   onlyAvailable?: boolean
   onlyNew?: boolean
+  onlyFeatured?: boolean
+  onlyVip?: boolean
   onlyOnSale?: boolean
   collectionSlug?: string
   sortBy?: 'featured' | 'newest' | 'price_asc' | 'price_desc' | 'bestseller'
@@ -52,6 +54,7 @@ export type ProductListItem = {
   compareAtPrice: number | null
   isNew: boolean
   isFeatured: boolean
+  isVip: boolean
   availableColors: { id: string; name: string; hex: string }[]
   images: { url: string; alt: string }[]
   hasStock: boolean
@@ -76,6 +79,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: null,
     isNew: true,
     isFeatured: true,
+    isVip: false,
     availableColors: [
       { id: 'c1', name: 'Dorado', hex: '#C9A84C' },
       { id: 'c2', name: 'Plateado', hex: '#A8A8A8' },
@@ -93,6 +97,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: 80,
     isNew: false,
     isFeatured: true,
+    isVip: false,
     availableColors: [
       { id: 'c3', name: 'Nude', hex: '#D4A689' },
     ],
@@ -109,6 +114,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: null,
     isNew: true,
     isFeatured: false,
+    isVip: false,
     availableColors: [
       { id: 'c4', name: 'Negro', hex: '#1C1C1E' },
     ],
@@ -125,6 +131,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: 70,
     isNew: false,
     isFeatured: false,
+    isVip: false,
     availableColors: [
       { id: 'c5', name: 'Camel', hex: '#C19A6B' },
       { id: 'c6', name: 'Blanco', hex: '#FAFAFA' },
@@ -142,6 +149,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: null,
     isNew: true,
     isFeatured: true,
+    isVip: false,
     availableColors: [
       { id: 'c1', name: 'Dorado', hex: '#C9A84C' },
       { id: 'c4', name: 'Negro', hex: '#1C1C1E' },
@@ -159,6 +167,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: null,
     isNew: false,
     isFeatured: false,
+    isVip: false,
     availableColors: [
       { id: 'c6', name: 'Blanco', hex: '#FAFAFA' },
     ],
@@ -175,6 +184,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: 58,
     isNew: false,
     isFeatured: false,
+    isVip: false,
     availableColors: [
       { id: 'c3', name: 'Nude', hex: '#D4A689' },
     ],
@@ -191,6 +201,7 @@ const DEV_PRODUCTS: ProductListItem[] = [
     compareAtPrice: null,
     isNew: true,
     isFeatured: true,
+    isVip: false,
     availableColors: [
       { id: 'c4', name: 'Negro', hex: '#1C1C1E' },
     ],
@@ -272,8 +283,8 @@ export async function getProducts(
   const conditions: import('drizzle-orm').SQL[] = []
 
   conditions.push(eq(products.isActive, true))
-  // Only return published products (publishedAt null = always visible)
-  conditions.push(sql`(${products.publishedAt} IS NULL OR ${products.publishedAt} <= NOW())`)
+  // publishedAt IS NULL means draft — only show published products
+  conditions.push(sql`${products.publishedAt} IS NOT NULL AND ${products.publishedAt} <= NOW()`)
 
   if (filters.gender) {
     conditions.push(eq(products.gender, filters.gender))
@@ -283,8 +294,15 @@ export async function getProducts(
     conditions.push(eq(products.isNew, true))
   }
 
+  if (filters.onlyFeatured) {
+    conditions.push(eq(products.isFeatured, true))
+  }
+
+  if (filters.onlyVip) {
+    conditions.push(eq(products.isVip, true))
+  }
+
   if (filters.onlyOnSale) {
-    // Has a compareAtPrice set (discount exists)
     conditions.push(sql`${products.compareAtPrice} IS NOT NULL`)
   }
 
@@ -411,6 +429,7 @@ export async function getProducts(
       compareAtPrice: products.compareAtPrice,
       isNew: products.isNew,
       isFeatured: products.isFeatured,
+      isVip: products.isVip,
     })
     .from(products)
     .where(whereClause)
@@ -498,6 +517,7 @@ export async function getProducts(
     compareAtPrice: row.compareAtPrice !== null ? Number(row.compareAtPrice) : null,
     isNew: row.isNew,
     isFeatured: row.isFeatured,
+    isVip: row.isVip,
     availableColors: colorsByProduct.get(row.id) ?? [],
     images: mediaByProduct.get(row.id) ?? [],
     hasStock: hasStockSet.has(row.id),
@@ -578,12 +598,23 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
 // getCollectionBySlug
 // ---------------------------------------------------------------------------
 
+export type CollectionFilterRules = {
+  onlyNew?: boolean
+  onlyFeatured?: boolean
+  onlyVip?: boolean
+  colorIds?: string[]
+  sizeIds?: string[]
+  priceMin?: number | null
+  priceMax?: number | null
+} | null | undefined
+
 export type CollectionDetail = {
   id: string
   name: string
   slug: string
   description: string | null
   imageUrl: string | null
+  filterRules: CollectionFilterRules
 }
 
 export async function getCollectionBySlug(slug: string): Promise<CollectionDetail | null> {
@@ -596,12 +627,17 @@ export async function getCollectionBySlug(slug: string): Promise<CollectionDetai
       slug: collections.slug,
       description: collections.description,
       imageUrl: collections.imageUrl,
+      filterRules: collections.filterRules,
     })
     .from(collections)
     .where(and(eq(collections.slug, slug), eq(collections.isActive, true)))
     .limit(1)
 
-  return rows[0] ?? null
+  if (!rows[0]) return null
+  return {
+    ...rows[0],
+    filterRules: rows[0].filterRules as CollectionFilterRules,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -951,8 +987,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
       and(
         eq(products.slug, slug),
         eq(products.isActive, true),
-        // Only return published products (publishedAt null = always visible)
-        sql`(${products.publishedAt} IS NULL OR ${products.publishedAt} <= NOW())`,
+        sql`${products.publishedAt} IS NOT NULL AND ${products.publishedAt} <= NOW()`,
       ),
     )
     .limit(1)
@@ -1076,6 +1111,7 @@ export async function getRelatedProducts(
       compareAtPrice: products.compareAtPrice,
       isNew: products.isNew,
       isFeatured: products.isFeatured,
+      isVip: products.isVip,
     })
     .from(products)
     .where(
@@ -1083,6 +1119,7 @@ export async function getRelatedProducts(
         eq(products.categoryId, categoryId),
         eq(products.isActive, true),
         ne(products.id, productId),
+        sql`${products.publishedAt} IS NOT NULL AND ${products.publishedAt} <= NOW()`,
       ),
     )
     .orderBy(desc(products.isFeatured), desc(products.publishedAt))
@@ -1165,6 +1202,7 @@ export async function getRelatedProducts(
     compareAtPrice: row.compareAtPrice !== null ? Number(row.compareAtPrice) : null,
     isNew: row.isNew,
     isFeatured: row.isFeatured,
+    isVip: row.isVip,
     availableColors: colorsByProduct.get(row.id) ?? [],
     images: mediaByProduct.get(row.id) ?? [],
     hasStock: hasStockSet.has(row.id),
@@ -1193,6 +1231,7 @@ export async function getRecentlyViewedProducts(ids: string[]): Promise<ProductL
       compareAtPrice: products.compareAtPrice,
       isNew: products.isNew,
       isFeatured: products.isFeatured,
+      isVip: products.isVip,
     })
     .from(products)
     .where(and(inArray(products.id, safeIds), eq(products.isActive, true)))
@@ -1263,6 +1302,7 @@ export async function getRecentlyViewedProducts(ids: string[]): Promise<ProductL
         compareAtPrice: row.compareAtPrice !== null ? Number(row.compareAtPrice) : null,
         isNew: row.isNew,
         isFeatured: row.isFeatured,
+        isVip: row.isVip,
         availableColors: colorsByProduct.get(row.id) ?? [],
         images: mediaByProduct.get(row.id) ?? [],
         hasStock: true, // recently viewed — don't re-query stock for this lightweight endpoint
