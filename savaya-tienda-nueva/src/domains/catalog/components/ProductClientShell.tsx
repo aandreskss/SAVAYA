@@ -27,6 +27,9 @@ export function ProductClientShell({
   wishlistVariantIds,
 }: ProductClientShellProps) {
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined)
+  const [selectedColorId, setSelectedColorId] = useState<string | undefined>(
+    product.variants[0]?.color.id,
+  )
   const [wishlistSet, setWishlistSet] = useState(() => new Set(wishlistVariantIds))
 
   const activeVariantId = selectedVariantId ?? product.variants[0]?.id
@@ -62,10 +65,6 @@ export function ProductClientShell({
     }
   }
 
-  const selectedColorId = selectedVariantId
-    ? product.variants.find((v) => v.id === selectedVariantId)?.color.id
-    : product.variants[0]?.color.id
-
   return (
     <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
       <ProductGallery
@@ -78,7 +77,12 @@ export function ProductClientShell({
         product={product}
         selectedVariantId={selectedVariantId}
         exchangeRate={exchangeRate}
-        onVariantChange={setSelectedVariantId}
+        onVariantChange={(variantId) => {
+          setSelectedVariantId(variantId)
+          const color = product.variants.find((v) => v.id === variantId)?.color.id
+          if (color) setSelectedColorId(color)
+        }}
+        onColorChange={setSelectedColorId}
         onAddToCart={onAddToCart}
         onWishlistToggle={handleWishlistToggle}
         isInWishlist={isInWishlist}

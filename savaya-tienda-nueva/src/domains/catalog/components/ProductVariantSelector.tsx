@@ -13,6 +13,7 @@ export type ProductVariantSelectorProps = {
   variants: ProductDetail['variants']
   selectedVariantId?: string
   onVariantChange: (variantId: string) => void
+  onColorChange?: (colorId: string) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -38,6 +39,7 @@ export function ProductVariantSelector({
   variants,
   selectedVariantId,
   onVariantChange,
+  onColorChange,
 }: ProductVariantSelectorProps) {
   // Inactive variants are hidden from the storefront entirely.
   // Active variants with no stock are shown with a diagonal line (isAvailable: false).
@@ -60,16 +62,15 @@ export function ProductVariantSelector({
   // When color changes, clear size selection if the current size is not available for new color
   function handleColorChange(colorId: string) {
     setSelectedColorId(colorId)
+    onColorChange?.(colorId)
 
     const sizesForColor = activeVariants
       .filter((v) => v.color.id === colorId)
       .map((v) => v.size.id)
 
-    // If current size is not available for the new color, clear it
     if (selectedSizeId && !sizesForColor.includes(selectedSizeId)) {
       setSelectedSizeId(undefined)
     } else if (selectedSizeId) {
-      // Try to find a matching variant with new color + same size
       const matchingVariant = activeVariants.find(
         (v) => v.color.id === colorId && v.size.id === selectedSizeId,
       )

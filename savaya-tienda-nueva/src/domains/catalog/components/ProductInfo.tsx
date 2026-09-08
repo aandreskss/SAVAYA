@@ -26,6 +26,7 @@ export type ProductInfoProps = {
   selectedVariantId: string | undefined
   exchangeRate: ExchangeRate
   onVariantChange: (variantId: string) => void
+  onColorChange: (colorId: string) => void
   onAddToCart: (variantId: string, quantity: number) => Promise<ActionResult<unknown>>
   onWishlistToggle: (variantId: string) => Promise<void>
   isInWishlist: boolean
@@ -172,6 +173,7 @@ export function ProductInfo({
   selectedVariantId,
   exchangeRate,
   onVariantChange,
+  onColorChange,
   onAddToCart,
   onWishlistToggle,
   isInWishlist,
@@ -275,6 +277,7 @@ export function ProductInfo({
             setQuantity(1)
             onVariantChange(variantId)
           }}
+          onColorChange={onColorChange}
         />
 
         {/* Size guide link */}
