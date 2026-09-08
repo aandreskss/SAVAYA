@@ -47,64 +47,88 @@ function TrashIcon() {
 export function MediaTab({ productId, media, colors, onChange }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     if (files.length === 0) return
 
-    setUploading(true)
-    try {
-      for (const file of files) {
-        const sigRes = await fetch('/api/admin/catalog/upload-signature')
-        if (!sigRes.ok) throw new Error('Error al obtener firma de Cloudinary')
-        const sig = await sigRes.json()
+    const remaining = 20 - media.length
+    if (remaining <= 0) {
+      toast.error('Ya tienes el máximo de 20 imágenes')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    const toUpload = files.slice(0, remaining)
+    if (toUpload.length < files.length) {
+      toast.error(`Solo se subirán ${toUpload.length} de ${files.length} imágenes (límite 20)`)
+    }
 
-        if (sig.isDev) {
-          // Dev mode: add a placeholder
-          onChange([
-            ...media,
-            {
-              cloudinaryPublicId: `dev/${Date.now()}`,
+    setUploading(true)
+    setUploadProgress({ done: 0, total: toUpload.length })
+
+    try {
+      const results = await Promise.allSettled(
+        toUpload.map(async (file) => {
+          const sigRes = await fetch('/api/admin/catalog/upload-signature')
+          if (!sigRes.ok) throw new Error('Error al obtener firma de Cloudinary')
+          const sig = await sigRes.json()
+
+          let item: Omit<MediaItem, 'isPrimary' | 'sortOrder'>
+
+          if (sig.isDev) {
+            item = {
+              cloudinaryPublicId: `dev/${Date.now()}-${Math.random()}`,
               url: URL.createObjectURL(file),
               altText: '',
-              isPrimary: media.length === 0,
-              sortOrder: media.length,
-            },
-          ])
-          continue
-        }
+            }
+          } else {
+            const fd = new FormData()
+            fd.append('file', file)
+            fd.append('api_key', sig.apiKey)
+            fd.append('timestamp', String(sig.timestamp))
+            fd.append('signature', sig.signature)
+            fd.append('folder', sig.folder)
+            fd.append('public_id', sig.publicId)
 
-        const fd = new FormData()
-        fd.append('file', file)
-        fd.append('api_key', sig.apiKey)
-        fd.append('timestamp', String(sig.timestamp))
-        fd.append('signature', sig.signature)
-        fd.append('folder', sig.folder)
-        fd.append('public_id', sig.publicId)
+            const cdRes = await fetch(
+              `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+              { method: 'POST', body: fd },
+            )
+            if (!cdRes.ok) throw new Error('Error al subir imagen a Cloudinary')
+            const cd = await cdRes.json()
+            item = { cloudinaryPublicId: cd.public_id, url: cd.secure_url, altText: '' }
+          }
 
-        const cdRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
-          { method: 'POST', body: fd },
-        )
-        if (!cdRes.ok) throw new Error('Error al subir imagen a Cloudinary')
-        const cd = await cdRes.json()
+          setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null)
+          return item
+        }),
+      )
 
-        onChange([
-          ...media,
-          {
-            cloudinaryPublicId: cd.public_id,
-            url: cd.secure_url,
-            altText: '',
-            isPrimary: media.length === 0,
-            sortOrder: media.length,
-          },
-        ])
+      const successful = results
+        .filter((r): r is PromiseFulfilledResult<Omit<MediaItem, 'isPrimary' | 'sortOrder'>> => r.status === 'fulfilled')
+        .map((r) => r.value)
+      const failedCount = results.filter((r) => r.status === 'rejected').length
+
+      if (failedCount > 0) {
+        toast.error(`${failedCount} imagen${failedCount > 1 ? 'es' : ''} no pud${failedCount > 1 ? 'ieron' : 'o'} subirse`)
+      }
+
+      if (successful.length > 0) {
+        const startIndex = media.length
+        const newItems: MediaItem[] = successful.map((item, i) => ({
+          ...item,
+          isPrimary: startIndex === 0 && i === 0,
+          sortOrder: startIndex + i,
+        }))
+        onChange([...media, ...newItems])
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al subir imagen')
+      toast.error(err instanceof Error ? err.message : 'Error al subir imágenes')
     } finally {
       setUploading(false)
+      setUploadProgress(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
@@ -173,7 +197,11 @@ export function MediaTab({ productId, media, colors, onChange }: Props) {
           )}
         >
           <UploadIcon />
-          {uploading ? 'Subiendo...' : 'Subir imágenes'}
+          {uploadProgress
+            ? `Subiendo ${uploadProgress.done}/${uploadProgress.total}...`
+            : uploading
+              ? 'Subiendo...'
+              : 'Subir imágenes'}
         </button>
         <p className="mt-1.5 font-sans text-xs text-text-secondary">
           Formatos: JPG, PNG, WEBP · Máx. 20 imágenes
