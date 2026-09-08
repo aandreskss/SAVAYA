@@ -1,9 +1,12 @@
 import Link from 'next/link'
 import { getProducts } from '@/domains/catalog/repository'
 import { ProductCard } from '@/shared/ui/ProductCard'
+import type { BlockContent } from '../block-schemas'
 
-export async function VipProductsSection() {
-  const { items } = await getProducts({ onlyVip: true, limit: 6, sortBy: 'featured' })
+type Props = BlockContent<'vip_section'>
+
+export async function VipSection({ eyebrow, title, subtitle, ctaText, ctaHref, limit }: Props) {
+  const { items } = await getProducts({ onlyVip: true, limit, sortBy: 'featured' })
 
   if (items.length === 0) return null
 
@@ -12,31 +15,35 @@ export async function VipProductsSection() {
       {/* Header */}
       <div className="flex items-end justify-between mb-8 gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.18em] uppercase px-3 py-1 rounded-full border"
-              style={{
-                color: '#CA8C31',
-                borderColor: 'rgba(202,140,49,0.4)',
-                background: 'rgba(202,140,49,0.08)',
-              }}
-            >
-              ★ Exclusivo
-            </span>
-          </div>
+          {eyebrow && (
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.18em] uppercase px-3 py-1 rounded-full border"
+                style={{
+                  color: '#CA8C31',
+                  borderColor: 'rgba(202,140,49,0.4)',
+                  background: 'rgba(202,140,49,0.08)',
+                }}
+              >
+                {eyebrow}
+              </span>
+            </div>
+          )}
           <h2 className="font-display text-[28px] md:text-[34px] uppercase tracking-tight text-text-primary">
-            SAVAYA VIP
+            {title}
           </h2>
-          <p className="text-text-secondary text-sm mt-1">
-            Piezas seleccionadas de nuestra colección premium
-          </p>
+          {subtitle && (
+            <p className="text-text-secondary text-sm mt-1">{subtitle}</p>
+          )}
         </div>
-        <Link
-          href="/catalogo?vip=1"
-          className="font-sans text-sm font-semibold text-text-secondary hover:text-text-primary underline-offset-2 hover:underline transition-colors shrink-0"
-        >
-          Ver todas →
-        </Link>
+        {ctaText && ctaHref && (
+          <Link
+            href={ctaHref}
+            className="font-sans text-sm font-semibold text-text-secondary hover:text-text-primary underline-offset-2 hover:underline transition-colors shrink-0"
+          >
+            {ctaText} →
+          </Link>
+        )}
       </div>
 
       {/* Gold accent line */}

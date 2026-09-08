@@ -56,4 +56,5 @@ export const BLOCK_TYPE_LABELS: Record<AdminSectionType, string> = {
   banner_row: 'Fila de banners',
   promo_banner: 'Banner promocional',
   social_proof_grid: 'Galería social',
+  vip_section: 'Sección VIP ★',
 }

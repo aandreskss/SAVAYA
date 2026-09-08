@@ -15,6 +15,7 @@ import {
   NewsletterSchema,
   PromoBannerSchema,
   SocialProofGridSchema,
+  VipSectionSchema,
 } from '@/domains/cms/block-schemas'
 import type { AdminSection } from '../types'
 
@@ -1154,6 +1155,95 @@ function SocialProofGridForm({ content, onSave, isPending }: SubFormProps) {
   )
 }
 
+function VipSectionForm({ content, onSave, isPending }: SubFormProps) {
+  const parsed = VipSectionSchema.safeParse(content)
+  const d = parsed.success
+    ? parsed.data
+    : { eyebrow: '★ Exclusivo', title: 'SAVAYA VIP', subtitle: '', ctaText: 'Ver todas', ctaHref: '/catalogo?vip=1', limit: 6 }
+
+  const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
+  const [title, setTitle] = useState(d.title)
+  const [subtitle, setSubtitle] = useState(d.subtitle ?? '')
+  const [ctaText, setCtaText] = useState(d.ctaText ?? '')
+  const [ctaHref, setCtaHref] = useState(d.ctaHref ?? '')
+  const [limit, setLimit] = useState(String(d.limit))
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    onSave({
+      eyebrow: eyebrow || undefined,
+      title,
+      subtitle: subtitle || undefined,
+      ctaText: ctaText || undefined,
+      ctaHref: ctaHref || undefined,
+      limit: parseInt(limit) || 6,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Eyebrow — chip dorado sobre el título (opcional)">
+        <input
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          maxLength={60}
+          placeholder="★ Exclusivo"
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Título de la sección">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={80}
+          required
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Subtítulo (opcional)">
+        <input
+          value={subtitle}
+          onChange={(e) => setSubtitle(e.target.value)}
+          maxLength={150}
+          placeholder="Piezas seleccionadas de nuestra colección premium"
+          className={inputClass}
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Texto del enlace Ver todas (opcional)">
+          <input
+            value={ctaText}
+            onChange={(e) => setCtaText(e.target.value)}
+            maxLength={50}
+            placeholder="Ver todas"
+            className={inputClass}
+          />
+        </Field>
+        <Field label="URL del enlace">
+          <UrlPicker value={ctaHref} onChange={setCtaHref} className={inputClass} />
+        </Field>
+      </div>
+      <Field label="Cantidad de productos a mostrar (2–12)">
+        <input
+          type="number"
+          value={limit}
+          onChange={(e) => setLimit(e.target.value)}
+          min={2}
+          max={12}
+          className={inputClass}
+        />
+      </Field>
+      <div className="rounded-lg bg-surface-2 border border-border px-3 py-2.5 text-xs text-text-secondary">
+        Los productos VIP se seleccionan automáticamente. Para marcar un producto como VIP,
+        activa el toggle <strong>VIP ★</strong> en su ficha de edición.
+      </div>
+      <Button type="submit" isLoading={isPending} size="sm">
+        Guardar bloque
+      </Button>
+    </form>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Main switch component
 // ---------------------------------------------------------------------------
@@ -1212,6 +1302,10 @@ export function BlockContentForm({ section, onSave, isPending }: Props) {
     case 'social_proof_grid':
       return (
         <SocialProofGridForm content={section.content} onSave={onSave} isPending={isPending} />
+      )
+    case 'vip_section':
+      return (
+        <VipSectionForm content={section.content} onSave={onSave} isPending={isPending} />
       )
     default:
       return (

@@ -134,6 +134,15 @@ export const SocialProofGridSchema = z.object({
 // Block type → schema map (used for generic validation in service.ts)
 // ---------------------------------------------------------------------------
 
+export const VipSectionSchema = z.object({
+  eyebrow: z.string().max(60).optional(),
+  title: z.string().max(80).default('SAVAYA VIP'),
+  subtitle: z.string().max(150).optional(),
+  ctaText: z.string().max(50).optional(),
+  ctaHref: z.string().optional(),
+  limit: z.number().min(2).max(12).default(6),
+})
+
 // banner_row has no stored content — it fetches from the banners table at render time
 export const BannerRowSchema = z.object({})
 
@@ -148,6 +157,7 @@ export const BLOCK_SCHEMAS = {
   newsletter: NewsletterSchema,
   promo_banner: PromoBannerSchema,
   social_proof_grid: SocialProofGridSchema,
+  vip_section: VipSectionSchema,
   banner_row: BannerRowSchema,
 } as const
 

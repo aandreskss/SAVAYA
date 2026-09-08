@@ -10,6 +10,7 @@ import { BenefitsBlock } from './blocks/BenefitsBlock'
 import { Newsletter } from './blocks/Newsletter'
 import { PromoBanner } from './blocks/PromoBanner'
 import { SocialProofGrid } from './blocks/SocialProofGrid'
+import { VipSection } from './blocks/VipSection'
 import { getProducts } from '@/domains/catalog/repository'
 import { getBanners } from './repository'
 import { BannerRow } from './blocks/BannerRow'
@@ -91,6 +92,9 @@ export async function BlockRenderer({ block }: Props) {
 
     case 'social_proof_grid':
       return <SocialProofGrid {...(block.content as BlockContent<'social_proof_grid'>)} />
+
+    case 'vip_section':
+      return <VipSection {...(block.content as BlockContent<'vip_section'>)} />
 
     case 'banner_row': {
       const banners = await getBanners(new Date())

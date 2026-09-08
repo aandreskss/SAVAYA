@@ -20,6 +20,7 @@ const ADDABLE_BLOCK_TYPES: AdminSectionType[] = [
   'hero',
   'shop_by_category',
   'product_carousel',
+  'vip_section',
   'editorial_block',
   'split_block',
   'benefits_block',
