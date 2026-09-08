@@ -251,3 +251,12 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 
 - `canScrollRight` se inicializa en `true` pero debe medirse desde el DOM real al montar. Sin `useEffect`, las flechas de navegación aparecen en desktop (donde el contenedor es un `md:grid` sin overflow) y no hacen nada al clic.
 - **Siempre agrega `useEffect(() => { updateScrollState() }, [updateScrollState])`** junto al `onScroll` handler. Esto garantiza que las flechas solo aparezcan cuando realmente hay contenido fuera del viewport.
+
+### 8.16 SEO — structured data y metadatos
+
+- **FAQPage JSON-LD** en `/preguntas-frecuentes/page.tsx`: se genera dinámicamente desde `FAQ_SECTIONS`. Al agregar una pregunta al array se refleja automáticamente en el schema. Habilita rich snippets de preguntas en la SERP de Google.
+- **LocalBusiness (ClothingStore) JSON-LD** en `/tiendas/page.tsx`: incluye dirección, coordenadas geo, horario, teléfono y sameAs. Alimenta el Knowledge Panel y el map pack local para búsquedas en Valencia/Carabobo.
+- **OpenGraph en PLPs**: las páginas `/categoria/[slug]` y `/coleccion/[slug]` tienen metadata OG completa (title, description, url, siteName, locale). La colección usa `collection.imageUrl` como OG image cuando existe (URL de Cloudinary, 1600×600).
+- **Sitemap dinámico** (`src/app/sitemap.ts`): incluye products, categories y collections desde la DB. Páginas estáticas incluyen `/hombre` (priority 0.9). Si agregas una ruta nueva al sitio, agrégala al array `STATIC_PAGES`.
+- **Nunca hardcodees BASE_URL en páginas nuevas** — usa `process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'` (patrón ya establecido en categoria/coleccion) o la constante local `const BASE_URL = 'https://www.savayavzla.com'` (patrón en páginas estáticas).
+- **`revalidate`**: páginas de contenido editorial estático (FAQ, Tiendas, etc.) usan `export const revalidate = 86400`. La home usa `revalidate = 3600`. Las PLPs dinámicas no declaran revalidate (Next.js las trata como dinámicas por los searchParams).
