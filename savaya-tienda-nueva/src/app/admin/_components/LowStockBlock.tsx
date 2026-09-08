@@ -6,10 +6,13 @@ export function LowStockBlock({ items }: { items: LowStockItem[] }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-medium">Stock bajo</h2>
+        <h2 className="text-sm font-semibold">Stock bajo</h2>
         {items.length > 0 && (
-          <span className="inline-flex items-center justify-center w-5 h-5 bg-warning text-white text-xs rounded-full font-medium">
-            {items.length > 9 ? '9+' : items.length}
+          <span className="relative inline-flex">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-warning opacity-50 animate-ping" />
+            <span className="relative inline-flex items-center justify-center w-5 h-5 bg-warning text-white text-xs rounded-full font-medium">
+              {items.length > 9 ? '9+' : items.length}
+            </span>
           </span>
         )}
       </div>

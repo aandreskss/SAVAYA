@@ -11,14 +11,17 @@ export function SalesChartBlock({ data }: { data: SalesChartPoint[] }) {
   const avgPerOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0
 
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden mb-6">
+    <div
+      className="bg-surface border border-border rounded-2xl overflow-hidden mb-6"
+      style={{ animation: 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 400ms both' }}
+    >
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-border/50">
         <div>
-          <p className="font-sans text-xs font-medium text-text-muted uppercase tracking-[0.12em] mb-1">
+          <p className="font-sans text-xs font-semibold text-text-muted uppercase tracking-[0.12em] mb-1">
             Ventas en el tiempo
           </p>
-          <p className="font-display text-2xl font-bold text-text-primary">
+          <p className="font-display text-2xl font-bold text-text-primary tabular-nums">
             {formatUsd(totalRevenue)}
           </p>
         </div>

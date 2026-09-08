@@ -133,12 +133,17 @@ export function SalesLineChart({ data }: Props) {
           />
         ))}
 
-        {/* Area fill */}
+        {/* Area fill — fades in after line draws */}
         {areaPath && (
-          <path d={areaPath} fill={`url(#${uid}-area)`} clipPath={`url(#${uid}-clip)`} />
+          <path
+            d={areaPath}
+            fill={`url(#${uid}-area)`}
+            clipPath={`url(#${uid}-clip)`}
+            style={{ animation: 'fadeIn 0.8s ease 1.2s both' }}
+          />
         )}
 
-        {/* Smooth line */}
+        {/* Smooth line — animates in from left to right */}
         {linePath && (
           <path
             d={linePath}
@@ -148,6 +153,10 @@ export function SalesLineChart({ data }: Props) {
             strokeLinejoin="round"
             strokeLinecap="round"
             filter={`url(#${uid}-glow)`}
+            pathLength="1"
+            strokeDasharray="1"
+            strokeDashoffset="1"
+            style={{ animation: 'lineReveal 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards' }}
           />
         )}
 

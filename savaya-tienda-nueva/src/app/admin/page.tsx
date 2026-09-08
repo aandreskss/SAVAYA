@@ -62,12 +62,20 @@ export default async function AdminDashboardPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-6">
-          <PendingPaymentsBlock items={pendingPayments} />
-          <LowStockBlock items={lowStock} />
+          <div style={{ animation: 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 500ms both' }}>
+            <PendingPaymentsBlock items={pendingPayments} />
+          </div>
+          <div style={{ animation: 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 600ms both' }}>
+            <LowStockBlock items={lowStock} />
+          </div>
         </div>
         <div className="flex flex-col gap-6">
-          <TopProductsBlock items={topProducts} />
-          <SalesByMethodBlock items={salesByMethod} />
+          <div style={{ animation: 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 560ms both' }}>
+            <TopProductsBlock items={topProducts} />
+          </div>
+          <div style={{ animation: 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 660ms both' }}>
+            <SalesByMethodBlock items={salesByMethod} />
+          </div>
         </div>
       </div>
     </div>

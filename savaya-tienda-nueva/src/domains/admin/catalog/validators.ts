@@ -50,7 +50,7 @@ export const SaveProductSchema = z.object({
     .or(z.literal('').transform((): null => null)),
   publishedAt: z.string().datetime().nullable(),
   variants: z.array(VariantSchema).max(200),
-  media: z.array(MediaSchema).max(20),
+  media: z.array(MediaSchema).max(50),
   deleteVariantIds: z.array(z.string().uuid()).optional().default([]),
 })
 

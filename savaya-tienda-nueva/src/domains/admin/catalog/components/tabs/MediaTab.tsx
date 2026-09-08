@@ -54,15 +54,15 @@ export function MediaTab({ productId, media, colors, onChange }: Props) {
     const files = Array.from(e.target.files ?? [])
     if (files.length === 0) return
 
-    const remaining = 20 - media.length
+    const remaining = 50 - media.length
     if (remaining <= 0) {
-      toast.error('Ya tienes el máximo de 20 imágenes')
+      toast.error('Ya tienes el máximo de 50 imágenes')
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
     const toUpload = files.slice(0, remaining)
     if (toUpload.length < files.length) {
-      toast.error(`Solo se subirán ${toUpload.length} de ${files.length} imágenes (límite 20)`)
+      toast.error(`Solo se subirán ${toUpload.length} de ${files.length} imágenes (límite 50)`)
     }
 
     setUploading(true)
@@ -204,7 +204,7 @@ export function MediaTab({ productId, media, colors, onChange }: Props) {
               : 'Subir imágenes'}
         </button>
         <p className="mt-1.5 font-sans text-xs text-text-secondary">
-          Formatos: JPG, PNG, WEBP · Máx. 20 imágenes
+          Formatos: JPG, PNG, WEBP · Máx. 50 imágenes
         </p>
       </div>
 
