@@ -35,13 +35,24 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const parsedParams = parsePLPSearchParams(rawParams)
   const noindex = shouldNoindex(parsedParams)
 
+  const title = category.seoTitle ?? `${category.name} — SAVAYA`
+  const description =
+    category.seoDescription ??
+    `Descubre nuestra colección de ${category.name.toLowerCase()} venezolano de autor`
+
   return {
-    title: category.seoTitle ?? `${category.name} — SAVAYA`,
-    description:
-      category.seoDescription ??
-      `Descubre nuestra colección de ${category.name.toLowerCase()} venezolano de autor`,
+    title,
+    description,
     alternates: {
       canonical: `${BASE_URL}/categoria/${slug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `${BASE_URL}/categoria/${slug}`,
+      siteName: 'SAVAYA',
+      locale: 'es_VE',
+      type: 'website',
     },
     ...(noindex && { robots: { index: false, follow: true } }),
   }

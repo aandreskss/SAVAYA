@@ -16,6 +16,7 @@ const STATIC_PAGES: Array<{ url: string; priority: number; changeFrequency: Meta
   { url: '/tiendas', priority: 0.6, changeFrequency: 'monthly' },
   { url: '/ventas-al-mayor', priority: 0.7, changeFrequency: 'monthly' },
   { url: '/mujer', priority: 0.9, changeFrequency: 'weekly' },
+  { url: '/hombre', priority: 0.9, changeFrequency: 'weekly' },
   { url: '/nuevos', priority: 0.9, changeFrequency: 'daily' },
   { url: '/ofertas', priority: 0.8, changeFrequency: 'daily' },
 ]
@@ -40,7 +41,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const { products, categories } = await import('@/domains/catalog/schema')
       const { eq } = await import('drizzle-orm')
 
-      const [productRows, categoryRows] = await Promise.all([
+      const { collections } = await import('@/domains/catalog/schema')
+
+      const [productRows, categoryRows, collectionRows] = await Promise.all([
         db
           .select({ slug: products.slug, updatedAt: products.updatedAt })
           .from(products)
@@ -49,6 +52,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           .select({ slug: categories.slug })
           .from(categories)
           .where(eq(categories.isActive, true)),
+        db
+          .select({ slug: collections.slug })
+          .from(collections)
+          .where(eq(collections.isActive, true)),
       ])
 
       dynamicEntries = [
@@ -63,6 +70,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: now,
           changeFrequency: 'weekly' as const,
           priority: 0.85,
+        })),
+        ...collectionRows.map((c) => ({
+          url: `${BASE_URL}/coleccion/${c.slug}`,
+          lastModified: now,
+          changeFrequency: 'weekly' as const,
+          priority: 0.75,
         })),
       ]
     } catch {

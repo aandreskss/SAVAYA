@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   alternates: { canonical: `${BASE_URL}/preguntas-frecuentes` },
 }
 
+export const revalidate = 86400
+
 const FAQ_SECTIONS = [
   {
     title: 'Pedidos y pagos',
@@ -77,7 +79,27 @@ const FAQ_SECTIONS = [
 ]
 
 export default function PreguntasFrecuentesPage() {
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_SECTIONS.flatMap((section) =>
+      section.items.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.a,
+        },
+      }))
+    ),
+  }
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
     <main className="max-w-screen-md mx-auto px-4 py-14 md:py-20">
       <h1 className="font-display text-4xl uppercase tracking-wide mb-4">
         Preguntas frecuentes
@@ -113,5 +135,6 @@ export default function PreguntasFrecuentesPage() {
         ))}
       </div>
     </main>
+    </>
   )
 }

@@ -9,8 +9,44 @@ export const metadata: Metadata = {
   alternates: { canonical: `${BASE_URL}/tiendas` },
 }
 
+export const revalidate = 86400
+
 export default function TiendasPage() {
+  const localBusinessJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ClothingStore',
+    name: 'SAVAYA Valencia',
+    url: BASE_URL,
+    telephone: '+584141100100',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: 'CC Multi Tienda God is Good, local A-4, Calle 73',
+      addressLocality: 'Valencia',
+      addressRegion: 'Carabobo',
+      addressCountry: 'VE',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 10.162,
+      longitude: -67.9928,
+    },
+    openingHoursSpecification: [
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        opens: '10:00',
+        closes: '18:00',
+      },
+    ],
+    sameAs: ['https://instagram.com/savayavzla'],
+  }
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
     <main className="max-w-screen-md mx-auto px-4 py-14 md:py-20">
       <h1 className="font-display text-4xl uppercase tracking-wide mb-4">
         Tiendas y distribuidores
@@ -101,5 +137,6 @@ export default function TiendasPage() {
         </a>
       </div>
     </main>
+    </>
   )
 }
