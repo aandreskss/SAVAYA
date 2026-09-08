@@ -193,6 +193,16 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - El formulario de edición se muestra **sobre** los pills de color (no debajo de la tabla de variantes). El botón lápiz aparece en hover por cada pill; clic de nuevo cancela.
 - Cuando `editingColorId` está activo, abrir el formulario de "Nuevo color" lo cancela automáticamente (`setShowColorForm(false)` dentro de `openEditColor`), y viceversa.
 
+### 8.9 Registro de visitas propio (page_views)
+
+- **Tabla `page_views`** en `src/domains/analytics/schema.ts`: registra path, referrer (solo hostname), sessionId, country, city, deviceType, browser, os. Append-only — sin updatedAt.
+- **API route `POST /api/track/pv`** (`src/app/api/track/pv/route.ts`): filtra bots por user-agent, extrae geo desde headers de Vercel (`x-vercel-ip-country`, `x-vercel-ip-city`) sin servicio externo, parsea UA con regex simples sin librería. Nunca lanza error — el tracking no puede romper la tienda.
+- **`SiteTracker`** (`src/domains/analytics/SiteTracker.tsx`): componente cliente montado en el shop layout (no en el admin). Usa `usePathname` para detectar cambios de ruta y `fetch` con `keepalive: true`. Genera `sessionId` con `crypto.randomUUID()` en `sessionStorage` (clave `sva_sid`) — se renueva cuando el usuario cierra la pestaña.
+- **Referrer**: se normaliza a hostname (`instagram.com`, no la URL completa) en el route handler con `new URL(referrer).hostname`.
+- **Queries**: `getTrafficSummary(days)` en `src/domains/analytics/repository.ts` lanza 7 queries en paralelo (`Promise.all`): totales, top páginas, países, referrers, dispositivos, browsers, visitas por día agrupadas en zona horaria `America/Caracas`.
+- **Panel admin** (`/admin/analytics`): server component con `searchParams` para filtro de 7/30/90 días. Muestra KPIs, gráfica SVG de barras por día, top páginas, países, dispositivos, browsers, referrers. No usa librería de gráficas — SVG inline.
+- **No trackear el admin**: `SiteTracker` está SOLO en `src/app/(shop)/layout.tsx`, nunca en el admin layout.
+
 ### 8.7 Base de datos — guardas defensivas
 
 - Toda función del storefront repository que haga queries debe tener:
