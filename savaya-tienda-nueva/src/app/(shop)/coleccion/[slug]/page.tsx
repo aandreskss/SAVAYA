@@ -117,7 +117,18 @@ export default async function CollectionPage({ params, searchParams }: Props) {
           ]}
         />
 
-        <div className="mt-6 mb-8">
+        {collection.imageUrl && (
+          <div className="mt-6 rounded-xl overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={collection.imageUrl}
+              alt={collection.name}
+              className="w-full h-40 md:h-60 object-cover"
+            />
+          </div>
+        )}
+
+        <div className={`${collection.imageUrl ? 'mt-5' : 'mt-6'} mb-8`}>
           <h1 className="font-display font-black text-[34px] md:text-[38px] uppercase tracking-tight text-text-primary">
             {collection.name}
           </h1>
