@@ -9,47 +9,6 @@ export async function VipProductsSection() {
 
   return (
     <section className="max-w-screen-xl mx-auto px-4 md:px-10 py-12 md:py-16">
-      <style>{`
-        @keyframes vip-glow {
-          0%, 100% {
-            box-shadow:
-              0 0 0 1.5px rgba(202,140,49,0.35),
-              0 4px 24px rgba(202,140,49,0.12);
-          }
-          50% {
-            box-shadow:
-              0 0 0 1.5px rgba(202,140,49,0.65),
-              0 4px 40px rgba(202,140,49,0.28);
-          }
-        }
-        .vip-card-wrap {
-          border-radius: 26px;
-          animation: vip-glow 3s ease-in-out infinite;
-          transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .vip-card-wrap:hover {
-          transform: scale(1.025) translateY(-3px);
-          animation-play-state: paused;
-          box-shadow:
-            0 0 0 2px #CA8C31,
-            0 20px 60px rgba(202,140,49,0.42);
-        }
-        .vip-card-wrap::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 26px;
-          background: linear-gradient(135deg, rgba(202,140,49,0.1) 0%, transparent 55%);
-          opacity: 0;
-          transition: opacity 0.35s ease;
-          pointer-events: none;
-          z-index: 5;
-        }
-        .vip-card-wrap:hover::after {
-          opacity: 1;
-        }
-      `}</style>
-
       {/* Header */}
       <div className="flex items-end justify-between mb-8 gap-4">
         <div>
@@ -86,22 +45,21 @@ export async function VipProductsSection() {
         style={{ background: 'linear-gradient(90deg, #CA8C31 0%, rgba(202,140,49,0.2) 100%)' }}
       />
 
-      {/* Product grid — 3 cols max so cards are noticeably larger than the regular catalog */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-5 md:gap-7">
+      {/* Product grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5">
         {items.map((product, index) => (
-          <div key={product.id} className="vip-card-wrap relative">
-            <ProductCard
-              id={product.id}
-              slug={product.slug}
-              name={product.name}
-              basePrice={product.basePrice}
-              compareAtPrice={product.compareAtPrice}
-              images={product.images}
-              availableColors={product.availableColors}
-              isVip
-              priority={index < 2}
-            />
-          </div>
+          <ProductCard
+            key={product.id}
+            id={product.id}
+            slug={product.slug}
+            name={product.name}
+            basePrice={product.basePrice}
+            compareAtPrice={product.compareAtPrice}
+            images={product.images}
+            availableColors={product.availableColors}
+            isVip
+            priority={index < 2}
+          />
         ))}
       </div>
     </section>

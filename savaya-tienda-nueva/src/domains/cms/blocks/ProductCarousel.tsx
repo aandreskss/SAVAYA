@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/shared/ui'
 import type { ProductCardProps } from '@/shared/ui'
@@ -59,6 +59,10 @@ export function ProductCarousel({
     setCanScrollLeft(el.scrollLeft > 8)
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8)
   }, [])
+
+  useEffect(() => {
+    updateScrollState()
+  }, [updateScrollState])
 
   const scrollLeft = () => {
     scrollRef.current?.scrollBy({ left: -SCROLL_AMOUNT, behavior: 'smooth' })
