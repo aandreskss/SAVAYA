@@ -48,6 +48,36 @@ No escribas código en esta fase. Entrega solo /docs/AUDIT.md y un resumen corto
 
 ---
 
+## FASE 0B — Auditoría de Odoo (bloqueante para decidir la integración mayor/detal)
+
+**Contexto:** el cliente ya opera con Odoo como ERP, pero configurado para venta al mayor (probablemente por "bulto", no por par individual). La tienda nueva vende al detal por variante (modelo + color + talla). Antes de escribir el ADR de integración y el prompt de Fase 5.7, hace falta información real de esa instancia de Odoo — no se debe diseñar sobre supuestos.
+
+**Paso A — Checklist para el cliente / administrador de Odoo (esto lo respondes tú o el equipo de Odoo, no Claude Code):**
+
+1. Versión y hosting de Odoo (Community o Enterprise; self-hosted, Odoo Online u Odoo.sh).
+2. ¿Los productos de mayoreo ya tienen Atributos de Odoo (Talla, Color) definidos a nivel de variante, aunque se vendan por bulto? ¿O el bulto es un producto único sin desglose interno?
+3. ¿Cómo se compone un bulto hoy — mismo modelo con tallas surtidas, o tallas fijas por bulto? ¿Hay un número típico de pares por bulto?
+3b. ¿Deciden qué mercancía es para la tienda online al momento de comprarla/recibirla, o lo deciden después según cómo se vaya vendiendo en cada canal? Esto define cuál de los dos caminos de conversión aplica (ver más abajo).
+4. ¿Ya usan multi-almacén en Odoo (Inventario > Almacenes) o todo el stock vive en una sola ubicación?
+5. ¿Tienen ya un usuario/API key técnico en Odoo para integraciones, o hay que crear uno desde cero? ¿Quién administra los accesos?
+6. Volumen aproximado esperado de ventas al detal por día/semana al lanzar — esto valida si "cuasi tiempo real" es suficiente o si hace falta algo más estricto.
+7. ¿El equipo de Odoo tiene capacidad interna para exponer un webhook (Automated Actions + acción de servidor) o preferimos que la tienda haga polling programado?
+
+**Paso B — Prompt para Claude Code, una vez tengas credenciales de acceso (lectura) al Odoo real:**
+
+```
+Con acceso de solo lectura al Odoo del cliente (vía XML-RPC/JSON-RPC con un usuario de prueba sin permisos de escritura), inspecciona y reporta en /docs/adr/007-odoo-integration.md:
+
+1. Cómo están modelados hoy los productos de mayoreo (product.template, product.product, atributos de variante si existen, unidades de medida usadas).
+2. Almacenes/ubicaciones (stock.warehouse, stock.location) existentes.
+3. Qué módulos de Inventario/Ventas/Contabilidad están instalados y activos.
+4. Si existe ya algún mecanismo de integración externa (API keys, webhooks, módulos de terceros conectados).
+
+No modifiques nada en Odoo. Con esos hallazgos, completa el ADR 007 (ya iniciado con el contexto y la decisión propuesta) confirmando o ajustando el enfoque de conversión bulto→unidad y el plan de sincronización de la Fase 5.7.
+```
+
+---
+
 ## FASE 1 — Fundaciones y arquitectura
 
 ### 1.1 — Scaffold del proyecto + CLAUDE.md
@@ -88,6 +118,7 @@ Crea /docs/adr/ con estas decisiones documentadas en formato ADR (contexto, deci
 - 004-payment-workflow.md (estados del pedido, comprobantes)
 - 005-cms-architecture.md (page builder con bloques controlados, no HTML libre)
 - 006-search.md (Postgres FTS detrás de SearchProvider, no Meilisearch todavía)
+- 007-odoo-integration.md (Odoo como fuente de verdad de stock/contabilidad; la tienda como fuente de verdad del catálogo enriquecido; ver Fase 0B y 5.7 — completar solo después de la auditoría de Odoo)
 
 Cada documento debe explicar decisiones reales tomadas para SAVAYA, no teoría genérica de ecommerce. Si algo depende de una decisión de negocio que no tenemos (por ejemplo la política de USDT o las zonas de delivery reales), dilo explícitamente como pendiente en vez de inventarlo.
 
@@ -553,6 +584,30 @@ Formaliza la generación de enlaces de WhatsApp (wa.me) usados en confirmación 
 Entrega: confirma que el mensaje prellenado incluye número de pedido, nombre, total y método, y que abrir el link no requiere que el pedido ya esté "enviado" — es un canal de comunicación, no la fuente de verdad del pedido.
 ```
 
+### 5.7 — Integración con Odoo (mayor ↔ detal)
+
+**No ejecutes esta fase hasta cerrar la Fase 0B** (auditoría real de Odoo) y confirmar conmigo el ADR 007. Este prompt asume el escenario recomendado (sincronización cuasi tiempo real, Odoo como fuente de verdad del stock físico); ajústalo si la auditoría revela algo distinto (por ejemplo, otra edición/hosting con menos opciones de API).
+
+**PROMPT → Fase 5.7**
+
+```
+Implementa el dominio domains/integrations/odoo como única capa que habla con Odoo — ningún otro módulo debe llamar al API de Odoo directamente.
+
+Modelo de responsabilidades (ya decidido en ADR 007, no lo cambies sin confirmarlo conmigo):
+- Odoo es la fuente de verdad del stock físico y la contabilidad, incluyendo un almacén/ubicación "Detal" separado del almacén de mayoreo existente.
+- La tienda es la fuente de verdad del catálogo enriquecido (fotos, descripción, SEO, contenido) en su propio Postgres. Cada ProductVariant de la tienda guarda la referencia interna (SKU/código) que lo enlaza con su product.product en Odoo — nunca inventes ese vínculo, debe salir de datos reales confirmados en la Fase 0B.
+- La conversión de "bulto de mayoreo" a "unidades de detal" ocurre dentro de Odoo, por uno de dos caminos según lo que confirme la Fase 0B (pregunta 3b): **Camino A**, recepción directa al almacén Detal cuando el destino del lote ya se conoce al comprar/recibir (sin paso intermedio); o **Camino B**, transferencia interna manual desde el almacén de Mayor cuando el destino se decide después según demanda. Pueden convivir ambos caminos a la vez para distintos lotes. La tienda nunca decide ni ejecuta esa conversión, solo lee el resultado.
+
+Implementa:
+1. Un usuario de servicio/API dedicado en Odoo (documenta en /docs/DEPLOYMENT.md cómo se crea y qué permisos mínimos necesita: lectura de stock del almacén Detal, creación de órdenes de venta, sin acceso a mayoreo ni contabilidad completa).
+2. Un job programado que sincroniza el stock on-hand del almacén Detal de Odoo hacia la tabla Inventory de la tienda (cache de lectura, con timestamp de última sincronización visible en el admin) — frecuencia inicial cada pocos minutos, configurable, no hardcodeada.
+3. Cuando un pedido pasa a estado PAID en la tienda (misma transición que dispara el evento purchase de GA4 en Fase 5.3), crea automáticamente el documento correspondiente en Odoo (orden de venta / entrega en el almacén Detal) de forma idempotente — un mismo pedido nunca debe generar dos documentos en Odoo aunque el proceso se reintente.
+4. Manejo de fallos: si Odoo no responde al crear el documento de venta, el pedido en la tienda no debe quedar bloqueado ni perderse — encola el intento, reintenta con backoff, y expón en el admin (bloque nuevo en el dashboard o en Configuración > Integraciones) el estado de sincronización con Odoo y cualquier pedido pendiente de reflejar allá, para revisión manual si hace falta.
+5. Si el stock cacheado de la tienda y el real de Odoo llegan a divergir (por ejemplo, alguien vendió en Odoo directo un producto que también está en la tienda), documenta y maneja el caso de "venta rechazada por falta de stock real al confirmar" de forma clara para el cliente, no como un error genérico.
+
+Actualiza /docs/adr/007-odoo-integration.md con la implementación final (no solo la propuesta) y agrega el caso a la suite de tests de la Fase 6.4: crear un pedido, confirmarlo como pagado, y verificar que aparece en Odoo con el stock correctamente descontado del almacén Detal.
+```
+
 ---
 
 ## FASE 6 — Hardening
@@ -648,3 +703,11 @@ Entrega el plan de corte como documento para que yo lo apruebe antes de que se e
 **Búsqueda:** Postgres full-text ahora, arquitectura lista para Meilisearch después si el catálogo crece mucho — evita instalar un motor de búsqueda dedicado antes de necesitarlo.
 
 **Pendiente de que tú decidas (no lo puede inventar Claude Code):** política exacta de USDT (¿1:1 con USD comercial o con spread?), lista final y tarifas reales de zonas de delivery/encomiendas, textos finales de marketing de Home/Hero, y si hay datos reales de catálogo/clientes en `savaya-tienda` que deban migrarse en vez de partir de cero (esto lo confirma la Fase 0).
+
+**Integración con Odoo (agregado 2026-08-27, actualizado el mismo día con el flujo de recepción):** el cliente vende al mayor desde Odoo (por bulto, no por par). La tienda al detal necesita su propia granularidad (variante color+talla). Enfoque recomendado: Odoo sigue siendo la fuente de verdad del stock físico y la contabilidad, en un almacén/ubicación "Detal" separado del de mayoreo (no "un usuario nuevo" — eso resuelve permisos, no separación de inventario); la tienda mantiene su propio catálogo enriquecido en Postgres enlazado por SKU, con el stock cacheado desde Odoo en sincronización cuasi tiempo real, y cada pedido pagado genera automáticamente el documento de venta en Odoo.
+
+La conversión bulto→unidades tiene **dos caminos posibles**, y cuál aplica depende de cómo trabaja el cliente hoy (pregunta 3b de la Fase 0B): **Camino A** — si ya saben al comprar/recibir que un lote es para la tienda, entra directo al almacén Detal sin pasos intermedios (más simple, elimina la transferencia interna por completo); **Camino B** — si deciden el canal después según demanda, el lote entra primero a Mayor y se transfiere a Detal cuando se decide destinarlo al detal (más flexible, permite reasignar). Pueden convivir ambos para distintos lotes. No asumir uno sin confirmar con el cliente — quedó reflejado en el PDF entregado al cliente (`materiales-cliente/SAVAYA-Integracion-Odoo.pdf`) como algo a confirmar, no como decisión cerrada.
+
+Sí conviene un usuario de servicio/API dedicado en Odoo para esta integración (con permisos acotados al almacén Detal), separado de cualquier usuario humano. Esto queda formalizado como **Fase 0B** (auditoría real de la instancia de Odoo del cliente — versión/hosting, modelo de producto actual, almacenes existentes, y cuál de los dos caminos de recepción aplica) y **Fase 5.7** (implementación, que debe soportar ambos caminos si conviven), con **ADR 007** pendiente de completar una vez la Fase 0B tenga respuestas reales. No se puede cerrar el diseño final de esta integración sin esa auditoría — evita que Claude Code adivine la versión de Odoo, cómo están modelados los productos hoy, o cuál camino de recepción usan.
+
+**Sobre el pricing de esta integración (conversación 2026-08-27):** Arnaldo es un desarrollador junior en código a mano, con más fuerza en marketing, construyendo con vibe coding (asistido por Claude Code) — el cliente es venezolano local (SAVAYA), no un cliente de exportación. Se le orientó a cotizar por valor, no por horas: ~$80-150 la auditoría (Fase 0B) por separado y adelantada, ~$400-700 la implementación (Fase 5.7) como precio cerrado una vez confirmada la auditoría — total ~$500-850 si se cobra aparte del proyecto completo de la tienda, o como ~10-15% del precio total si va incluida en el paquete completo. Referencia de mercado local: un desarrollador empleado en Venezuela gana ~$300-450/mes (muy por debajo de tarifas de exportación de $50-80/hora). Se le recomendó explícitamente no saltarse la Fase 0B, no conectar a producción sin probar con pedidos de mentira antes, y traer a alguien que conozca Odoo por dentro solo si la auditoría revela módulos personalizados complejos.

@@ -16,6 +16,173 @@ import type { CollectionProductSummary } from '../repository'
 import type { CollectionFilterRules } from '../validators'
 import type { ColorOption, SizeOption } from '../types'
 
+// ---------------------------------------------------------------------------
+// CollectionImageUpload
+// ---------------------------------------------------------------------------
+
+function UploadIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 3v10M6.5 6.5l3.5-3.5 3.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 14v1a2 2 0 002 2h10a2 2 0 002-2v-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+type UploadState = 'idle' | 'uploading' | 'done' | 'error'
+
+function CollectionImageUpload({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (url: string) => void
+}) {
+  const [uploadState, setUploadState] = useState<UploadState>('idle')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se aceptan imágenes')
+      return
+    }
+
+    setUploadState('uploading')
+    try {
+      const res = await fetch('/api/admin/catalog/upload-collection-signature')
+      if (!res.ok) throw new Error('Error al obtener firma')
+      const sig = await res.json() as {
+        signature: string
+        timestamp: number
+        cloudName: string
+        apiKey: string
+        folder: string
+        publicId: string
+        isDev?: boolean
+      }
+
+      if (sig.isDev) {
+        const localUrl = URL.createObjectURL(file)
+        onChange(localUrl)
+        setUploadState('done')
+        return
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('api_key', sig.apiKey)
+      formData.append('timestamp', String(sig.timestamp))
+      formData.append('signature', sig.signature)
+      formData.append('folder', sig.folder)
+      formData.append('public_id', sig.publicId)
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+        { method: 'POST', body: formData },
+      )
+      if (!uploadRes.ok) throw new Error('Error al subir imagen')
+      const data = await uploadRes.json() as { secure_url: string }
+      onChange(data.secure_url)
+      setUploadState('done')
+    } catch (err) {
+      console.error('[CollectionImageUpload] upload failed:', err)
+      toast.error('Error al subir la imagen')
+      setUploadState('error')
+    }
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) void handleFile(file)
+    e.target.value = ''
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer.files?.[0]
+    if (file) void handleFile(file)
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <label className="font-sans text-sm font-medium text-text-primary">
+          Imagen de portada
+        </label>
+        <span className="font-sans text-xs text-text-secondary">
+          Recomendado: <strong className="text-text-primary">1600 × 600 px</strong> · ratio 8:3 · JPG/WebP
+        </span>
+      </div>
+
+      {value ? (
+        <div className="relative rounded-lg overflow-hidden border border-border group">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt="Portada de colección"
+            className="w-full h-32 object-cover"
+          />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-[#0C0C08] text-xs font-sans font-semibold transition-colors"
+            >
+              Cambiar
+            </button>
+            <button
+              type="button"
+              onClick={() => { onChange(''); setUploadState('idle') }}
+              aria-label="Quitar imagen"
+              className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-[#0C0C08] transition-colors"
+            >
+              <XIcon />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          disabled={uploadState === 'uploading'}
+          className="flex flex-col items-center justify-center gap-2 h-28 rounded-lg border-2 border-dashed border-border hover:border-accent-gold/60 hover:bg-accent-gold/4 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {uploadState === 'uploading' ? (
+            <span className="font-sans text-sm text-text-secondary animate-pulse">Subiendo…</span>
+          ) : (
+            <>
+              <span className="text-text-secondary">
+                <UploadIcon />
+              </span>
+              <span className="font-sans text-sm text-text-secondary">
+                Haz clic o arrastra una imagen aquí
+              </span>
+            </>
+          )}
+        </button>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={handleInputChange}
+      />
+    </div>
+  )
+}
+
 type CollectionData = {
   id?: string
   name: string
@@ -559,12 +726,7 @@ export function CollectionEditor({ collection, initialProducts = [], colors = []
           />
         </div>
 
-        <Input
-          label="URL de imagen"
-          type="url"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-        />
+        <CollectionImageUpload value={imageUrl} onChange={setImageUrl} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
