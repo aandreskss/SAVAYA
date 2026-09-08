@@ -84,7 +84,7 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
     return (
       <div
         className="w-full bg-surface-2 rounded-lg flex items-center justify-center"
-        style={{ aspectRatio: '3/4' }}
+        style={{ aspectRatio: '1/1' }}
         aria-label={`Sin imágenes de ${productName}`}
       >
         <span className="font-sans text-sm text-text-secondary">Sin imágenes</span>
@@ -120,7 +120,7 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
                     ? 'border-accent-gold'
                     : 'border-transparent hover:border-border',
                 )}
-                style={{ aspectRatio: '3/4' }}
+                style={{ aspectRatio: '1/1' }}
               >
                 {img.type === 'video' ? (
                   <div className="w-full h-full bg-surface-2 flex items-center justify-center">
@@ -132,7 +132,7 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
                     alt={img.altText ?? `${productName} imagen ${idx + 1}`}
                     fill
                     sizes="72px"
-                    className="object-cover"
+                    className="object-contain"
                   />
                 )}
               </button>
@@ -146,7 +146,7 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
             'relative flex-1 rounded-2xl overflow-hidden bg-surface-2',
             'cursor-crosshair',
           )}
-          style={{ aspectRatio: '3/4' }}
+          style={{ aspectRatio: '1/1' }}
           onMouseEnter={() => setIsZoomed(true)}
           onMouseLeave={() => setIsZoomed(false)}
           aria-label={activeImage.altText ?? productName}
@@ -155,7 +155,7 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
             <video
               src={activeImage.url}
               controls
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
               aria-label={activeImage.altText ?? `Video de ${productName}`}
             />
           ) : (
@@ -166,7 +166,7 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
               sizes="(max-width: 1280px) 50vw, 640px"
               priority={activeIndex === 0}
               className={cn(
-                'object-cover transition-transform duration-300',
+                'object-contain transition-transform duration-300',
                 isZoomed ? 'scale-150' : 'scale-100',
               )}
             />
@@ -192,13 +192,13 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
             <div
               key={idx}
               className="relative w-full shrink-0 snap-start"
-              style={{ aspectRatio: '3/4' }}
+              style={{ aspectRatio: '1/1' }}
             >
               {img.type === 'video' ? (
                 <video
                   src={img.url}
                   controls
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-contain"
                   aria-label={img.altText ?? `Video de ${productName}`}
                 />
               ) : (
@@ -208,7 +208,7 @@ export function ProductGallery({ images, selectedVariantId, selectedColorId, pro
                   fill
                   sizes="100vw"
                   priority={idx === 0}
-                  className="object-cover"
+                  className="object-contain"
                 />
               )}
             </div>

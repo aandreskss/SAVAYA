@@ -223,7 +223,7 @@ export function MediaTab({ productId, media, colors, onChange }: Props) {
                 )}
               >
                 {/* Thumbnail */}
-                <div className="relative aspect-[3/4] bg-surface-2">
+                <div className="relative aspect-square bg-surface-2">
                   <Image
                     src={item.url}
                     alt={item.altText || 'Imagen de producto'}

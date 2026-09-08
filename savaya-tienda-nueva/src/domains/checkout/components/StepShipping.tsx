@@ -308,13 +308,21 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="address" className="text-sm font-medium">Dirección completa</label>
+                <label htmlFor="address" className="text-sm font-medium">
+                  {zoneType === 'national_agency'
+                    ? 'Dirección completa de la agencia donde deseas recibir tus productos (incluyendo el código de la agencia)'
+                    : 'Dirección completa'}
+                </label>
                 <textarea
                   id="address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   rows={3}
-                  placeholder="Calle, número de casa, urbanización..."
+                  placeholder={
+                    zoneType === 'national_agency'
+                      ? 'Ej: MRW Naguanagua, Código 0412, Av. Principal...'
+                      : 'Calle, número de casa, urbanización...'
+                  }
                   className={`input resize-none ${errors.address ? 'border-[var(--color-error)]' : ''}`}
                 />
                 {errors.address && <p className="text-xs text-[var(--color-error)]">{errors.address}</p>}
