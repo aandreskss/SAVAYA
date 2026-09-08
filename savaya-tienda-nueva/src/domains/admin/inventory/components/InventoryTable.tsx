@@ -25,6 +25,14 @@ function UploadIcon() {
   )
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+      <path d="M7.5 1v8M4.5 6l3 3 3-3M2 11h11v3H2v-3z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function WarningIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -39,6 +47,22 @@ type Props = {
   search: string
 }
 
+function downloadCsv(selected: InventoryRow[]) {
+  const header = 'sku,producto,color,talla,stock_actual,cantidad'
+  const lines = selected.map((r) =>
+    [r.sku, `"${r.productName}"`, `"${r.colorName}"`, r.sizeName, r.quantity, r.quantity].join(','),
+  )
+  const csv = [header, ...lines].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const date = new Date().toISOString().slice(0, 10)
+  a.download = `inventario-seleccion-${date}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function InventoryTable({ rows, search }: Props) {
   const router = useRouter()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -46,6 +70,7 @@ export function InventoryTable({ rows, search }: Props) {
   const [movementTarget, setMovementTarget] = useState<InventoryRow | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showLowOnly, setShowLowOnly] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   function handleSearchChange(value: string) {
     setLocalSearch(value)
@@ -60,6 +85,38 @@ export function InventoryTable({ rows, search }: Props) {
 
   const lowCount = rows.filter((r) => r.isLow).length
   const displayRows = showLowOnly ? rows.filter((r) => r.isLow) : rows
+
+  const allDisplaySelected =
+    displayRows.length > 0 && displayRows.every((r) => selectedIds.has(r.variantId))
+  const someDisplaySelected =
+    !allDisplaySelected && displayRows.some((r) => selectedIds.has(r.variantId))
+
+  function toggleSelectAll() {
+    if (allDisplaySelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        displayRows.forEach((r) => next.delete(r.variantId))
+        return next
+      })
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        displayRows.forEach((r) => next.add(r.variantId))
+        return next
+      })
+    }
+  }
+
+  function toggleRow(variantId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(variantId)) next.delete(variantId)
+      else next.add(variantId)
+      return next
+    })
+  }
+
+  const selectedRows = rows.filter((r) => selectedIds.has(r.variantId))
 
   return (
     <div>
@@ -109,6 +166,32 @@ export function InventoryTable({ rows, search }: Props) {
         </button>
       </div>
 
+      {/* Selection action bar */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex items-center justify-between px-4 py-2.5 bg-accent-gold/8 border border-accent-gold/25 rounded-lg">
+          <span className="font-sans text-sm font-medium text-text-primary">
+            {selectedIds.size} variante{selectedIds.size !== 1 ? 's' : ''} seleccionada{selectedIds.size !== 1 ? 's' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Deseleccionar ×
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadCsv(selectedRows)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-gold hover:bg-accent-gold/90 text-[#0C0C08] text-sm font-sans font-semibold transition-colors"
+            >
+              <DownloadIcon />
+              Descargar CSV ({selectedIds.size})
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Active filter banner */}
       {showLowOnly && (
         <div className="mb-4 flex items-center justify-between px-4 py-2.5 bg-warning/8 border border-warning/25 rounded-lg">
@@ -139,9 +222,19 @@ export function InventoryTable({ rows, search }: Props) {
       ) : (
         <div className="rounded-xl border border-border overflow-hidden bg-surface">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-sm" role="grid">
+            <table className="w-full min-w-[840px] text-sm" role="grid">
               <thead className="bg-surface-2 border-b border-border">
                 <tr>
+                  <th scope="col" className="pl-4 pr-2 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      aria-label="Seleccionar todas"
+                      checked={allDisplaySelected}
+                      ref={(el) => { if (el) el.indeterminate = someDisplaySelected }}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 accent-[#CA8C31] cursor-pointer"
+                    />
+                  </th>
                   <th scope="col" className="px-4 py-3 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider">Producto</th>
                   <th scope="col" className="px-4 py-3 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider">SKU</th>
                   <th scope="col" className="px-4 py-3 text-left font-sans text-xs font-medium text-text-secondary uppercase tracking-wider">Color / Talla</th>
@@ -153,81 +246,100 @@ export function InventoryTable({ rows, search }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {displayRows.map((row) => (
-                  <tr
-                    key={row.variantId}
-                    className={`transition-colors ${row.isLow ? 'bg-warning/5 hover:bg-warning/10' : 'hover:bg-surface-2/50'}`}
-                  >
-                    <td className="px-4 py-3">
-                      <span className="font-sans text-sm font-medium text-text-primary">
-                        {row.productName}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <span className="font-sans text-xs font-mono text-text-secondary">
-                        {row.sku}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-4 h-4 rounded-full border border-border shrink-0"
-                          style={{ backgroundColor: row.colorHex }}
-                          title={row.colorName}
+                {displayRows.map((row) => {
+                  const isSelected = selectedIds.has(row.variantId)
+                  return (
+                    <tr
+                      key={row.variantId}
+                      className={`transition-colors ${
+                        isSelected
+                          ? 'bg-accent-gold/6'
+                          : row.isLow
+                            ? 'bg-warning/5 hover:bg-warning/10'
+                            : 'hover:bg-surface-2/50'
+                      }`}
+                    >
+                      <td className="pl-4 pr-2 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          aria-label={`Seleccionar ${row.productName} ${row.sku}`}
+                          checked={isSelected}
+                          onChange={() => toggleRow(row.variantId)}
+                          className="w-4 h-4 accent-[#CA8C31] cursor-pointer"
                         />
-                        <span className="font-sans text-sm text-text-primary">
-                          {row.colorName} · T{row.sizeName}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <span className="font-sans text-sm font-medium text-text-primary">
+                          {row.productName}
                         </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-4 py-3 text-right">
-                      <span className={`font-sans text-sm font-medium ${row.quantity === 0 ? 'text-error' : 'text-text-primary'}`}>
-                        {row.quantity}
-                      </span>
-                    </td>
+                      <td className="px-4 py-3">
+                        <span className="font-sans text-xs font-mono text-text-secondary">
+                          {row.sku}
+                        </span>
+                      </td>
 
-                    <td className="px-4 py-3 text-right">
-                      <span className="font-sans text-sm text-text-secondary">
-                        {row.reserved}
-                      </span>
-                    </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-4 h-4 rounded-full border border-border shrink-0"
+                            style={{ backgroundColor: row.colorHex }}
+                            title={row.colorName}
+                          />
+                          <span className="font-sans text-sm text-text-primary">
+                            {row.colorName} · T{row.sizeName}
+                          </span>
+                        </div>
+                      </td>
 
-                    <td className="px-4 py-3 text-right">
-                      <span className={`font-sans text-sm font-medium ${row.available === 0 ? 'text-error' : row.isLow ? 'text-warning' : 'text-text-primary'}`}>
-                        {row.available}
-                      </span>
-                    </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-sans text-sm font-medium ${row.quantity === 0 ? 'text-error' : 'text-text-primary'}`}>
+                          {row.quantity}
+                        </span>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      {row.available === 0 ? (
-                        <Badge variant="error" size="sm">Sin stock</Badge>
-                      ) : row.isLow ? (
-                        <Badge variant="warning" size="sm">Stock bajo</Badge>
-                      ) : (
-                        <Badge variant="success" size="sm">OK</Badge>
-                      )}
-                    </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="font-sans text-sm text-text-secondary">
+                          {row.reserved}
+                        </span>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setMovementTarget(row)}
-                          className="px-2.5 py-1 rounded text-xs font-sans border border-accent-gold/50 hover:bg-accent-gold/10 text-accent-gold transition-colors"
-                        >
-                          Ajustar
-                        </button>
-                        <Link href={`/admin/inventario/${row.variantId}`}>
-                          <button className="px-2.5 py-1 rounded text-xs font-sans border border-border hover:border-border-hover text-text-secondary hover:text-text-primary transition-colors">
-                            Historial
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-sans text-sm font-medium ${row.available === 0 ? 'text-error' : row.isLow ? 'text-warning' : 'text-text-primary'}`}>
+                          {row.available}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {row.available === 0 ? (
+                          <Badge variant="error" size="sm">Sin stock</Badge>
+                        ) : row.isLow ? (
+                          <Badge variant="warning" size="sm">Stock bajo</Badge>
+                        ) : (
+                          <Badge variant="success" size="sm">OK</Badge>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setMovementTarget(row)}
+                            className="px-2.5 py-1 rounded text-xs font-sans border border-accent-gold/50 hover:bg-accent-gold/10 text-accent-gold transition-colors"
+                          >
+                            Ajustar
                           </button>
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <Link href={`/admin/inventario/${row.variantId}`}>
+                            <button className="px-2.5 py-1 rounded text-xs font-sans border border-border hover:border-border-hover text-text-secondary hover:text-text-primary transition-colors">
+                              Historial
+                            </button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
