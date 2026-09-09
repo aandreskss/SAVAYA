@@ -213,7 +213,9 @@ export async function createSectionAction(payload: {
     return { success: false, error: 'Tipo de bloque no reconocido' }
   }
 
-  const defaultContent = schema.parse({})
+  // safeParse so schemas with required fields don't throw — block gets empty defaults,
+  // admin fills in the content after creation.
+  const defaultContent = schema.safeParse({}).data ?? {}
 
   try {
     const section = await createSection(
