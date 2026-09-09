@@ -132,6 +132,8 @@ Esta sección documenta decisiones que ya se tomaron y están en el código. No 
 - **`BLOCK_SCHEMAS`** en `src/domains/cms/block-schemas.ts` es el registro central. Todo tipo de bloque nuevo debe registrarse ahí.
 - **`banner_row` es especial**: su schema es `z.object({})` (sin contenido almacenado). El `BlockRenderer` lo maneja aparte llamando a `getBanners(new Date())` en tiempo de render — nunca guarda datos en `page_sections.content` para ese tipo.
 - **`BlockRenderer`** (`src/domains/cms/BlockRenderer.tsx`) es el único lugar donde un tipo de bloque se mapea a un componente. Si agregas un tipo nuevo, es el único archivo que cambia (más el schema y el componente propio).
+- **Guards obligatorios en `BlockRenderer`**: cualquier bloque que use `<Image src={url}>` con URL requerida (hero, split_block, editorial_block) o que haga `.map()` sobre un array requerido (shop_by_category, benefits_block, social_proof_grid) **debe** verificar que esos campos existan antes de renderizar, o retornar `null`. Sin el guard, un bloque recién creado con contenido vacío crashea la página entera.
+- **`parseSections` en `service.ts` — validación en dos etapas**: primero intenta `schema.safeParse()` estricto; si falla, hace fallback con `schema.partial().safeParse()` para bloques en proceso de configuración (contenido `{}`). Si la validación parcial también falla, el bloque se omite. Esto permite que bloques recién agregados (aún sin configurar) pasen al `BlockRenderer`, que decide si renderizar o retornar `null` según los guards.
 - **`revalidatePath`**: toda mutación de CMS (secciones, banners, popups) debe llamar `revalidatePath('/')` Y `revalidatePath('/admin/contenido')`. Sin el primero la Home no se refresca.
 - **Contenido de bloque tipado con Zod**: nunca uses `as any` para el contenido de un bloque. El cast correcto es `block.content as BlockContent<'tipo'>`.
 
@@ -264,6 +266,25 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 ### 8.18 UrlPicker — páginas estáticas completas
 
 - El array `STATIC_PAGES` en `src/shared/ui/UrlPicker.tsx` incluye: `/`, `/mujer`, `/hombre`, `/nuevos`, `/ofertas`, y las páginas informativas. Agregar rutas nuevas del sitio aquí cuando se creen.
+
+### 8.19 Custom Pages Builder (`/p/[slug]`)
+
+- **Ruta storefront**: `src/app/(shop)/p/[slug]/page.tsx` — siempre `export const dynamic = 'force-dynamic'`, dentro del grupo `(shop)` para heredar navbar y footer automáticamente.
+- **Prefijo en DB**: las custom pages se almacenan en la tabla `pages` con slug `p/[slug]` (ej. `p/ofertas-verano`). En el admin, el slug se muestra sin el prefijo. Nunca omitas el prefijo `p/` al hacer queries desde el storefront.
+- **`getCustomPageSections(slug)`** en `src/domains/cms/repository.ts`: retorna `null` si la página no existe o no está activa (→ 404 en storefront), `[]` si existe pero no tiene secciones activas, o el array de secciones ordenado por `sortOrder`.
+- **Admin**: pestaña "Páginas" en `/admin/contenido` → `PagesManager.tsx` (client component). Vista lista (crear/editar/eliminar páginas) + vista edición (usa `HomeSectionsEditor` con `pageSlug='p/slug'` y `pageLabel=title`).
+- **Tipos de bloque disponibles**: todos los del CMS existente + `product_grid` + `html_block`. Enum `page_section_type` fue extendido con `ALTER TYPE ... ADD VALUE IF NOT EXISTS` en migración `scripts/run-migration-010.js`.
+- **`product_grid`**: grilla de productos configurable — fuente por filtro (`source` enum) o slugs manuales (uno por línea), o ambos (se unen y deduplicados por `id`). Schema: `ProductGridSchema` — todos los campos opcionales o con default, por lo que aparece inmediatamente al agregarlo.
+- **`getSiteUrlOptionsAction`** incluye `pages: SiteUrlOption[]` para que el UrlPicker muestre custom pages como destino en campos de URL del CMS.
+
+### 8.20 HtmlBlock — procesamiento de contenido
+
+- **`processHtml(raw)`** en `src/domains/cms/blocks/HtmlBlock.tsx`: función pura server-side que prepara HTML crudo antes de renderizarlo dentro del layout de la tienda.
+- **Qué elimina**: `<html>`, `<head>`, `<body>` wrappers; la sección `<header>…</header>` completa (el layout provee el navbar real); la sección `<footer>…</footer>` completa (el layout provee el footer real).
+- **Qué preserva**: links de Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`) extraídos del `<head>` y reinyectados fuera de él para que carguen correctamente en el body; todos los bloques `<style>` del HTML original (reinyectados como CSS con scope).
+- **CSS scoping con `@scope`**: los estilos se envuelven en `@scope (.savaya-html-blk) { … }`. Dentro del scope, `:root` se reemplaza por `:scope` y `body { }` se reemplaza por `:scope { }` para que las custom properties y estilos de base apliquen solo dentro del bloque, sin derramarse al navbar o footer del sitio.
+- **Wrapper**: el contenido queda dentro de `<div class="savaya-html-blk">`. No agregues padding ni max-width al wrapper externo — el HTML gestiona su propio layout.
+- **Advertencia de seguridad**: `HtmlBlock` usa `dangerouslySetInnerHTML`. Solo admins con `cms:write` pueden subir HTML. No filtres ni escapes el HTML — se asume que el admin es de confianza.
 
 ### 8.16 SEO — structured data y metadatos
 
