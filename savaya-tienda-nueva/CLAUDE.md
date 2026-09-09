@@ -135,6 +135,7 @@ Esta sección documenta decisiones que ya se tomaron y están en el código. No 
 - **Guards obligatorios en `BlockRenderer`**: cualquier bloque que use `<Image src={url}>` con URL requerida (hero, split_block, editorial_block) o que haga `.map()` sobre un array requerido (shop_by_category, benefits_block, social_proof_grid) **debe** verificar que esos campos existan antes de renderizar, o retornar `null`. Sin el guard, un bloque recién creado con contenido vacío crashea la página entera.
 - **`parseSections` en `service.ts` — validación en dos etapas**: primero intenta `schema.safeParse()` estricto; si falla, hace fallback con `schema.partial().safeParse()` para bloques en proceso de configuración (contenido `{}`). Si la validación parcial también falla, el bloque se omite. Esto permite que bloques recién agregados (aún sin configurar) pasen al `BlockRenderer`, que decide si renderizar o retornar `null` según los guards.
 - **`revalidatePath`**: toda mutación de CMS (secciones, banners, popups) debe llamar `revalidatePath('/')` Y `revalidatePath('/admin/contenido')`. Sin el primero la Home no se refresca.
+- **Contenido por defecto al crear un bloque**: en `createSectionAction` (y cualquier lugar que construya contenido inicial) usa SIEMPRE `schema.safeParse({}).data ?? {}`. **Nunca uses `schema.parse({})`** — `parse` lanza `ZodError` si el schema tiene campos requeridos sin default (ej. `HtmlBlockSchema`, `HeroSchema`) y eso convierte la acción en un HTTP 500 no manejado.
 - **Contenido de bloque tipado con Zod**: nunca uses `as any` para el contenido de un bloque. El cast correcto es `block.content as BlockContent<'tipo'>`.
 
 ### 8.2 Teléfonos y WhatsApp
@@ -276,6 +277,7 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Tipos de bloque disponibles**: todos los del CMS existente + `product_grid` + `html_block`. Enum `page_section_type` fue extendido con `ALTER TYPE ... ADD VALUE IF NOT EXISTS` en migración `scripts/run-migration-010.js`.
 - **`product_grid`**: grilla de productos configurable — fuente por filtro (`source` enum) o slugs manuales (uno por línea), o ambos (se unen y deduplicados por `id`). Schema: `ProductGridSchema` — todos los campos opcionales o con default, por lo que aparece inmediatamente al agregarlo.
 - **`getSiteUrlOptionsAction`** incluye `pages: SiteUrlOption[]` para que el UrlPicker muestre custom pages como destino en campos de URL del CMS.
+- **`revalidatePath` y custom pages**: las mutaciones de secciones (crear, guardar, reordenar, toggle, eliminar) llaman `revalidatePath('/')` pero NO `revalidatePath('/p/slug')`. Esto es correcto porque la página usa `force-dynamic` y siempre sirve datos frescos desde DB. Si alguna vez se cambia a ISR/caching, habría que agregar la revalidación explícita del path `/p/[slug]`.
 
 ### 8.20 HtmlBlock — procesamiento de contenido
 
