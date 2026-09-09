@@ -355,25 +355,9 @@ export async function getActivePopup(now: Date): Promise<ActivePopup | null> {
 
 export async function buildNavCategories(): Promise<NavCategory[]> {
   if (!process.env.DATABASE_URL) {
-    // Dev fallback — mirrors the old static config
     return [
-      {
-        label: 'Mujer',
-        href: '/mujer',
-        subcategories: [
-          { name: 'Sandalias', href: '/categoria/sandalias' },
-          { name: 'Tacones', href: '/categoria/tacones' },
-          { name: 'Sneakers', href: '/categoria/sneakers' },
-        ],
-      },
-      {
-        label: 'Hombre',
-        href: '/hombre',
-        subcategories: [
-          { name: 'Sneakers', href: '/categoria/sneakers' },
-          { name: 'Botas', href: '/categoria/botas' },
-        ],
-      },
+      { label: 'Mujer', href: '/mujer' },
+      { label: 'Hombre', href: '/hombre' },
       { label: 'Nuevos', href: '/nuevos' },
       { label: 'Ofertas', href: '/ofertas' },
     ]
