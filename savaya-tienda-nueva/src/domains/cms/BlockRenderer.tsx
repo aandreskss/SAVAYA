@@ -66,35 +66,57 @@ export async function BlockRenderer({ block }: Props) {
       // Rendered above the sticky navbar in the shop layout — skip here to avoid duplication.
       return null
 
-    case 'hero':
-      return <Hero {...(block.content as BlockContent<'hero'>)} />
+    case 'hero': {
+      const content = block.content as BlockContent<'hero'>
+      if (!content.imageDesktopUrl || !content.imageMobileUrl) return null
+      return <Hero {...content} />
+    }
 
-    case 'shop_by_category':
-      return <ShopByCategory {...(block.content as BlockContent<'shop_by_category'>)} />
+    case 'shop_by_category': {
+      const content = block.content as BlockContent<'shop_by_category'>
+      if (!content.categories?.length) return null
+      return <ShopByCategory {...content} />
+    }
 
     case 'product_carousel': {
       const content = block.content as BlockContent<'product_carousel'>
+      if (!content.source) return null
       const products = await fetchCarouselProducts(content)
       return <ProductCarousel {...content} products={products} />
     }
 
-    case 'split_block':
-      return <SplitBlock {...(block.content as BlockContent<'split_block'>)} />
+    case 'split_block': {
+      const content = block.content as BlockContent<'split_block'>
+      if (!content.leftImageUrl || !content.rightImageUrl) return null
+      return <SplitBlock {...content} />
+    }
 
-    case 'editorial_block':
-      return <EditorialBlock {...(block.content as BlockContent<'editorial_block'>)} />
+    case 'editorial_block': {
+      const content = block.content as BlockContent<'editorial_block'>
+      if (!content.imageUrl || !content.headline || !content.body) return null
+      return <EditorialBlock {...content} />
+    }
 
-    case 'benefits_block':
-      return <BenefitsBlock {...(block.content as BlockContent<'benefits_block'>)} />
+    case 'benefits_block': {
+      const content = block.content as BlockContent<'benefits_block'>
+      if (!content.benefits?.length) return null
+      return <BenefitsBlock {...content} />
+    }
 
     case 'newsletter':
       return <Newsletter {...(block.content as BlockContent<'newsletter'>)} />
 
-    case 'promo_banner':
-      return <PromoBanner {...(block.content as BlockContent<'promo_banner'>)} />
+    case 'promo_banner': {
+      const content = block.content as BlockContent<'promo_banner'>
+      if (!content.headline || !content.ctaText || !content.ctaHref) return null
+      return <PromoBanner {...content} />
+    }
 
-    case 'social_proof_grid':
-      return <SocialProofGrid {...(block.content as BlockContent<'social_proof_grid'>)} />
+    case 'social_proof_grid': {
+      const content = block.content as BlockContent<'social_proof_grid'>
+      if (!content.images?.length) return null
+      return <SocialProofGrid {...content} />
+    }
 
     case 'vip_section':
       return <VipSection {...(block.content as BlockContent<'vip_section'>)} />

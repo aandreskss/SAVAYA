@@ -39,16 +39,34 @@ function parseSections(sections: PageSection[]): ParsedBlock[] {
       console.error(`[cms/service] Unknown block type "${section.type}" (id: ${section.id}) — skipping`)
       continue
     }
-    const result = schema.safeParse(section.content)
-    if (!result.success) {
-      console.error(`[cms/service] Invalid content for "${section.type}" (id: ${section.id}):`, result.error.flatten())
+
+    // Try strict validation first (fully configured block).
+    const strict = schema.safeParse(section.content)
+    if (strict.success) {
+      parsed.push({
+        id: section.id,
+        type: section.type as BlockType,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        content: strict.data as any,
+        sortOrder: section.sortOrder,
+      })
+      continue
+    }
+
+    // Fallback: partial validation for blocks that are still being configured
+    // (newly added blocks have content = {}, required fields are absent).
+    // BlockRenderer guards against rendering with missing critical data.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const partial = (schema as any).partial().safeParse(section.content)
+    if (!partial.success) {
+      console.error(`[cms/service] Invalid content for "${section.type}" (id: ${section.id}):`, strict.error.flatten())
       continue
     }
     parsed.push({
       id: section.id,
       type: section.type as BlockType,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      content: result.data as any,
+      content: partial.data as any,
       sortOrder: section.sortOrder,
     })
   }
