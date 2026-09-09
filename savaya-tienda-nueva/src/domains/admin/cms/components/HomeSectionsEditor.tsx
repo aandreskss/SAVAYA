@@ -27,13 +27,21 @@ const ADDABLE_BLOCK_TYPES: AdminSectionType[] = [
   'newsletter',
   'promo_banner',
   'social_proof_grid',
+  'product_grid',
+  'html_block',
 ]
 
 type Props = {
   initialSections: AdminSection[]
+  pageSlug?: string
+  pageLabel?: string
 }
 
-export function HomeSectionsEditor({ initialSections }: Props) {
+export function HomeSectionsEditor({
+  initialSections,
+  pageSlug = 'home',
+  pageLabel = 'home',
+}: Props) {
   const [sections, setSections] = useState<AdminSection[]>(
     [...initialSections].sort((a, b) => a.sortOrder - b.sortOrder),
   )
@@ -125,7 +133,7 @@ export function HomeSectionsEditor({ initialSections }: Props) {
     const maxSortOrder = sections.length > 0 ? Math.max(...sections.map((s) => s.sortOrder)) : -1
     startAddTransition(async () => {
       const result = await createSectionAction({
-        pageSlug: 'home',
+        pageSlug,
         type: newType,
         currentMaxSortOrder: maxSortOrder,
       })
@@ -166,7 +174,7 @@ export function HomeSectionsEditor({ initialSections }: Props) {
       {/* Left — block list */}
       <div className="w-full lg:w-72 shrink-0 bg-surface border border-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
-          <h2 className="font-medium text-sm">Bloques de la página home</h2>
+          <h2 className="font-medium text-sm">Bloques — {pageLabel}</h2>
         </div>
 
         {sections.length === 0 ? (

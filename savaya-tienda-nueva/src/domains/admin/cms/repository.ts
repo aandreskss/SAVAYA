@@ -1,7 +1,7 @@
-import { eq, asc, desc, and } from 'drizzle-orm'
+import { eq, asc, desc, and, like, count } from 'drizzle-orm'
 import { db } from '@/shared/lib/db'
 import { pages, pageSections, pageSectionTypeEnum, banners, popups, navItems } from '@/domains/cms/schema'
-import type { AdminSection, AdminBanner, AdminPopup, AdminNavItem } from './types'
+import type { AdminSection, AdminBanner, AdminPopup, AdminNavItem, AdminPage } from './types'
 
 // ---------------------------------------------------------------------------
 // Sections
@@ -385,4 +385,66 @@ export async function toggleAdminNavItem(id: string, isActive: boolean): Promise
     .update(navItems)
     .set({ isActive, updatedAt: new Date() })
     .where(eq(navItems.id, id))
+}
+
+// ---------------------------------------------------------------------------
+// Custom pages CRUD (pages with slug starting with 'p/')
+// ---------------------------------------------------------------------------
+
+export async function listAdminCustomPages(): Promise<AdminPage[]> {
+  const rows = await db
+    .select({
+      id: pages.id,
+      slug: pages.slug,
+      title: pages.title,
+      isActive: pages.isActive,
+      createdAt: pages.createdAt,
+      updatedAt: pages.updatedAt,
+    })
+    .from(pages)
+    .where(like(pages.slug, 'p/%'))
+    .orderBy(asc(pages.createdAt))
+
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug.replace(/^p\//, ''),
+    title: r.title,
+    isActive: r.isActive,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }))
+}
+
+export async function createAdminCustomPage(data: {
+  slug: string
+  title: string
+}): Promise<AdminPage> {
+  const fullSlug = `p/${data.slug}`
+  const [row] = await db
+    .insert(pages)
+    .values({ slug: fullSlug, title: data.title, isActive: true })
+    .returning()
+
+  return {
+    id: row.id,
+    slug: data.slug,
+    title: row.title,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+export async function updateAdminCustomPageMeta(
+  id: string,
+  data: { title: string; isActive: boolean },
+): Promise<void> {
+  await db
+    .update(pages)
+    .set({ title: data.title, isActive: data.isActive, updatedAt: new Date() })
+    .where(eq(pages.id, id))
+}
+
+export async function deleteAdminCustomPage(id: string): Promise<void> {
+  await db.delete(pages).where(eq(pages.id, id))
 }

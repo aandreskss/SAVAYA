@@ -11,10 +11,13 @@ import { Newsletter } from './blocks/Newsletter'
 import { PromoBanner } from './blocks/PromoBanner'
 import { SocialProofGrid } from './blocks/SocialProofGrid'
 import { VipSection } from './blocks/VipSection'
+import { ProductGrid } from './blocks/ProductGrid'
+import { HtmlBlock } from './blocks/HtmlBlock'
 import { getProducts } from '@/domains/catalog/repository'
 import { getBanners } from './repository'
 import { BannerRow } from './blocks/BannerRow'
 import type { ProductCardProps } from '@/shared/ui'
+import type { ProductListItem } from '@/domains/catalog/repository'
 
 type Props = {
   block: ParsedBlock
@@ -101,7 +104,72 @@ export async function BlockRenderer({ block }: Props) {
       return banners.length > 0 ? <BannerRow banners={banners} /> : null
     }
 
+    case 'product_grid': {
+      const content = block.content as BlockContent<'product_grid'>
+      const products = await fetchProductGridItems(content)
+      return <ProductGrid {...content} products={products} />
+    }
+
+    case 'html_block': {
+      const content = block.content as BlockContent<'html_block'>
+      return <HtmlBlock {...content} />
+    }
+
     default:
       return null
+  }
+}
+
+function toCardProps(items: ProductListItem[]): ProductCardProps[] {
+  return items.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    basePrice: p.basePrice,
+    compareAtPrice: p.compareAtPrice,
+    images: p.images,
+    availableColors: p.availableColors,
+    isVip: p.isVip,
+    badges: !p.isVip && p.isNew
+      ? (['new'] as const)
+      : !p.isVip && p.compareAtPrice
+        ? (['sale'] as const)
+        : undefined,
+  }))
+}
+
+async function fetchProductGridItems(
+  content: BlockContent<'product_grid'>,
+): Promise<ProductCardProps[]> {
+  try {
+    const results: ProductListItem[] = []
+
+    if (content.source) {
+      const { items } = await getProducts({
+        onlyNew: content.source === 'new',
+        onlyFeatured: content.source === 'featured',
+        onlyVip: content.source === 'vip',
+        onlyOnSale: content.source === 'sale',
+        sortBy: content.source === 'bestseller' ? 'bestseller' : 'featured',
+        categorySlug: content.source === 'category' ? content.categorySlug : undefined,
+        collectionSlug: content.source === 'collection' ? content.collectionSlug : undefined,
+        onlyAvailable: true,
+        limit: content.limit,
+      })
+      results.push(...items)
+    }
+
+    if (content.productSlugs?.length) {
+      const { items } = await getProducts({
+        slugsIn: content.productSlugs,
+        limit: content.productSlugs.length,
+      })
+      const seen = new Set(results.map((p) => p.id))
+      items.forEach((p) => { if (!seen.has(p.id)) results.push(p) })
+    }
+
+    return toCardProps(results)
+  } catch {
+    return []
   }
 }

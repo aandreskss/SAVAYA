@@ -23,6 +23,11 @@ import {
   deleteAdminNavItem,
   reorderAdminNavItems,
   toggleAdminNavItem,
+  listAdminCustomPages,
+  createAdminCustomPage,
+  updateAdminCustomPageMeta,
+  deleteAdminCustomPage,
+  getAdminSections,
 } from './repository'
 import {
   ReorderSectionsSchema,
@@ -33,11 +38,13 @@ import {
   BannerFormSchema,
   PopupFormSchema,
   NavItemFormSchema,
+  CustomPageFormSchema,
   type BannerFormPayload,
   type PopupFormPayload,
   type NavItemFormPayload,
+  type CustomPageFormPayload,
 } from './validators'
-import type { ActionResult, AdminBanner, AdminNavItem, AdminPopup, AdminSection } from './types'
+import type { ActionResult, AdminBanner, AdminNavItem, AdminPage, AdminPopup, AdminSection } from './types'
 import {
   getAllCategorySlugsForPicker,
   getAllCollectionSlugsForPicker,
@@ -69,16 +76,18 @@ export type SiteUrlOptions = {
   categories: SiteUrlOption[]
   collections: SiteUrlOption[]
   products: SiteUrlOption[]
+  pages: SiteUrlOption[]
 }
 
 export async function getSiteUrlOptionsAction(): Promise<ActionResult<SiteUrlOptions>> {
   const actor = await getActor()
   if (!actor) return { success: false, error: 'No autenticado' }
 
-  const [cats, colls, prods] = await Promise.all([
+  const [cats, colls, prods, customPages] = await Promise.all([
     getAllCategorySlugsForPicker(),
     getAllCollectionSlugsForPicker(),
     getAllProductSlugsForPicker(),
+    listAdminCustomPages(),
   ])
 
   return {
@@ -87,6 +96,7 @@ export async function getSiteUrlOptionsAction(): Promise<ActionResult<SiteUrlOpt
       categories: cats.map((c) => ({ label: c.name, url: `/categoria/${c.slug}` })),
       collections: colls.map((c) => ({ label: c.name, url: `/coleccion/${c.slug}` })),
       products: prods.map((p) => ({ label: p.name, url: `/producto/${p.slug}` })),
+      pages: customPages.map((p) => ({ label: p.title, url: `/p/${p.slug}` })),
     },
   }
 }
@@ -599,5 +609,101 @@ export async function toggleNavItemAction(
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Error al actualizar el ítem' }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Custom pages
+// ---------------------------------------------------------------------------
+
+export async function getPageSectionsAction(
+  pageSlug: string,
+): Promise<ActionResult<AdminSection[]>> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso' }
+  }
+
+  try {
+    const sections = await getAdminSections(pageSlug)
+    return { success: true, data: sections }
+  } catch {
+    return { success: false, error: 'Error al cargar las secciones' }
+  }
+}
+
+export async function createCustomPageAction(
+  payload: CustomPageFormPayload,
+): Promise<ActionResult<AdminPage>> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para crear páginas' }
+  }
+
+  const parsed = CustomPageFormSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' }
+  }
+
+  try {
+    const page = await createAdminCustomPage({
+      slug: parsed.data.slug,
+      title: parsed.data.title,
+    })
+    revalidatePath('/p', 'layout')
+    revalidatePath('/admin/contenido')
+    return { success: true, data: page }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : ''
+    if (msg.includes('unique') || msg.includes('duplicate')) {
+      return { success: false, error: `Ya existe una página con el slug "${parsed.data.slug}"` }
+    }
+    return { success: false, error: 'Error al crear la página' }
+  }
+}
+
+export async function updateCustomPageMetaAction(
+  id: string,
+  payload: { title: string; isActive: boolean },
+): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para editar páginas' }
+  }
+
+  if (!payload.title?.trim()) {
+    return { success: false, error: 'El título es requerido' }
+  }
+
+  try {
+    await updateAdminCustomPageMeta(id, {
+      title: payload.title.trim(),
+      isActive: payload.isActive,
+    })
+    revalidatePath('/p', 'layout')
+    revalidatePath('/admin/contenido')
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al actualizar la página' }
+  }
+}
+
+export async function deleteCustomPageAction(id: string): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para eliminar páginas' }
+  }
+
+  try {
+    await deleteAdminCustomPage(id)
+    revalidatePath('/p', 'layout')
+    revalidatePath('/admin/contenido')
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al eliminar la página' }
   }
 }

@@ -71,5 +71,18 @@ export const DeleteSectionSchema = z.object({
   sectionId: z.string().uuid(),
 })
 
+export const CustomPageFormSchema = z.object({
+  slug: z
+    .string()
+    .min(1, 'El slug es requerido')
+    .max(80)
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      'Solo letras minúsculas, números y guiones (sin espacios ni caracteres especiales)',
+    ),
+  title: z.string().min(1, 'El título es requerido').max(100),
+})
+
 export type BannerFormPayload = z.infer<typeof BannerFormSchema>
 export type PopupFormPayload = z.infer<typeof PopupFormSchema>
+export type CustomPageFormPayload = z.infer<typeof CustomPageFormSchema>

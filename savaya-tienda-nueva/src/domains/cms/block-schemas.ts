@@ -146,6 +146,26 @@ export const VipSectionSchema = z.object({
 // banner_row has no stored content — it fetches from the banners table at render time
 export const BannerRowSchema = z.object({})
 
+export const ProductGridSchema = z.object({
+  eyebrow: z.string().max(60).optional(),
+  title: z.string().max(80).optional(),
+  subtitle: z.string().max(150).optional(),
+  // Filter-based source (fetches products automatically)
+  source: z.enum(['new', 'bestseller', 'featured', 'sale', 'vip', 'category', 'collection']).optional(),
+  categorySlug: z.string().optional(),
+  collectionSlug: z.string().optional(),
+  // Manual picks (slugs, one per line in admin)
+  productSlugs: z.array(z.string()).max(50).optional(),
+  limit: z.number().min(1).max(48).default(12),
+  columns: z.enum(['2', '3', '4']).default('4'),
+  ctaText: z.string().max(50).optional(),
+  ctaHref: z.string().optional(),
+})
+
+export const HtmlBlockSchema = z.object({
+  html: z.string().max(50000),
+})
+
 export const BLOCK_SCHEMAS = {
   announcement_bar: AnnouncementBarSchema,
   hero: HeroSchema,
@@ -159,6 +179,8 @@ export const BLOCK_SCHEMAS = {
   social_proof_grid: SocialProofGridSchema,
   vip_section: VipSectionSchema,
   banner_row: BannerRowSchema,
+  product_grid: ProductGridSchema,
+  html_block: HtmlBlockSchema,
 } as const
 
 export type BlockType = keyof typeof BLOCK_SCHEMAS

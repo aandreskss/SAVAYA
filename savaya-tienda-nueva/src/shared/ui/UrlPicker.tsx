@@ -118,7 +118,9 @@ export function UrlPicker({ value, onChange, placeholder = '/ruta...', className
   const catMatches = filterList(options?.categories ?? [])
   const collMatches = filterList(options?.collections ?? [])
   const prodMatches = filterList(options?.products ?? [])
-  const totalResults = staticMatches.length + catMatches.length + collMatches.length + prodMatches.length
+  const pageMatches = filterList(options?.pages ?? [])
+  const totalResults =
+    staticMatches.length + catMatches.length + collMatches.length + prodMatches.length + pageMatches.length
 
   const dropdown = open && pos ? (
     <div
@@ -149,6 +151,7 @@ export function UrlPicker({ value, onChange, placeholder = '/ruta...', className
       {!loading && (
         <div className="py-1">
           <Section title="Páginas" items={staticMatches} onPick={pick} />
+          <Section title="Páginas personalizadas" items={pageMatches} onPick={pick} />
           <Section title="Categorías" items={catMatches} onPick={pick} />
           <Section title="Colecciones" items={collMatches} onPick={pick} />
           <Section title="Productos" items={prodMatches} onPick={pick} />

@@ -350,6 +350,44 @@ export async function getActivePopup(now: Date): Promise<ActivePopup | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Custom pages (/p/[slug]) — sections for a specific page by slug
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches active sections for any page by its DB slug (e.g. 'p/nuevos').
+ * Returns null if the page doesn't exist or is inactive (triggers 404 in storefront).
+ */
+export async function getCustomPageSections(slug: string): Promise<PageSection[] | null> {
+  if (!process.env.DATABASE_URL) return []
+
+  try {
+    const [page] = await db
+      .select({ id: pages.id })
+      .from(pages)
+      .where(and(eq(pages.slug, slug), eq(pages.isActive, true)))
+      .limit(1)
+
+    if (!page) return null
+
+    const rows = await db
+      .select({
+        id: pageSections.id,
+        type: pageSections.type,
+        content: pageSections.content,
+        sortOrder: pageSections.sortOrder,
+      })
+      .from(pageSections)
+      .where(and(eq(pageSections.pageId, page.id), eq(pageSections.isActive, true)))
+      .orderBy(asc(pageSections.sortOrder))
+
+    return rows as PageSection[]
+  } catch (error) {
+    console.error(`[cms/repository] getCustomPageSections(${slug}) failed:`, error)
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Dynamic navbar — builds NavCategory[] from nav_items + DB categories
 // ---------------------------------------------------------------------------
 

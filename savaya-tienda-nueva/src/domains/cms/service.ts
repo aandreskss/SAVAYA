@@ -1,6 +1,7 @@
-import { getHomePageSections } from './repository'
+import { getHomePageSections, getCustomPageSections } from './repository'
 import { BLOCK_SCHEMAS } from './block-schemas'
 import type { BlockType, BlockContent } from './block-schemas'
+import type { PageSection } from './repository'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,28 +28,22 @@ export type ParsedBlock<T extends BlockType = BlockType> = {
  */
 export async function getHomeBlocks(): Promise<ParsedBlock[]> {
   const sections = await getHomePageSections()
-  const parsed: ParsedBlock[] = []
+  return parseSections(sections)
+}
 
+function parseSections(sections: PageSection[]): ParsedBlock[] {
+  const parsed: ParsedBlock[] = []
   for (const section of sections) {
     const schema = BLOCK_SCHEMAS[section.type as BlockType]
-
     if (!schema) {
-      console.error(
-        `[cms/service] Unknown block type "${section.type}" (id: ${section.id}) — skipping`,
-      )
+      console.error(`[cms/service] Unknown block type "${section.type}" (id: ${section.id}) — skipping`)
       continue
     }
-
     const result = schema.safeParse(section.content)
-
     if (!result.success) {
-      console.error(
-        `[cms/service] Invalid content for block "${section.type}" (id: ${section.id}):`,
-        result.error.flatten(),
-      )
+      console.error(`[cms/service] Invalid content for "${section.type}" (id: ${section.id}):`, result.error.flatten())
       continue
     }
-
     parsed.push({
       id: section.id,
       type: section.type as BlockType,
@@ -57,6 +52,15 @@ export async function getHomeBlocks(): Promise<ParsedBlock[]> {
       sortOrder: section.sortOrder,
     })
   }
-
   return parsed
+}
+
+/**
+ * Returns validated blocks for a custom page (slug = 'p/...' in DB).
+ * Returns null if the page doesn't exist or is inactive.
+ */
+export async function getCustomPageBlocks(slug: string): Promise<ParsedBlock[] | null> {
+  const sections = await getCustomPageSections(slug)
+  if (sections === null) return null
+  return parseSections(sections)
 }

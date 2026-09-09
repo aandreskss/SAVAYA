@@ -1,6 +1,6 @@
 import type { BlockType } from '@/domains/cms/block-schemas'
 
-export type AdminSectionType = BlockType | 'banner_row'
+export type AdminSectionType = BlockType
 
 export type AdminSection = {
   id: string
@@ -50,6 +50,15 @@ export type AdminNavItem = {
   isActive: boolean
 }
 
+export type AdminPage = {
+  id: string
+  slug: string    // user-facing slug without 'p/' prefix (e.g. 'nuevos')
+  title: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string }
@@ -67,4 +76,6 @@ export const BLOCK_TYPE_LABELS: Record<AdminSectionType, string> = {
   promo_banner: 'Banner promocional',
   social_proof_grid: 'Galería social',
   vip_section: 'Sección VIP ★',
+  product_grid: 'Grilla de productos',
+  html_block: 'Bloque HTML libre',
 }

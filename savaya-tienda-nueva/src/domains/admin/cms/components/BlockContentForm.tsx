@@ -16,6 +16,8 @@ import {
   PromoBannerSchema,
   SocialProofGridSchema,
   VipSectionSchema,
+  ProductGridSchema,
+  HtmlBlockSchema,
 } from '@/domains/cms/block-schemas'
 import type { AdminSection } from '../types'
 
@@ -1240,6 +1242,204 @@ function VipSectionForm({ content, onSave, isPending }: SubFormProps) {
   )
 }
 
+function ProductGridForm({ content, onSave, isPending }: SubFormProps) {
+  const parsed = ProductGridSchema.safeParse(content)
+  const d = parsed.success
+    ? parsed.data
+    : { eyebrow: '', title: '', subtitle: '', source: undefined, categorySlug: '', collectionSlug: '', productSlugs: [], limit: 12, columns: '4' as const, ctaText: '', ctaHref: '' }
+
+  const [eyebrow, setEyebrow] = useState(d.eyebrow ?? '')
+  const [title, setTitle] = useState(d.title ?? '')
+  const [subtitle, setSubtitle] = useState(d.subtitle ?? '')
+  const [source, setSource] = useState(d.source ?? '')
+  const [categorySlug, setCategorySlug] = useState(d.categorySlug ?? '')
+  const [collectionSlug, setCollectionSlug] = useState(d.collectionSlug ?? '')
+  const [productSlugsTxt, setProductSlugsTxt] = useState((d.productSlugs ?? []).join('\n'))
+  const [limit, setLimit] = useState(String(d.limit))
+  const [columns, setColumns] = useState<'2' | '3' | '4'>(d.columns)
+  const [ctaText, setCtaText] = useState(d.ctaText ?? '')
+  const [ctaHref, setCtaHref] = useState(d.ctaHref ?? '')
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const productSlugs = productSlugsTxt
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    onSave({
+      eyebrow: eyebrow || undefined,
+      title: title || undefined,
+      subtitle: subtitle || undefined,
+      source: source || undefined,
+      categorySlug: source === 'category' ? (categorySlug || undefined) : undefined,
+      collectionSlug: source === 'collection' ? (collectionSlug || undefined) : undefined,
+      productSlugs: productSlugs.length > 0 ? productSlugs : undefined,
+      limit: parseInt(limit) || 12,
+      columns,
+      ctaText: ctaText || undefined,
+      ctaHref: ctaHref || undefined,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="Eyebrow (opcional)">
+        <input
+          value={eyebrow}
+          onChange={(e) => setEyebrow(e.target.value)}
+          maxLength={60}
+          className={inputClass}
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Título (opcional)">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={80}
+            className={inputClass}
+          />
+        </Field>
+        <Field label="Subtítulo (opcional)">
+          <input
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            maxLength={150}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+
+      <div className="border border-border rounded-lg p-3 space-y-3">
+        <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">Filtro automático (opcional)</p>
+        <Field label="Fuente">
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Sin filtro automático</option>
+            <option value="new">Nuevos</option>
+            <option value="bestseller">Más vendidos</option>
+            <option value="featured">Destacados</option>
+            <option value="sale">En oferta</option>
+            <option value="vip">VIP ★</option>
+            <option value="category">Por categoría</option>
+            <option value="collection">Por colección</option>
+          </select>
+        </Field>
+        {source === 'category' && (
+          <Field label="Slug de la categoría">
+            <input
+              value={categorySlug}
+              onChange={(e) => setCategorySlug(e.target.value)}
+              placeholder="ej: sandalias"
+              className={inputClass}
+            />
+          </Field>
+        )}
+        {source === 'collection' && (
+          <Field label="Slug de la colección">
+            <input
+              value={collectionSlug}
+              onChange={(e) => setCollectionSlug(e.target.value)}
+              placeholder="ej: coleccion-verano"
+              className={inputClass}
+            />
+          </Field>
+        )}
+        {source && (
+          <Field label="Límite de productos (1–48)">
+            <input
+              type="number"
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+              min={1}
+              max={48}
+              className={inputClass}
+            />
+          </Field>
+        )}
+      </div>
+
+      <div className="border border-border rounded-lg p-3 space-y-3">
+        <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">Productos específicos (opcional)</p>
+        <Field label="Slugs de productos — uno por línea">
+          <textarea
+            value={productSlugsTxt}
+            onChange={(e) => setProductSlugsTxt(e.target.value)}
+            rows={4}
+            placeholder="sandalia-dorada-canela&#10;tacon-nude-elegante&#10;..."
+            className={`${inputClass} font-mono text-xs resize-y`}
+          />
+        </Field>
+        <p className="text-xs text-text-muted">
+          Puedes combinar filtro automático + slugs específicos. Se muestran todos (sin duplicados).
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Columnas">
+          <select
+            value={columns}
+            onChange={(e) => setColumns(e.target.value as '2' | '3' | '4')}
+            className={inputClass}
+          >
+            <option value="2">2 columnas</option>
+            <option value="3">3 columnas</option>
+            <option value="4">4 columnas</option>
+          </select>
+        </Field>
+        <Field label="Texto del CTA (opcional)">
+          <input
+            value={ctaText}
+            onChange={(e) => setCtaText(e.target.value)}
+            maxLength={50}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+      <Field label="URL del CTA (opcional)">
+        <UrlPicker value={ctaHref} onChange={setCtaHref} className={inputClass} />
+      </Field>
+      <Button type="submit" isLoading={isPending} size="sm">
+        Guardar bloque
+      </Button>
+    </form>
+  )
+}
+
+function HtmlBlockForm({ content, onSave, isPending }: SubFormProps) {
+  const parsed = HtmlBlockSchema.safeParse(content)
+  const d = parsed.success ? parsed.data : { html: '' }
+  const [html, setHtml] = useState(d.html)
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    onSave({ html })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Field label="HTML">
+        <textarea
+          value={html}
+          onChange={(e) => setHtml(e.target.value)}
+          rows={14}
+          placeholder="<section>...</section>"
+          className={`${inputClass} font-mono text-xs resize-y`}
+        />
+      </Field>
+      <div className="rounded-lg bg-surface-2 border border-border px-3 py-2.5 text-xs text-text-secondary">
+        &#9888; El HTML se renderizará tal cual en la tienda. Usa solo HTML seguro — sin scripts externos ni iframes de terceros.
+      </div>
+      <Button type="submit" isLoading={isPending} size="sm">
+        Guardar bloque
+      </Button>
+    </form>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Main switch component
 // ---------------------------------------------------------------------------
@@ -1302,6 +1502,14 @@ export function BlockContentForm({ section, onSave, isPending }: Props) {
     case 'vip_section':
       return (
         <VipSectionForm content={section.content} onSave={onSave} isPending={isPending} />
+      )
+    case 'product_grid':
+      return (
+        <ProductGridForm content={section.content} onSave={onSave} isPending={isPending} />
+      )
+    case 'html_block':
+      return (
+        <HtmlBlockForm content={section.content} onSave={onSave} isPending={isPending} />
       )
     default:
       return (

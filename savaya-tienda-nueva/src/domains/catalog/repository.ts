@@ -41,6 +41,7 @@ export type ProductFilters = {
   onlyVip?: boolean
   onlyOnSale?: boolean
   collectionSlug?: string
+  slugsIn?: string[]
   sortBy?: 'featured' | 'newest' | 'price_asc' | 'price_desc' | 'bestseller'
   page?: number
   limit?: number
@@ -218,6 +219,7 @@ function applyDevFilters(
 ): ProductListItem[] {
   let result = [...items]
 
+  if (filters.slugsIn?.length) result = result.filter((p) => filters.slugsIn!.includes(p.slug))
   if (filters.onlyNew) result = result.filter((p) => p.isNew)
   if (filters.onlyOnSale) result = result.filter((p) => p.compareAtPrice !== null)
   if (filters.onlyAvailable) result = result.filter((p) => p.hasStock)
@@ -304,6 +306,10 @@ export async function getProducts(
 
   if (filters.onlyOnSale) {
     conditions.push(sql`${products.compareAtPrice} IS NOT NULL`)
+  }
+
+  if (filters.slugsIn?.length) {
+    conditions.push(inArray(products.slug, filters.slugsIn))
   }
 
   if (filters.minPrice !== undefined) {

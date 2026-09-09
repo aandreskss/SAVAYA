@@ -6,16 +6,18 @@ import { BannersManager } from './BannersManager'
 import { PopupsManager } from './PopupsManager'
 import { GenderHeroEditor } from './GenderHeroEditor'
 import { NavbarEditor } from './NavbarEditor'
-import type { AdminSection, AdminBanner, AdminNavItem, AdminPopup } from '../types'
+import { PagesManager } from './PagesManager'
+import type { AdminSection, AdminBanner, AdminNavItem, AdminPage, AdminPopup } from '../types'
 import type { GenderHero } from '@/domains/cms/repository'
 
-type Tab = 'home' | 'hombre' | 'mujer' | 'navbar' | 'banners' | 'popups'
+type Tab = 'home' | 'hombre' | 'mujer' | 'navbar' | 'paginas' | 'banners' | 'popups'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'home', label: 'Página home' },
   { id: 'hombre', label: 'Hombre' },
   { id: 'mujer', label: 'Mujer' },
   { id: 'navbar', label: 'Navbar' },
+  { id: 'paginas', label: 'Páginas' },
   { id: 'banners', label: 'Banners' },
   { id: 'popups', label: 'Popups' },
 ]
@@ -25,11 +27,20 @@ type Props = {
   banners: AdminBanner[]
   popups: AdminPopup[]
   navItems: AdminNavItem[]
+  customPages: AdminPage[]
   hombreHero: GenderHero | null
   mujerHero: GenderHero | null
 }
 
-export function ContenidoView({ sections, banners, popups, navItems, hombreHero, mujerHero }: Props) {
+export function ContenidoView({
+  sections,
+  banners,
+  popups,
+  navItems,
+  customPages,
+  hombreHero,
+  mujerHero,
+}: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('home')
 
   return (
@@ -57,6 +68,7 @@ export function ContenidoView({ sections, banners, popups, navItems, hombreHero,
       {activeTab === 'hombre' && <GenderHeroEditor slug="hombre" initial={hombreHero} />}
       {activeTab === 'mujer' && <GenderHeroEditor slug="mujer" initial={mujerHero} />}
       {activeTab === 'navbar' && <NavbarEditor initialItems={navItems} />}
+      {activeTab === 'paginas' && <PagesManager initialPages={customPages} />}
       {activeTab === 'banners' && <BannersManager initialBanners={banners} />}
       {activeTab === 'popups' && <PopupsManager initialPopups={popups} />}
     </div>
