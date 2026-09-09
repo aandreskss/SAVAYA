@@ -335,11 +335,7 @@ function ShopByCategoryForm({ content, onSave, isPending }: SubFormProps) {
           />
         </Field>
         <Field label="URL del CTA (opcional)">
-          <input
-            value={ctaHref}
-            onChange={(e) => setCtaHref(e.target.value)}
-            className={inputClass}
-          />
+          <UrlPicker value={ctaHref} onChange={setCtaHref} className={inputClass} />
         </Field>
       </div>
       <div className="space-y-3">
