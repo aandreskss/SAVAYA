@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Select } from '@/shared/ui/Select'
 import { Toggle } from '@/shared/ui/Toggle'
+import { UrlPicker } from '@/shared/ui/UrlPicker'
 import { toast } from '@/shared/ui'
 import {
   createNavItemAction,
@@ -198,12 +199,14 @@ export function NavbarEditor({ initialItems }: Props) {
           </div>
 
           {form.type === 'link' && (
-            <Input
-              label="URL destino"
-              value={form.href}
-              onChange={(e) => setForm((f) => ({ ...f, href: e.target.value }))}
-              hint="Ej: /nuevos, /ofertas, /coleccion/verano"
-            />
+            <div className="space-y-1">
+              <label className="font-sans text-sm font-medium text-text-primary">URL destino</label>
+              <UrlPicker
+                value={form.href}
+                onChange={(url) => setForm((f) => ({ ...f, href: url }))}
+                placeholder="/nuevos, /ofertas, /coleccion/verano..."
+              />
+            </div>
           )}
 
           {form.type === 'category_group' && (
@@ -217,12 +220,15 @@ export function NavbarEditor({ initialItems }: Props) {
                 <option value="mujer">Mujer</option>
                 <option value="hombre">Hombre</option>
               </Select>
-              <Input
-                label="URL del encabezado"
-                value={form.href}
-                onChange={(e) => setForm((f) => ({ ...f, href: e.target.value }))}
-                hint="Ej: /mujer o /hombre (para el clic en el label)"
-              />
+              <div className="space-y-1">
+                <label className="font-sans text-sm font-medium text-text-primary">URL del encabezado</label>
+                <UrlPicker
+                  value={form.href}
+                  onChange={(url) => setForm((f) => ({ ...f, href: url }))}
+                  placeholder="/mujer o /hombre..."
+                />
+                <p className="text-xs text-text-muted">Para el clic en el label del menú</p>
+              </div>
             </div>
           )}
 
