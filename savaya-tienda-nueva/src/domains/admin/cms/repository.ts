@@ -1,7 +1,7 @@
 import { eq, asc, desc, and } from 'drizzle-orm'
 import { db } from '@/shared/lib/db'
-import { pages, pageSections, pageSectionTypeEnum, banners, popups } from '@/domains/cms/schema'
-import type { AdminSection, AdminBanner, AdminPopup } from './types'
+import { pages, pageSections, pageSectionTypeEnum, banners, popups, navItems } from '@/domains/cms/schema'
+import type { AdminSection, AdminBanner, AdminPopup, AdminNavItem } from './types'
 
 // ---------------------------------------------------------------------------
 // Sections
@@ -286,4 +286,103 @@ export async function updateAdminPopup(id: string, data: PopupInput): Promise<vo
 
 export async function deleteAdminPopup(id: string): Promise<void> {
   await db.delete(popups).where(eq(popups.id, id))
+}
+
+// ---------------------------------------------------------------------------
+// Nav items CRUD
+// ---------------------------------------------------------------------------
+
+export async function listAdminNavItems(): Promise<AdminNavItem[]> {
+  const rows = await db
+    .select({
+      id: navItems.id,
+      label: navItems.label,
+      href: navItems.href,
+      type: navItems.type,
+      gender: navItems.gender,
+      sortOrder: navItems.sortOrder,
+      isActive: navItems.isActive,
+    })
+    .from(navItems)
+    .orderBy(asc(navItems.sortOrder))
+
+  return rows.map((r) => ({
+    id: r.id,
+    label: r.label,
+    href: r.href,
+    type: r.type as 'link' | 'category_group',
+    gender: (r.gender ?? null) as 'mujer' | 'hombre' | null,
+    sortOrder: r.sortOrder,
+    isActive: r.isActive,
+  }))
+}
+
+type NavItemInput = {
+  label: string
+  href: string | null
+  type: string
+  gender: string | null
+  sortOrder: number
+  isActive: boolean
+}
+
+export async function createAdminNavItem(data: NavItemInput): Promise<AdminNavItem> {
+  const [row] = await db
+    .insert(navItems)
+    .values({
+      label: data.label,
+      href: data.href,
+      type: data.type,
+      gender: data.gender,
+      sortOrder: data.sortOrder,
+      isActive: data.isActive,
+    })
+    .returning()
+
+  return {
+    id: row.id,
+    label: row.label,
+    href: row.href,
+    type: row.type as 'link' | 'category_group',
+    gender: (row.gender ?? null) as 'mujer' | 'hombre' | null,
+    sortOrder: row.sortOrder,
+    isActive: row.isActive,
+  }
+}
+
+export async function updateAdminNavItem(id: string, data: NavItemInput): Promise<void> {
+  await db
+    .update(navItems)
+    .set({
+      label: data.label,
+      href: data.href,
+      type: data.type,
+      gender: data.gender,
+      sortOrder: data.sortOrder,
+      isActive: data.isActive,
+      updatedAt: new Date(),
+    })
+    .where(eq(navItems.id, id))
+}
+
+export async function deleteAdminNavItem(id: string): Promise<void> {
+  await db.delete(navItems).where(eq(navItems.id, id))
+}
+
+export async function reorderAdminNavItems(
+  items: { id: string; sortOrder: number }[],
+): Promise<void> {
+  for (const item of items) {
+    await db
+      .update(navItems)
+      .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
+      .where(eq(navItems.id, item.id))
+  }
+}
+
+export async function toggleAdminNavItem(id: string, isActive: boolean): Promise<void> {
+  await db
+    .update(navItems)
+    .set({ isActive, updatedAt: new Date() })
+    .where(eq(navItems.id, id))
 }

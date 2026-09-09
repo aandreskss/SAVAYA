@@ -113,6 +113,25 @@ export const popups = pgTable(
   ],
 )
 
+export const navItems = pgTable(
+  'nav_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    label: text('label').notNull(),
+    href: text('href'),
+    type: text('type').notNull().default('link'),
+    gender: text('gender'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('nav_items_is_active_idx').on(t.isActive),
+    index('nav_items_sort_order_idx').on(t.sortOrder),
+  ],
+)
+
 // ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------

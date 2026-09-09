@@ -72,6 +72,7 @@ export const SaveCategorySchema = z.object({
     .url()
     .nullable()
     .or(z.literal('').transform((): null => null)),
+  gender: z.enum(['mujer', 'hombre', 'unisex']).default('unisex'),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().min(0).default(0),
 })

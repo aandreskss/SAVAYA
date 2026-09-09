@@ -1,4 +1,4 @@
-import { eq, and, lte, gte, or, isNull, asc } from 'drizzle-orm'
+import { eq, and, lte, gte, or, isNull, asc, inArray } from 'drizzle-orm'
 
 export type GenderHero = {
   imageDesktopUrl: string
@@ -9,8 +9,10 @@ export type GenderHero = {
   ctaSecondaryHref: string | null
 }
 import { db } from '@/shared/lib/db'
-import { pages, pageSections, banners, popups } from './schema'
+import { pages, pageSections, banners, popups, navItems } from './schema'
+import { categories } from '@/domains/catalog/schema'
 import type { BlockType } from './block-schemas'
+import type { NavCategory } from '@/domains/catalog/nav-config'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -344,5 +346,95 @@ export async function getActivePopup(now: Date): Promise<ActivePopup | null> {
   } catch (error) {
     console.error('[cms/repository] getActivePopup failed:', error)
     return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic navbar — builds NavCategory[] from nav_items + DB categories
+// ---------------------------------------------------------------------------
+
+export async function buildNavCategories(): Promise<NavCategory[]> {
+  if (!process.env.DATABASE_URL) {
+    // Dev fallback — mirrors the old static config
+    return [
+      {
+        label: 'Mujer',
+        href: '/mujer',
+        subcategories: [
+          { name: 'Sandalias', href: '/categoria/sandalias' },
+          { name: 'Tacones', href: '/categoria/tacones' },
+          { name: 'Sneakers', href: '/categoria/sneakers' },
+        ],
+      },
+      {
+        label: 'Hombre',
+        href: '/hombre',
+        subcategories: [
+          { name: 'Sneakers', href: '/categoria/sneakers' },
+          { name: 'Botas', href: '/categoria/botas' },
+        ],
+      },
+      { label: 'Nuevos', href: '/nuevos' },
+      { label: 'Ofertas', href: '/ofertas' },
+    ]
+  }
+
+  try {
+    const items = await db
+      .select({
+        id: navItems.id,
+        label: navItems.label,
+        href: navItems.href,
+        type: navItems.type,
+        gender: navItems.gender,
+        sortOrder: navItems.sortOrder,
+      })
+      .from(navItems)
+      .where(eq(navItems.isActive, true))
+      .orderBy(asc(navItems.sortOrder))
+
+    // Fetch all categories needed for category_group items in one query
+    const genderGroups = items
+      .filter((i) => i.type === 'category_group' && i.gender)
+      .map((i) => i.gender as string)
+
+    let catRows: { name: string; slug: string; gender: string }[] = []
+    if (genderGroups.length > 0) {
+      catRows = await db
+        .select({ name: categories.name, slug: categories.slug, gender: categories.gender })
+        .from(categories)
+        .where(
+          and(
+            eq(categories.isActive, true),
+            or(
+              inArray(categories.gender, genderGroups),
+              eq(categories.gender, 'unisex'),
+            ),
+          ),
+        )
+        .orderBy(asc(categories.sortOrder), asc(categories.name))
+    }
+
+    return items.map((item): NavCategory => {
+      if (item.type === 'category_group' && item.gender) {
+        const subs = catRows
+          .filter((c) => c.gender === item.gender || c.gender === 'unisex')
+          .map((c) => ({ name: c.name, href: `/categoria/${c.slug}` }))
+
+        return {
+          label: item.label,
+          href: item.href ?? `/${item.gender}`,
+          subcategories: subs.length > 0 ? subs : undefined,
+        }
+      }
+
+      return {
+        label: item.label,
+        href: item.href ?? '/',
+      }
+    })
+  } catch (error) {
+    console.error('[cms/repository] buildNavCategories failed:', error)
+    return []
   }
 }

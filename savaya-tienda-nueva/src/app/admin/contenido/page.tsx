@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { Skeleton } from '@/shared/ui/Skeleton'
-import { getAdminSections, listAdminBanners, listAdminPopups, getGenderHeroContent } from '@/domains/admin/cms/repository'
+import { getAdminSections, listAdminBanners, listAdminPopups, getGenderHeroContent, listAdminNavItems } from '@/domains/admin/cms/repository'
 import { ContenidoView } from '@/domains/admin/cms/components/ContenidoView'
 import type { GenderHero } from '@/domains/cms/repository'
 
@@ -9,10 +9,11 @@ export const metadata = {
 }
 
 async function ContenidoData() {
-  const [sections, banners, popups, hombreHero, mujerHero] = await Promise.all([
+  const [sections, banners, popups, navItems, hombreHero, mujerHero] = await Promise.all([
     getAdminSections('home'),
     listAdminBanners(),
     listAdminPopups(),
+    listAdminNavItems(),
     getGenderHeroContent('hombre'),
     getGenderHeroContent('mujer'),
   ])
@@ -22,6 +23,7 @@ async function ContenidoData() {
       sections={sections}
       banners={banners}
       popups={popups}
+      navItems={navItems}
       hombreHero={hombreHero as GenderHero | null}
       mujerHero={mujerHero as GenderHero | null}
     />

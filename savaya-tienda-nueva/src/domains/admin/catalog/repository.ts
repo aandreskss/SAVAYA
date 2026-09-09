@@ -972,6 +972,7 @@ export async function listAdminCategories(): Promise<AdminCategoryRow[]> {
     slug: string
     parent_id: string | null
     parent_name: string | null
+    gender: string
     is_active: boolean
     sort_order: number
     product_count: string
@@ -984,6 +985,7 @@ export async function listAdminCategories(): Promise<AdminCategoryRow[]> {
       c.slug,
       c.parent_id,
       p.name AS parent_name,
+      c.gender,
       c.is_active,
       c.sort_order,
       (SELECT COUNT(*) FROM products pr WHERE pr.category_id = c.id AND pr.is_active = true) AS product_count
@@ -998,6 +1000,7 @@ export async function listAdminCategories(): Promise<AdminCategoryRow[]> {
     slug: r.slug,
     parentId: r.parent_id,
     parentName: r.parent_name,
+    gender: (r.gender ?? 'unisex') as 'mujer' | 'hombre' | 'unisex',
     isActive: r.is_active,
     sortOrder: r.sort_order,
     productCount: num(r.product_count),
@@ -1027,6 +1030,7 @@ export async function createCategory(
       description: data.description,
       parentId: data.parentId,
       imageUrl: data.imageUrl,
+      gender: data.gender,
       isActive: data.isActive,
       sortOrder: data.sortOrder,
     })
@@ -1060,6 +1064,7 @@ export async function updateCategory(
       description: data.description,
       parentId: data.parentId,
       imageUrl: data.imageUrl,
+      gender: data.gender,
       isActive: data.isActive,
       sortOrder: data.sortOrder,
       updatedAt: new Date(),

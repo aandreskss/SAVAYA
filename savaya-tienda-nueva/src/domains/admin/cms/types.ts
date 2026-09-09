@@ -40,6 +40,16 @@ export type AdminPopup = {
   createdAt: Date
 }
 
+export type AdminNavItem = {
+  id: string
+  label: string
+  href: string | null
+  type: 'link' | 'category_group'
+  gender: 'mujer' | 'hombre' | null
+  sortOrder: number
+  isActive: boolean
+}
+
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string }

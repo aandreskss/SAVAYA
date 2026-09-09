@@ -252,6 +252,19 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - `canScrollRight` se inicializa en `true` pero debe medirse desde el DOM real al montar. Sin `useEffect`, las flechas de navegación aparecen en desktop (donde el contenedor es un `md:grid` sin overflow) y no hacen nada al clic.
 - **Siempre agrega `useEffect(() => { updateScrollState() }, [updateScrollState])`** junto al `onScroll` handler. Esto garantiza que las flechas solo aparezcan cuando realmente hay contenido fuera del viewport.
 
+### 8.17 Navbar dinámico desde DB
+
+- **Tabla `nav_items`** en `src/domains/cms/schema.ts`: campos `label`, `href`, `type` (`link` | `category_group`), `gender` (nullable, `mujer` | `hombre`), `sort_order`, `is_active`.
+- **`buildNavCategories()`** en `src/domains/cms/repository.ts`: obtiene nav_items activos + subcategorías desde DB. Para `category_group`, las subcategorías son categorías con `gender = item.gender OR gender = 'unisex'`.
+- **`Navbar.tsx`** es async server component — llama a `buildNavCategories()` directamente. No más `NAV_CATEGORIES` estático de `nav-config.ts`.
+- **Admin:** pestaña "Navbar" en Contenido → `NavbarEditor.tsx` — CRUD completo de nav_items con reordenamiento (↑ ↓), toggle activo/inactivo, crear/editar/eliminar.
+- **Categorías con género:** tabla `categories` tiene columna `gender` (`mujer` | `hombre` | `unisex`, default `unisex`). El admin de categorías muestra un select de género. Las categorías `unisex` aparecen en ambos dropdowns (Mujer y Hombre).
+- **Revalidación:** toda mutación de nav_items llama `revalidatePath('/', 'layout')` para refrescar el navbar en todo el sitio.
+
+### 8.18 UrlPicker — páginas estáticas completas
+
+- El array `STATIC_PAGES` en `src/shared/ui/UrlPicker.tsx` incluye: `/`, `/mujer`, `/hombre`, `/nuevos`, `/ofertas`, y las páginas informativas. Agregar rutas nuevas del sitio aquí cuando se creen.
+
 ### 8.16 SEO — structured data y metadatos
 
 - **FAQPage JSON-LD** en `/preguntas-frecuentes/page.tsx`: se genera dinámicamente desde `FAQ_SECTIONS`. Al agregar una pregunta al array se refleja automáticamente en el schema. Habilita rich snippets de preguntas en la SERP de Google.

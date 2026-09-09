@@ -26,6 +26,7 @@ export default async function EditarCategoriaPage({
           description: category.description,
           parentId: category.parentId,
           imageUrl: category.imageUrl,
+          gender: (category.gender ?? 'unisex') as 'mujer' | 'hombre' | 'unisex',
           isActive: category.isActive,
           sortOrder: category.sortOrder,
         }}

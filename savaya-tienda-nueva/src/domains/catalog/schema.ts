@@ -38,6 +38,7 @@ export const categories = pgTable(
     description: text('description'),
     parentId: uuid('parent_id'),
     imageUrl: text('image_url'),
+    gender: text('gender').notNull().default('unisex'),
     isActive: boolean('is_active').notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

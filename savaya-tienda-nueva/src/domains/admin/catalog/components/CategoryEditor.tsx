@@ -18,6 +18,7 @@ type CategoryData = {
   description: string | null
   parentId: string | null
   imageUrl: string | null
+  gender: 'mujer' | 'hombre' | 'unisex'
   isActive: boolean
   sortOrder: number
 }
@@ -36,6 +37,7 @@ export function CategoryEditor({ category, parentOptions }: Props) {
   const [description, setDescription] = useState(category?.description ?? '')
   const [parentId, setParentId] = useState(category?.parentId ?? '')
   const [imageUrl, setImageUrl] = useState(category?.imageUrl ?? '')
+  const [gender, setGender] = useState<'mujer' | 'hombre' | 'unisex'>(category?.gender ?? 'unisex')
   const [isActive, setIsActive] = useState(category?.isActive ?? true)
   const [sortOrder, setSortOrder] = useState(String(category?.sortOrder ?? 0))
 
@@ -53,6 +55,7 @@ export function CategoryEditor({ category, parentOptions }: Props) {
         description: description || null,
         parentId: parentId || null,
         imageUrl: imageUrl || null,
+        gender,
         isActive,
         sortOrder: parseInt(sortOrder) || 0,
       })
@@ -120,6 +123,18 @@ export function CategoryEditor({ category, parentOptions }: Props) {
             ))}
           </Select>
 
+          <Select
+            label="Género"
+            value={gender}
+            onChange={(e) => setGender(e.target.value as 'mujer' | 'hombre' | 'unisex')}
+          >
+            <option value="unisex">Unisex (aparece en ambos)</option>
+            <option value="mujer">Mujer</option>
+            <option value="hombre">Hombre</option>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             label="Orden"
             type="number"

@@ -52,6 +52,21 @@ export const CreateSectionSchema = z.object({
   type: z.string().min(1),
 })
 
+export const NavItemFormSchema = z.object({
+  label: z.string().min(1, 'El label es requerido').max(60),
+  type: z.enum(['link', 'category_group']),
+  href: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((v) => v || null),
+  gender: z.enum(['mujer', 'hombre']).nullable().optional(),
+  sortOrder: z.number().int().min(0).default(0),
+  isActive: z.boolean().default(true),
+})
+
+export type NavItemFormPayload = z.infer<typeof NavItemFormSchema>
+
 export const DeleteSectionSchema = z.object({
   sectionId: z.string().uuid(),
 })

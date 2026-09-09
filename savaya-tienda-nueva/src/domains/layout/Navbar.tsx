@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NAV_CATEGORIES } from '@/domains/catalog/nav-config'
+import { buildNavCategories } from '@/domains/cms/repository'
 import { NavDesktop } from './NavDesktop'
 import { NavMobile } from './NavMobile'
 import { NavActions } from './NavActions'
@@ -10,6 +10,7 @@ import { SavayaLogo } from './SavayaLogo'
 export async function Navbar() {
   const isLoggedIn = false
   const cartCount = 0
+  const navCategories = await buildNavCategories()
 
   return (
     <NavScrollWrapper>
@@ -39,7 +40,7 @@ export async function Navbar() {
 
         {/* Menú desktop — centrado */}
         <div className="flex-1 flex justify-center">
-          <NavDesktop categories={NAV_CATEGORIES} />
+          <NavDesktop categories={navCategories} />
         </div>
 
         {/* Acciones */}
@@ -47,7 +48,7 @@ export async function Navbar() {
       </nav>
 
       {/* Menú mobile */}
-      <NavMobile categories={NAV_CATEGORIES} />
+      <NavMobile categories={navCategories} />
     </NavScrollWrapper>
   )
 }

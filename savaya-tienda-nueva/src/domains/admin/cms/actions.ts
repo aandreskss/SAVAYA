@@ -18,6 +18,11 @@ import {
   updateAdminPopup,
   deleteAdminPopup,
   upsertGenderHeroSection,
+  createAdminNavItem,
+  updateAdminNavItem,
+  deleteAdminNavItem,
+  reorderAdminNavItems,
+  toggleAdminNavItem,
 } from './repository'
 import {
   ReorderSectionsSchema,
@@ -27,10 +32,12 @@ import {
   DeleteSectionSchema,
   BannerFormSchema,
   PopupFormSchema,
+  NavItemFormSchema,
   type BannerFormPayload,
   type PopupFormPayload,
+  type NavItemFormPayload,
 } from './validators'
-import type { ActionResult, AdminBanner, AdminPopup, AdminSection } from './types'
+import type { ActionResult, AdminBanner, AdminNavItem, AdminPopup, AdminSection } from './types'
 import {
   getAllCategorySlugsForPicker,
   getAllCollectionSlugsForPicker,
@@ -469,5 +476,128 @@ export async function updateGenderHeroAction(
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: `Error al guardar el banner de /${slug}` }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Nav items
+// ---------------------------------------------------------------------------
+
+function revalidateNav() {
+  revalidatePath('/', 'layout')
+  revalidatePath('/admin/contenido')
+}
+
+export async function createNavItemAction(
+  payload: NavItemFormPayload,
+): Promise<ActionResult<AdminNavItem>> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para editar contenido' }
+  }
+
+  const parsed = NavItemFormSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' }
+  }
+
+  try {
+    const item = await createAdminNavItem({
+      label: parsed.data.label,
+      href: parsed.data.href ?? null,
+      type: parsed.data.type,
+      gender: parsed.data.gender ?? null,
+      sortOrder: parsed.data.sortOrder,
+      isActive: parsed.data.isActive,
+    })
+    revalidateNav()
+    return { success: true, data: item }
+  } catch {
+    return { success: false, error: 'Error al crear el ítem de navegación' }
+  }
+}
+
+export async function updateNavItemAction(
+  id: string,
+  payload: NavItemFormPayload,
+): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para editar contenido' }
+  }
+
+  const parsed = NavItemFormSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' }
+  }
+
+  try {
+    await updateAdminNavItem(id, {
+      label: parsed.data.label,
+      href: parsed.data.href ?? null,
+      type: parsed.data.type,
+      gender: parsed.data.gender ?? null,
+      sortOrder: parsed.data.sortOrder,
+      isActive: parsed.data.isActive,
+    })
+    revalidateNav()
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al actualizar el ítem de navegación' }
+  }
+}
+
+export async function deleteNavItemAction(id: string): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso para eliminar ítems de navegación' }
+  }
+
+  try {
+    await deleteAdminNavItem(id)
+    revalidateNav()
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al eliminar el ítem de navegación' }
+  }
+}
+
+export async function reorderNavItemsAction(
+  items: { id: string; sortOrder: number }[],
+): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso' }
+  }
+
+  try {
+    await reorderAdminNavItems(items)
+    revalidateNav()
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al reordenar' }
+  }
+}
+
+export async function toggleNavItemAction(
+  id: string,
+  isActive: boolean,
+): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso' }
+  }
+
+  try {
+    await toggleAdminNavItem(id, isActive)
+    revalidateNav()
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al actualizar el ítem' }
   }
 }

@@ -11,6 +11,10 @@ import type { SiteUrlOption, SiteUrlOptions } from '@/domains/admin/cms/actions'
 
 const STATIC_PAGES: SiteUrlOption[] = [
   { label: 'Inicio', url: '/' },
+  { label: 'Mujer', url: '/mujer' },
+  { label: 'Hombre', url: '/hombre' },
+  { label: 'Nuevos', url: '/nuevos' },
+  { label: 'Ofertas', url: '/ofertas' },
   { label: 'Nosotros', url: '/nosotros' },
   { label: 'Tiendas', url: '/tiendas' },
   { label: 'Contacto', url: '/contacto' },

@@ -77,6 +77,7 @@ export type AdminCategoryRow = {
   slug: string
   parentId: string | null
   parentName: string | null
+  gender: 'mujer' | 'hombre' | 'unisex'
   isActive: boolean
   sortOrder: number
   productCount: number
@@ -176,6 +177,7 @@ export type SaveCategoryPayload = {
   description: string | null
   parentId: string | null
   imageUrl: string | null
+  gender: 'mujer' | 'hombre' | 'unisex'
   isActive: boolean
   sortOrder: number
 }
