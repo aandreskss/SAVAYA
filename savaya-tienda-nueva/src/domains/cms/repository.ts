@@ -441,7 +441,7 @@ export async function buildNavCategories(): Promise<NavCategory[]> {
       if (item.type === 'category_group' && item.gender) {
         const subs = catRows
           .filter((c) => c.gender === item.gender || c.gender === 'unisex')
-          .map((c) => ({ name: c.name, href: `/categoria/${c.slug}` }))
+          .map((c) => ({ name: c.name, href: `/${item.gender}/categoria/${c.slug}` }))
 
         return {
           label: item.label,

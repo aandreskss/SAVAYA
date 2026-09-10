@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import {
   getCategoryBySlug,
@@ -40,16 +40,20 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     category.seoDescription ??
     `Descubre nuestra colección de ${category.name.toLowerCase()} venezolano de autor`
 
+  const genderPrefix =
+    category.gender === 'hombre' ? '/hombre' : category.gender === 'mujer' ? '/mujer' : ''
+  const canonicalPath = `${genderPrefix}/categoria/${slug}`
+
   return {
     title,
     description,
     alternates: {
-      canonical: `${BASE_URL}/categoria/${slug}`,
+      canonical: `${BASE_URL}${canonicalPath}`,
     },
     openGraph: {
       title,
       description,
-      url: `${BASE_URL}/categoria/${slug}`,
+      url: `${BASE_URL}${canonicalPath}`,
       siteName: 'SAVAYA',
       locale: 'es_VE',
       type: 'website',
@@ -64,6 +68,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const category = await getCategoryBySlug(slug)
   if (!category) notFound()
+
+  if (category.gender === 'hombre') redirect(`/hombre/categoria/${slug}`)
+  if (category.gender === 'mujer') redirect(`/mujer/categoria/${slug}`)
 
   const parsedParams = parsePLPSearchParams(rawParams)
   const filters = searchParamsToFilters(parsedParams, slug)
