@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { Skeleton } from '@/shared/ui/Skeleton'
+import { auth } from '@/domains/auth/auth'
 import {
   getAdminSections,
   listAdminBanners,
@@ -16,15 +17,20 @@ export const metadata = {
 }
 
 async function ContenidoData() {
-  const [sections, banners, popups, navItems, customPages, hombreHero, mujerHero] = await Promise.all([
-    getAdminSections('home'),
-    listAdminBanners(),
-    listAdminPopups(),
-    listAdminNavItems(),
-    listAdminCustomPages(),
-    getGenderHeroContent('hombre'),
-    getGenderHeroContent('mujer'),
-  ])
+  const [sections, banners, popups, navItems, customPages, hombreHero, mujerHero, session] =
+    await Promise.all([
+      getAdminSections('home'),
+      listAdminBanners(),
+      listAdminPopups(),
+      listAdminNavItems(),
+      listAdminCustomPages(),
+      getGenderHeroContent('hombre'),
+      getGenderHeroContent('mujer'),
+      auth(),
+    ])
+
+  const permissions = (session?.user?.permissions ?? []) as string[]
+  const showPages = permissions.includes('exchange_rates:override')
 
   return (
     <ContenidoView
@@ -35,6 +41,7 @@ async function ContenidoData() {
       customPages={customPages}
       hombreHero={hombreHero as GenderHero | null}
       mujerHero={mujerHero as GenderHero | null}
+      showPages={showPages}
     />
   )
 }

@@ -30,6 +30,7 @@ type Props = {
   customPages: AdminPage[]
   hombreHero: GenderHero | null
   mujerHero: GenderHero | null
+  showPages?: boolean
 }
 
 export function ContenidoView({
@@ -40,14 +41,17 @@ export function ContenidoView({
   customPages,
   hombreHero,
   mujerHero,
+  showPages = false,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('home')
+
+  const visibleTabs = showPages ? TABS : TABS.filter((t) => t.id !== 'paginas')
 
   return (
     <div className="space-y-6">
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border overflow-x-auto">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
