@@ -458,6 +458,7 @@ export async function deletePopupAction(id: string): Promise<ActionResult> {
 export type GenderHeroPayload = {
   imageDesktopUrl: string
   overlayOpacity: number
+  tagline: string
   ctaPrimaryText: string
   ctaPrimaryHref: string
   ctaSecondaryText: string
@@ -478,6 +479,7 @@ export async function updateGenderHeroAction(
     await upsertGenderHeroSection(slug, {
       imageDesktopUrl: payload.imageDesktopUrl,
       overlayOpacity: payload.overlayOpacity,
+      tagline: payload.tagline || undefined,
       ctaPrimaryText: payload.ctaPrimaryText,
       ctaPrimaryHref: payload.ctaPrimaryHref,
       ctaSecondaryText: payload.ctaSecondaryText || undefined,

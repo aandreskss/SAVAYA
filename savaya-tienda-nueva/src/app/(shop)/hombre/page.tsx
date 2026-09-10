@@ -55,6 +55,7 @@ export default async function HombrePage({ searchParams }: Props) {
 
   const heroImage = hero?.imageDesktopUrl ?? 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=1600&q=80'
   const heroOverlay = hero?.overlayOpacity ?? 0.88
+  const heroTagline = hero?.tagline ?? 'Sneakers · Botas · Loafers · Zapatos Formales'
   const cta1Text = hero?.ctaPrimaryText ?? 'Ver Sneakers'
   const cta1Href = hero?.ctaPrimaryHref ?? '/hombre/categoria/sneakers'
   const cta2Text = hero?.ctaSecondaryText ?? 'Botas'
@@ -113,9 +114,9 @@ export default async function HombrePage({ searchParams }: Props) {
           <h1 className="font-display font-black text-[52px] md:text-[80px] uppercase text-white leading-none tracking-tight mb-4">
             Para<br />Él
           </h1>
-          <p className="text-white/60 text-sm mb-7 max-w-xs">
-            Sneakers · Botas · Loafers · Zapatos Formales
-          </p>
+          {heroTagline && (
+            <p className="text-white/60 text-sm mb-7 max-w-xs">{heroTagline}</p>
+          )}
           <div className="flex gap-3 flex-wrap">
             <Link
               href={cta1Href}

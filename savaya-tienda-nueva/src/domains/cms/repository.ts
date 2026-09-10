@@ -3,6 +3,7 @@ import { eq, and, lte, gte, or, isNull, asc, inArray } from 'drizzle-orm'
 export type GenderHero = {
   imageDesktopUrl: string
   overlayOpacity: number
+  tagline?: string | null
   ctaPrimaryText: string
   ctaPrimaryHref: string
   ctaSecondaryText: string | null

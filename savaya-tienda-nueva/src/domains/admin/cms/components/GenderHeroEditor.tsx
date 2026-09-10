@@ -22,6 +22,7 @@ const DEFAULTS: Record<'hombre' | 'mujer', GenderHero> = {
   hombre: {
     imageDesktopUrl: 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=1600&q=80',
     overlayOpacity: 0.88,
+    tagline: 'Sneakers · Botas · Loafers · Zapatos Formales',
     ctaPrimaryText: 'Ver Sneakers',
     ctaPrimaryHref: '/hombre/categoria/sneakers',
     ctaSecondaryText: 'Botas',
@@ -30,6 +31,7 @@ const DEFAULTS: Record<'hombre' | 'mujer', GenderHero> = {
   mujer: {
     imageDesktopUrl: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=1600&q=80',
     overlayOpacity: 0.72,
+    tagline: 'Sandalias · Tacones · Plataformas · Flats · Botas',
     ctaPrimaryText: 'Ver Sandalias',
     ctaPrimaryHref: '/mujer/categoria/sandalias',
     ctaSecondaryText: 'Tacones',
@@ -43,6 +45,7 @@ export function GenderHeroEditor({ slug, initial }: Props) {
 
   const [imageDesktopUrl, setImageDesktopUrl] = useState(data.imageDesktopUrl)
   const [overlayOpacity, setOverlayOpacity] = useState(String(data.overlayOpacity))
+  const [tagline, setTagline] = useState(data.tagline ?? defaults.tagline ?? '')
   const [ctaPrimaryText, setCtaPrimaryText] = useState(data.ctaPrimaryText)
   const [ctaPrimaryHref, setCtaPrimaryHref] = useState(data.ctaPrimaryHref)
   const [ctaSecondaryText, setCtaSecondaryText] = useState(data.ctaSecondaryText ?? '')
@@ -54,6 +57,7 @@ export function GenderHeroEditor({ slug, initial }: Props) {
     const payload: GenderHeroPayload = {
       imageDesktopUrl,
       overlayOpacity: parseFloat(overlayOpacity) || defaults.overlayOpacity,
+      tagline,
       ctaPrimaryText,
       ctaPrimaryHref,
       ctaSecondaryText,
@@ -103,6 +107,20 @@ export function GenderHeroEditor({ slug, initial }: Props) {
             {parseFloat(overlayOpacity).toFixed(2)}
           </span>
         </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className={labelClass}>Tagline del hero</label>
+        <input
+          value={tagline}
+          onChange={(e) => setTagline(e.target.value)}
+          maxLength={100}
+          className={inputClass}
+          placeholder={defaults.tagline ?? 'Ej: Sneakers · Botas · Loafers'}
+        />
+        <p className="text-xs text-text-secondary">
+          Texto descriptivo bajo el título "Para {slug === 'hombre' ? 'Él' : 'Ella'}". Dejar vacío para ocultar.
+        </p>
       </div>
 
       <div className="border border-border rounded-lg p-4 space-y-3">

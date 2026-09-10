@@ -55,6 +55,7 @@ export default async function MujerPage({ searchParams }: Props) {
 
   const heroImage = hero?.imageDesktopUrl ?? 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=1600&q=80'
   const heroOverlay = hero?.overlayOpacity ?? 0.72
+  const heroTagline = hero?.tagline ?? 'Sandalias · Tacones · Plataformas · Flats · Botas'
   const cta1Text = hero?.ctaPrimaryText ?? 'Ver Sandalias'
   const cta1Href = hero?.ctaPrimaryHref ?? '/mujer/categoria/sandalias'
   const cta2Text = hero?.ctaSecondaryText ?? 'Tacones'
@@ -102,9 +103,9 @@ export default async function MujerPage({ searchParams }: Props) {
           <h1 className="font-display font-black text-[52px] md:text-[80px] uppercase text-white leading-none tracking-tight mb-4">
             Para<br />Ella
           </h1>
-          <p className="text-white/75 text-sm mb-7 max-w-xs">
-            Sandalias · Tacones · Plataformas · Flats · Botas
-          </p>
+          {heroTagline && (
+            <p className="text-white/75 text-sm mb-7 max-w-xs">{heroTagline}</p>
+          )}
           <div className="flex gap-3 flex-wrap">
             <Link
               href={cta1Href}
