@@ -258,7 +258,7 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 ### 8.17 Navbar dinámico desde DB
 
 - **Tabla `nav_items`** en `src/domains/cms/schema.ts`: campos `label`, `href`, `type` (`link` | `category_group`), `gender` (nullable, `mujer` | `hombre`), `sort_order`, `is_active`.
-- **`buildNavCategories()`** en `src/domains/cms/repository.ts`: obtiene nav_items activos + subcategorías desde DB. Para `category_group`, las subcategorías son categorías con `gender = item.gender OR gender = 'unisex'`.
+- **`buildNavCategories()`** en `src/domains/cms/repository.ts`: obtiene nav_items activos + subcategorías desde DB. Para `category_group`, las subcategorías son categorías con `gender = item.gender OR gender = 'unisex'`. Los hrefs se generan como `/${item.gender}/categoria/${slug}` — ver sección 8.21.
 - **`Navbar.tsx`** es async server component — llama a `buildNavCategories()` directamente. No más `NAV_CATEGORIES` estático de `nav-config.ts`.
 - **Admin:** pestaña "Navbar" en Contenido → `NavbarEditor.tsx` — CRUD completo de nav_items con reordenamiento (↑ ↓), toggle activo/inactivo, crear/editar/eliminar.
 - **Categorías con género:** tabla `categories` tiene columna `gender` (`mujer` | `hombre` | `unisex`, default `unisex`). El admin de categorías muestra un select de género. Las categorías `unisex` aparecen en ambos dropdowns (Mujer y Hombre).
@@ -287,6 +287,42 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **CSS scoping con `@scope`**: los estilos se envuelven en `@scope (.savaya-html-blk) { … }`. Dentro del scope, `:root` se reemplaza por `:scope` y `body { }` se reemplaza por `:scope { }` para que las custom properties y estilos de base apliquen solo dentro del bloque, sin derramarse al navbar o footer del sitio.
 - **Wrapper**: el contenido queda dentro de `<div class="savaya-html-blk">`. No agregues padding ni max-width al wrapper externo — el HTML gestiona su propio layout.
 - **Advertencia de seguridad**: `HtmlBlock` usa `dangerouslySetInnerHTML`. Solo admins con `cms:write` pueden subir HTML. No filtres ni escapes el HTML — se asume que el admin es de confianza.
+
+### 8.21 URLs de categorías — siempre con prefijo de género
+
+- **`buildNavCategories()`** en `src/domains/cms/repository.ts` genera las subcategorías del navbar con el prefijo del nav item: `/${item.gender}/categoria/${c.slug}` (nunca `/categoria/${c.slug}` sin prefijo). Esto permite que `GenderSync` detecte `/hombre` y active el tema oscuro SVY.
+- **Ruta genérica `/categoria/[slug]`** (`src/app/(shop)/categoria/[slug]/page.tsx`): si la categoría tiene `gender = 'hombre'` → redirect a `/hombre/categoria/${slug}`; `gender = 'mujer'` → redirect a `/mujer/categoria/${slug}`; `gender = 'unisex'` → sin redirect, queda en la ruta genérica con tema claro.
+- **Canonical SEO**: `generateMetadata` de la ruta genérica calcula `genderPrefix` y apunta el canonical a la URL con prefijo cuando corresponde.
+- **Regla**: nunca linkees una categoría masculina o femenina con `/categoria/[slug]` sin prefijo — siempre usa `/${gender}/categoria/${slug}`.
+
+### 8.22 GenderHero — campo tagline editable desde admin
+
+- **`GenderHero`** en `src/domains/cms/repository.ts` tiene campo `tagline?: string | null` (campo opcional en el JSONB — sin migración de DB).
+- **Admin**: pestaña Hombre/Mujer en Contenido → campo "Tagline del hero" entre el slider de overlay y los botones CTA. Dejar vacío oculta el texto.
+- **`GenderHeroPayload`** en `src/domains/admin/cms/actions.ts` incluye `tagline: string`.
+- **Storefront** (`/hombre/page.tsx`, `/mujer/page.tsx`): usa `hero?.tagline ?? '<texto hardcodeado original>'`. Si `heroTagline` es vacío/null el `<p>` no se renderiza (`{heroTagline && <p>...`}).
+- **Defaults en `GenderHeroEditor.tsx`**: hombre → `'Sneakers · Botas · Loafers · Zapatos Formales'`, mujer → `'Sandalias · Tacones · Plataformas · Flats · Botas'`.
+
+### 8.23 Contenido admin — tab "Páginas" restringido a super_admin
+
+- El Page Builder (tab "Páginas") está oculto para cualquier rol distinto a `super_admin`.
+- **Control**: `src/app/admin/contenido/page.tsx` llama `auth()` y evalúa `permissions.includes('exchange_rates:override')` como guard de super_admin. Pasa `showPages={boolean}` a `ContenidoView`.
+- **`ContenidoView`** filtra el array `TABS` antes de renderizar: `visibleTabs = showPages ? TABS : TABS.filter(t => t.id !== 'paginas')`. Si `showPages` es false, el tab ni aparece en el DOM.
+- **Guard de super_admin en este proyecto**: `permissions.includes('exchange_rates:override')` — es el permiso exclusivo del rol `super_admin`. Úsalo como identificador de desarrollador para cualquier feature similar en el futuro.
+
+### 8.24 Newsletter — Resend Audiences + tabla newsletter_subscribers
+
+- **Dominio**: `src/domains/newsletter/schema.ts` + `src/domains/newsletter/repository.ts`.
+- **Tabla `newsletter_subscribers`** en Neon (migración `scripts/run-migration-011.js` — ya ejecutada). Columnas: `id`, `email` (unique), `status` (`active`/`unsubscribed`), `source`, `resend_contact_id`, `subscribed_at`, `unsubscribed_at`.
+- **Flujo de suscripción** (`subscribeToNewsletter` en `src/domains/cms/actions.ts`):
+  1. Valida email con Zod
+  2. Si no hay `DATABASE_URL` → success silencioso (dev sin credenciales)
+  3. Chequea duplicado via `findSubscriberByEmail` → si existe, success silencioso (no expone la lista)
+  4. Si `RESEND_API_KEY` + `RESEND_AUDIENCE_ID` presentes → `resend.contacts.create()` para agregar al Audience
+  5. Guarda en DB con `saveSubscriber(email, resendContactId)`
+- **Variable de entorno requerida**: `RESEND_AUDIENCE_ID` (UUID del Audience de Resend). Ver `docs/NEWSLETTER-PENDIENTE.md` para los pasos de activación pendientes.
+- **`onConflictDoNothing()`** en `saveSubscriber` — el insert nunca lanza error por duplicado.
+- **No envía email de bienvenida** por ahora — solo guarda contacto. Agregar cuando se diseñe el template.
 
 ### 8.16 SEO — structured data y metadatos
 
