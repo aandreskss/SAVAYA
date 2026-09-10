@@ -63,8 +63,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       browser: parseBrowser(ua),
       os: parseOS(ua),
     })
-  } catch {
-    // Tracking must never break the site
+  } catch (err) {
+    // Tracking must never break the site — but log so we can diagnose
+    console.error('[track/pv] insert failed:', err instanceof Error ? err.message : err)
   }
 
   return NextResponse.json({ ok: true })

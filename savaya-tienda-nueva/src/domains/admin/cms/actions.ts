@@ -479,7 +479,7 @@ export async function updateGenderHeroAction(
     await upsertGenderHeroSection(slug, {
       imageDesktopUrl: payload.imageDesktopUrl,
       overlayOpacity: payload.overlayOpacity,
-      tagline: payload.tagline || undefined,
+      tagline: payload.tagline,
       ctaPrimaryText: payload.ctaPrimaryText,
       ctaPrimaryHref: payload.ctaPrimaryHref,
       ctaSecondaryText: payload.ctaSecondaryText || undefined,

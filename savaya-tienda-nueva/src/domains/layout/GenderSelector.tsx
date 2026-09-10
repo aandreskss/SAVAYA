@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useThemeStore } from './theme-store'
 import { cn } from '@/shared/lib/utils'
 
@@ -13,28 +14,30 @@ export function GenderSelector({ variant = 'navbar' }: Props) {
   if (variant === 'drawer') {
     return (
       <div className="flex gap-2">
-        <button
+        <Link
+          href="/mujer"
           onClick={() => setGender('mujer')}
           className={cn(
-            'flex-1 rounded-pill py-2.5 font-display text-sm tracking-widest transition-colors',
+            'flex-1 text-center rounded-pill py-2.5 font-display text-sm tracking-widest transition-colors',
             gender === 'mujer'
               ? 'bg-accent-gold text-text-primary-inverse'
               : 'border border-border text-text-secondary hover:text-text-primary hover:border-border-hover',
           )}
         >
           SAVAYA
-        </button>
-        <button
+        </Link>
+        <Link
+          href="/hombre"
           onClick={() => setGender('hombre')}
           className={cn(
-            'flex-1 rounded-pill py-2.5 font-display text-sm tracking-widest transition-colors',
+            'flex-1 text-center rounded-pill py-2.5 font-display text-sm tracking-widest transition-colors',
             gender === 'hombre'
               ? 'bg-accent-gold text-text-primary-inverse'
               : 'border border-border text-text-secondary hover:text-text-primary hover:border-border-hover',
           )}
         >
           FOR MEN
-        </button>
+        </Link>
       </div>
     )
   }

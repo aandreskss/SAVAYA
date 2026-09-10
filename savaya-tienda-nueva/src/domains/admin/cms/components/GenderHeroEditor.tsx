@@ -45,7 +45,7 @@ export function GenderHeroEditor({ slug, initial }: Props) {
 
   const [imageDesktopUrl, setImageDesktopUrl] = useState(data.imageDesktopUrl)
   const [overlayOpacity, setOverlayOpacity] = useState(String(data.overlayOpacity))
-  const [tagline, setTagline] = useState(data.tagline ?? defaults.tagline ?? '')
+  const [tagline, setTagline] = useState(initial ? (initial.tagline ?? '') : (defaults.tagline ?? ''))
   const [ctaPrimaryText, setCtaPrimaryText] = useState(data.ctaPrimaryText)
   const [ctaPrimaryHref, setCtaPrimaryHref] = useState(data.ctaPrimaryHref)
   const [ctaSecondaryText, setCtaSecondaryText] = useState(data.ctaSecondaryText ?? '')

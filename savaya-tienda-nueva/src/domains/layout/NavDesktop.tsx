@@ -29,19 +29,6 @@ export function NavDesktop({ categories }: Props) {
     if (closeTimer.current) clearTimeout(closeTimer.current)
   }, [])
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent, label: string) => {
-      if (e.key === 'Escape') {
-        setOpenCategory(null)
-        ;(e.currentTarget as HTMLElement).focus()
-      }
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        setOpenCategory((prev) => (prev === label ? null : label))
-      }
-    },
-    [],
-  )
 
   return (
     <nav aria-label="Menú principal" className="hidden md:flex items-center gap-1">
@@ -84,15 +71,20 @@ export function NavDesktop({ categories }: Props) {
             onMouseEnter={() => openMenu(cat.label)}
             onMouseLeave={closeMenu}
           >
-            <button
+            <Link
               id={triggerId}
-              type="button"
+              href={cat.href}
               aria-expanded={isOpen}
               aria-controls={panelId}
               aria-haspopup="true"
               onFocus={cancelClose}
               onBlur={closeMenu}
-              onKeyDown={(e) => handleKeyDown(e, cat.label)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setOpenCategory(null)
+                  ;(e.currentTarget as HTMLElement).focus()
+                }
+              }}
               className={cn(baseLinkClass, 'flex items-center gap-1.5')}
             >
               {cat.label}
@@ -105,7 +97,7 @@ export function NavDesktop({ categories }: Props) {
                   isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
                 )}
               />
-            </button>
+            </Link>
 
             {/* Dropdown panel */}
             <div
