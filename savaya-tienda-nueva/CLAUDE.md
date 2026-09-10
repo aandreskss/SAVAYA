@@ -302,6 +302,8 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **`GenderHeroPayload`** en `src/domains/admin/cms/actions.ts` incluye `tagline: string`.
 - **Storefront** (`/hombre/page.tsx`, `/mujer/page.tsx`): usa `hero?.tagline ?? '<texto hardcodeado original>'`. Si `heroTagline` es vacío/null el `<p>` no se renderiza (`{heroTagline && <p>...`}).
 - **Defaults en `GenderHeroEditor.tsx`**: hombre → `'Sneakers · Botas · Loafers · Zapatos Formales'`, mujer → `'Sandalias · Tacones · Plataformas · Flats · Botas'`.
+- **Regla crítica — guardar tagline vacío**: en `updateGenderHeroAction` pasar `tagline: payload.tagline` directamente (NO `payload.tagline || undefined`). El operador `||` convierte `""` en `undefined`, borrando el campo del JSONB y causando que el editor vuelva al default al recargar.
+- **Regla crítica — estado inicial en editor**: `useState` del tagline debe inicializarse como `initial ? (initial.tagline ?? '') : (defaults.tagline ?? '')`. Si se usa `data.tagline ?? defaults.tagline` (donde `data = initial ?? defaults`), un tagline `undefined` en un registro existente cae al default hardcodeado.
 
 ### 8.23 Contenido admin — tab "Páginas" restringido a super_admin
 
@@ -323,6 +325,23 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Variable de entorno requerida**: `RESEND_AUDIENCE_ID` (UUID del Audience de Resend). Ver `docs/NEWSLETTER-PENDIENTE.md` para los pasos de activación pendientes.
 - **`onConflictDoNothing()`** en `saveSubscriber` — el insert nunca lanza error por duplicado.
 - **No envía email de bienvenida** por ahora — solo guarda contacto. Agregar cuando se diseñe el template.
+
+### 8.25 GenderSelector — navegación en drawer mobile
+
+- **Variant `drawer`** (`src/domains/layout/GenderSelector.tsx`): los botones SAVAYA y FOR MEN son `<Link href="/mujer">` y `<Link href="/hombre">` respectivamente, con `onClick={() => setGender(...)}`. El drawer se cierra automáticamente por el `useEffect` de `pathname` en `NavMobile.tsx` — no hace falta cerrar manualmente.
+- **Variant `navbar`** (desktop): sigue siendo `<button>` que solo cambia el tema — en desktop el acceso a /mujer y /hombre es vía los links del nav principal.
+
+### 8.26 NavDesktop — triggers de dropdown también navegan
+
+- Los items del navbar con subcategorías (`hasSubmenu = true`) usan `<Link href={cat.href}>` en lugar de `<button>`. Click → navega a `cat.href` (p.ej. `/mujer` o `/hombre`). Hover → abre el dropdown de subcategorías (via `onMouseEnter` del div padre, sin cambios).
+- Se eliminó `handleKeyDown` (que manejaba Enter/Space para toggle del menú en el button). Ahora Enter en el link navega de forma nativa. Escape sigue cerrando el dropdown inline.
+- `cat.href` para items `category_group` viene de `buildNavCategories()` → `item.href ?? /${item.gender}` — siempre hay una URL válida.
+
+### 8.27 Analytics — tabla page_views en Neon
+
+- **Migración**: `scripts/run-migration-007.js` — crea la tabla `page_views` con `IF NOT EXISTS` (idempotente). Correr una vez: `node --env-file=.env.local scripts/run-migration-007.js`.
+- **Error silencioso resuelto**: el route handler `POST /api/track/pv` ya loggea `console.error('[track/pv] insert failed:', ...)` en el catch. Antes tragaba el error sin traza, lo que impedía diagnosticar que la tabla no existía.
+- **Panel admin**: Server Component en `/admin/analytics` — no es real-time, se actualiza al recargar la página manualmente.
 
 ### 8.16 SEO — structured data y metadatos
 
