@@ -24,14 +24,44 @@ const BASE_URL = rawBaseUrl.startsWith('http') ? rawBaseUrl : `https://${rawBase
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: { default: 'SAVAYA — Marca tu moda', template: '%s | SAVAYA' },
-  description: 'Calzado femenino venezolano. Valencia, Carabobo.',
+  description: 'Calzado femenino venezolano de alta calidad. Valencia, Carabobo. Sandalias, tacones, botas y más.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   openGraph: {
     type: 'website',
     locale: 'es_VE',
     siteName: 'SAVAYA',
+    title: 'SAVAYA — Marca tu moda',
+    description: 'Calzado femenino venezolano de alta calidad. Valencia, Carabobo.',
+    url: BASE_URL,
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'SAVAYA — Calzado venezolano',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
+    site: '@savayavzla',
+    creator: '@savayavzla',
+    title: 'SAVAYA — Marca tu moda',
+    description: 'Calzado femenino venezolano de alta calidad. Valencia, Carabobo.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'SAVAYA — Calzado venezolano',
+      },
+    ],
   },
   ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && {
     verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },

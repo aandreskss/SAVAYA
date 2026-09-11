@@ -780,7 +780,7 @@ export type ProductDetail = {
     sku: string
     price: number
     compareAtPrice: number | null
-    color: { id: string; name: string; hex: string }
+    color: { id: string; name: string; hex: string; hex2?: string | null }
     size: { id: string; name: string }
     isActive: boolean
     stock: number       // inventory.quantity - inventory.reserved
@@ -1016,6 +1016,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
       colorId: colors.id,
       colorName: colors.name,
       colorHex: colors.hex,
+      colorHex2: colors.hex2,
       sizeId: sizes.id,
       sizeName: sizes.name,
       inventoryQuantity: inventory.quantity,
@@ -1053,7 +1054,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
       sku: v.sku,
       price: Number(v.price),
       compareAtPrice: v.compareAtPrice !== null ? Number(v.compareAtPrice) : null,
-      color: { id: v.colorId, name: v.colorName, hex: v.colorHex ?? '#888888' },
+      color: { id: v.colorId, name: v.colorName, hex: v.colorHex ?? '#888888', hex2: v.colorHex2 ?? null },
       size: { id: v.sizeId, name: v.sizeName },
       isActive: v.isActive,
       stock,

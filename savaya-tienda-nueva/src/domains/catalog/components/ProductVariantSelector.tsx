@@ -22,13 +22,16 @@ export type ProductVariantSelectorProps = {
 
 function getUniqueColors(
   variants: ProductDetail['variants'],
-): { id: string; name: string; hex: string }[] {
-  return variants.reduce<{ id: string; name: string; hex: string }[]>((acc, v) => {
-    if (!acc.find((c) => c.id === v.color.id)) {
-      acc.push(v.color)
-    }
-    return acc
-  }, [])
+): { id: string; name: string; hex: string; hex2?: string | null }[] {
+  return variants.reduce<{ id: string; name: string; hex: string; hex2?: string | null }[]>(
+    (acc, v) => {
+      if (!acc.find((c) => c.id === v.color.id)) {
+        acc.push(v.color)
+      }
+      return acc
+    },
+    [],
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +102,7 @@ export function ProductVariantSelector({
     id: color.id,
     name: color.name,
     hex: color.hex,
+    hex2: color.hex2,
     isAvailable: activeVariants.some((v) => v.color.id === color.id && v.isAvailable),
   }))
 
