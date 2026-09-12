@@ -369,3 +369,22 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **`getUniqueColors`** en `ProductVariantSelector.tsx`: el tipo de retorno incluye `hex2?: string | null` y hace `acc.push(v.color)` directamente (no destructura) para no perder campos.
 - **`colorOptions`** en `ProductVariantSelector.tsx`: incluye `hex2: color.hex2` explícitamente al mapear — si no se pasa, `ColorSelector` recibe `hex2: undefined` y renderiza la bolita con un solo color.
 - **`ColorSelector`**: el SVG diagonal (mitad izquierda `hex`, mitad derecha `hex2`) ya está implementado correctamente — solo requiere recibir `hex2` con valor.
+
+### 8.30 Integración Odoo — sincronización de inventario
+
+- **Dominio exclusivo**: toda comunicación con Odoo pasa por `src/domains/integrations/odoo/`. Nunca llames al API de Odoo desde fuera de ese dominio.
+- **Archivos del dominio**:
+  - `client.ts` — JSON-RPC wrapper: `authenticate()`, `callKw()`, `testConnection()`, `isConfigured()`
+  - `inventory.ts` — `getAllStockLevels()` (sync masivo) y `getStockBySku(skus[])` (webhook)
+  - `schema.ts` — tabla `odoo_sync_logs` (Drizzle) con enums `odoo_sync_type` y `odoo_sync_status`
+  - `repository.ts` — `saveOdooSyncLog()` y `listRecentSyncLogs()`
+- **Identificador de vínculo**: el campo `sku` en `product_variants` (único, not null) es el único identificador que conecta un producto de la tienda con uno de Odoo (`default_code` en `product.product`).
+- **`updateStockBySku(items)`** en `src/domains/catalog/repository.ts`: única función que escribe inventario desde Odoo. Respeta la constraint `reserved <= quantity` — si Odoo dice qty=3 pero hay 5 reservadas, se guarda 5 (no 3). Cada cambio se registra como `adjustment` en `inventory_movements` con reason `Sincronización Odoo ERP (SKU: ...)`.
+- **Cron** (`/api/cron/sync-inventory`): sync masivo horario, misma autenticación que los demás crons (`CRON_SECRET` via `x-cron-secret` header o `?secret=`). Acepta GET y POST.
+- **Webhook** (`/api/webhooks/odoo/inventory`): POST, autenticado con `x-odoo-secret: <ODOO_WEBHOOK_SECRET>`. Acepta `{ sku, qty }` o `{ items: [{sku, qty}][] }`.
+- **Variables de entorno requeridas**: `ODOO_URL`, `ODOO_DB`, `ODOO_USER`, `ODOO_PASS`, `ODOO_WEBHOOK_SECRET`. Opcional: `ODOO_STOCK_LOCATION_ID` (ID numérico de la ubicación de stock; sin él filtra por `location_id.usage = internal`).
+- **Permiso `integrations:manage`**: exclusivo de `super_admin` (igual que `exchange_rates:override`). Excluido explícitamente del rol `admin` en `ROLE_PERMISSIONS`. Úsalo como guard en cualquier página o acción de integración.
+- **Panel admin** (`/admin/integraciones/odoo`): Server Component con `requireAdminPermission('integrations:manage')`. Muestra estado de config (env vars), botón de test de conexión, sync manual, URL y formato del webhook, e historial de syncs desde `odoo_sync_logs`.
+- **Nav**: ítem "Integraciones" visible solo a quienes tengan `integrations:manage`. Posición: antes de Configuración.
+- **JWT y permisos nuevos**: si se agrega un permiso nuevo a un rol existente vía migración, los usuarios con ese rol deben cerrar sesión y volver a entrar para que el JWT incluya el permiso nuevo.
+- **Migración 013** (`scripts/run-migration-013.js`): crea enums, tabla `odoo_sync_logs`, inserta permiso `integrations:manage` y lo asigna a `super_admin`. Ya ejecutada en Neon.
