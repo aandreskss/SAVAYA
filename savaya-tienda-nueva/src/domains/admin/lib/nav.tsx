@@ -171,6 +171,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Métodos pago',  href: '/admin/metodos-pago', icon: <WalletIcon />,     permission: 'settings:read' },
   { label: 'Analytics',     href: '/admin/analytics',    icon: <BarChartIcon />,   permission: 'analytics:read' },
   { label: 'Usuarios',      href: '/admin/usuarios',     icon: <ShieldIcon />,     permission: 'users:read' },
-  { label: 'Integraciones', href: '/admin/integraciones/odoo', icon: <IntegrationsIcon />, permission: 'integrations:manage' },
+  { label: 'Integraciones', href: '/admin/integraciones', icon: <IntegrationsIcon />, permission: 'integrations:manage' },
   { label: 'Configuración', href: '/admin/configuracion',icon: <GearIcon />,       permission: 'settings:read' },
 ]
