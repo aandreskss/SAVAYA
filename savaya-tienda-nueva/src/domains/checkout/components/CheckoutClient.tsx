@@ -1,5 +1,6 @@
 'use client'
 
+import { useLayoutEffect } from 'react'
 import Link from 'next/link'
 import { useCheckoutStore } from '../checkout-store'
 import { CheckoutStepper } from './CheckoutStepper'
@@ -14,7 +15,13 @@ type Props = {
 }
 
 export function CheckoutClient({ initialData }: Props) {
-  const { step, shippingCostUsd } = useCheckoutStore()
+  const { step, shippingCostUsd, reset } = useCheckoutStore()
+
+  // Reset stale completed-order state when the user starts a new checkout
+  useLayoutEffect(() => {
+    if (step === 4) reset()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const {
     paymentMethods,

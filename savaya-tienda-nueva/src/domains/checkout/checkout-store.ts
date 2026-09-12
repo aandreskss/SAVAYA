@@ -31,6 +31,7 @@ type CheckoutStore = {
   setSubmitError: (err: string | null) => void
   setAppliedCoupon: (coupon: AppliedCoupon | null) => void
   goBack: () => void
+  reset: () => void
 }
 
 function generateIdempotencyKey(): string {
@@ -72,4 +73,18 @@ export const useCheckoutStore = create<CheckoutStore>((set, get) => ({
       set({ step: (step - 1) as CheckoutStep, submitError: null })
     }
   },
+
+  reset: () =>
+    set({
+      step: 1,
+      idempotencyKey: generateIdempotencyKey(),
+      personalData: null,
+      shippingData: null,
+      shippingCostUsd: 0,
+      paymentData: null,
+      orderResult: null,
+      isSubmitting: false,
+      submitError: null,
+      appliedCoupon: null,
+    }),
 }))
