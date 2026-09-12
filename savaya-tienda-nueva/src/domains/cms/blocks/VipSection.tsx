@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getProducts } from '@/domains/catalog/repository'
-import { ProductCard } from '@/shared/ui/ProductCard'
+import { VipProductsGrid } from './VipProductsGrid'
 import type { BlockContent } from '../block-schemas'
 
 type Props = BlockContent<'vip_section'>
@@ -52,23 +52,8 @@ export async function VipSection({ eyebrow, title, subtitle, ctaText, ctaHref, l
         style={{ background: 'linear-gradient(90deg, #CA8C31 0%, rgba(202,140,49,0.2) 100%)' }}
       />
 
-      {/* Product grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5">
-        {items.map((product, index) => (
-          <ProductCard
-            key={product.id}
-            id={product.id}
-            slug={product.slug}
-            name={product.name}
-            basePrice={product.basePrice}
-            compareAtPrice={product.compareAtPrice}
-            images={product.images}
-            availableColors={product.availableColors}
-            isVip
-            priority={index < 2}
-          />
-        ))}
-      </div>
+      {/* Product grid — cards drop with rubber-ball bounce on scroll-into-view */}
+      <VipProductsGrid products={items} />
     </section>
   )
 }

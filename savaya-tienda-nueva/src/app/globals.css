@@ -169,6 +169,28 @@ body {
   to { stroke-dashoffset: 0; }
 }
 
+/* VIP cards rubber-ball drop */
+@keyframes card-bounce-in {
+  0%   { transform: translateY(-240px) scaleY(1);    opacity: 0;
+         animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  32%  { transform: translateY(0px)   scaleY(0.84);  opacity: 1;
+         animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+  42%  { transform: translateY(0px)   scaleY(1.08);
+         animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  54%  { transform: translateY(-60px)  scaleY(1);
+         animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  64%  { transform: translateY(0px)   scaleY(0.93);
+         animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+  71%  { transform: translateY(0px)   scaleY(1.04);
+         animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  79%  { transform: translateY(-20px)  scaleY(1);
+         animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  86%  { transform: translateY(0px)   scaleY(0.97);
+         animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+  92%  { transform: translateY(-6px)   scaleY(1);   }
+  100% { transform: translateY(0px)   scaleY(1);    opacity: 1; }
+}
+
 /* Hero mirror sweep */
 @keyframes hero-shimmer {
   0%   { transform: translateX(-160%) skewX(-12deg); opacity: 0; }
