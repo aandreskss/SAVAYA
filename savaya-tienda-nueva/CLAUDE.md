@@ -384,7 +384,13 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Webhook** (`/api/webhooks/odoo/inventory`): POST, autenticado con `x-odoo-secret: <ODOO_WEBHOOK_SECRET>`. Acepta `{ sku, qty }` o `{ items: [{sku, qty}][] }`.
 - **Variables de entorno requeridas**: `ODOO_URL`, `ODOO_DB`, `ODOO_USER`, `ODOO_PASS`, `ODOO_WEBHOOK_SECRET`. Opcional: `ODOO_STOCK_LOCATION_ID` (ID numérico de la ubicación de stock; sin él filtra por `location_id.usage = internal`).
 - **Permiso `integrations:manage`**: exclusivo de `super_admin` (igual que `exchange_rates:override`). Excluido explícitamente del rol `admin` en `ROLE_PERMISSIONS`. Úsalo como guard en cualquier página o acción de integración.
-- **Panel admin** (`/admin/integraciones/odoo`): Server Component con `requireAdminPermission('integrations:manage')`. Muestra estado de config (env vars), botón de test de conexión, sync manual, URL y formato del webhook, e historial de syncs desde `odoo_sync_logs`.
+- **Panel admin** (`/admin/integraciones/odoo`): Server Component con `requireAdminPermission('integrations:manage')`. Layout: `p-6 md:p-10` como padding exterior + `max-w-4xl mx-auto` para centrar. Estructura: header con ícono + badge de estado global → grid 2 col (config vars + resumen último sync) → grid 2 col (test conexión + sync manual, `OdooControls.tsx` client component) → sección webhook → tabla de historial.
 - **Nav**: ítem "Integraciones" visible solo a quienes tengan `integrations:manage`. Posición: antes de Configuración.
 - **JWT y permisos nuevos**: si se agrega un permiso nuevo a un rol existente vía migración, los usuarios con ese rol deben cerrar sesión y volver a entrar para que el JWT incluya el permiso nuevo.
 - **Migración 013** (`scripts/run-migration-013.js`): crea enums, tabla `odoo_sync_logs`, inserta permiso `integrations:manage` y lo asigna a `super_admin`. Ya ejecutada en Neon.
+
+### 8.31 Layout de páginas admin — padding y centrado
+
+- **Wrapper exterior**: `<div className="p-6 md:p-10">` — no `p-6 md:p-8` como en páginas más simples (ver tasas que usa p-6 md:p-8; integraciones usa md:p-10 por ser más densa).
+- **Contenedor de contenido**: `<div className="max-w-4xl mx-auto space-y-8">` para páginas de gestión con varias secciones. `max-w-2xl` para páginas de formulario simple (ej. perfil).
+- **Regla general**: toda página admin debe tener su propio padding (`p-6 md:p-8` o `p-6 md:p-10`). El `<main>` del `AdminShell` no aplica padding — cada página es responsable del suyo.
