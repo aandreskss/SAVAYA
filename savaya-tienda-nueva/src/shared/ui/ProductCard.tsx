@@ -184,13 +184,13 @@ export function ProductCard({
 
         {/* Colores */}
         {visibleColors.length > 0 && (
-          <div className="flex items-center gap-1.5" aria-label="Colores disponibles">
+          <div className="flex items-center gap-2" aria-label="Colores disponibles">
             {visibleColors.map((color) => (
               <span
                 key={color.id}
                 title={color.name}
                 aria-label={color.name}
-                className="inline-block w-3.5 h-3.5 rounded-full border border-border shrink-0"
+                className="inline-block w-[18px] h-[18px] rounded-full shrink-0 shadow-[0_0_0_1.5px_rgba(0,0,0,0.13),0_1px_3px_rgba(0,0,0,0.10)]"
                 style={
                   color.hex2
                     ? { background: `linear-gradient(135deg, ${color.hex} 50%, ${color.hex2} 50%)` }
@@ -199,7 +199,7 @@ export function ProductCard({
               />
             ))}
             {extraColors > 0 && (
-              <span className="font-sans text-xs text-text-secondary">
+              <span className="font-sans text-[11px] text-text-secondary leading-none">
                 +{extraColors}
               </span>
             )}
