@@ -6,32 +6,44 @@ import { OdooControls } from '@/domains/admin/integrations/OdooControls'
 export const dynamic = 'force-dynamic'
 
 const ENV_VARS = [
-  { key: 'ODOO_URL', label: 'URL del servidor', required: true },
-  { key: 'ODOO_DB', label: 'Base de datos', required: true },
-  { key: 'ODOO_USER', label: 'Usuario', required: true },
-  { key: 'ODOO_PASS', label: 'Contraseña', required: true },
-  { key: 'ODOO_WEBHOOK_SECRET', label: 'Webhook secret', required: true },
-  { key: 'ODOO_STOCK_LOCATION_ID', label: 'ID de ubicación de stock', required: false },
+  { key: 'ODOO_URL',              label: 'URL del servidor',          required: true  },
+  { key: 'ODOO_DB',               label: 'Base de datos',             required: true  },
+  { key: 'ODOO_USER',             label: 'Usuario',                   required: true  },
+  { key: 'ODOO_PASS',             label: 'Contraseña',                required: true  },
+  { key: 'ODOO_WEBHOOK_SECRET',   label: 'Webhook secret',            required: true  },
+  { key: 'ODOO_STOCK_LOCATION_ID',label: 'ID de ubicación de stock',  required: false },
 ] as const
 
-function ConfigRow({ label, configured, required }: { label: string; configured: boolean; required: boolean }) {
+function StatusDot({ ok }: { ok: boolean }) {
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-      <span className="text-sm text-text-primary">
-        {label}
-        {!required && <span className="ml-1 text-xs text-text-secondary">(opcional)</span>}
-      </span>
-      <span
-        className={[
-          'text-xs font-medium px-2.5 py-1 rounded-full',
-          configured
-            ? 'bg-success/15 text-success'
-            : required
-              ? 'bg-error/15 text-error'
-              : 'bg-white/6 text-text-secondary',
-        ].join(' ')}
-      >
-        {configured ? '✓ Configurado' : required ? '✕ Falta' : '— No definido'}
+    <span className={[
+      'inline-block h-2 w-2 rounded-full',
+      ok ? 'bg-success animate-pulse' : 'bg-warning',
+    ].join(' ')} />
+  )
+}
+
+function ConfigRow({ label, configured, required }: {
+  label: string
+  configured: boolean
+  required: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+      <div className="flex items-center gap-2">
+        <StatusDot ok={configured} />
+        <span className="text-sm text-text-primary">{label}</span>
+        {!required && (
+          <span className="text-xs text-text-secondary bg-white/5 px-1.5 py-0.5 rounded">
+            opcional
+          </span>
+        )}
+      </div>
+      <span className={[
+        'text-xs font-medium',
+        configured ? 'text-success' : required ? 'text-error' : 'text-text-secondary',
+      ].join(' ')}>
+        {configured ? 'Configurado' : required ? 'Falta' : 'No definido'}
       </span>
     </div>
   )
@@ -39,11 +51,8 @@ function ConfigRow({ label, configured, required }: { label: string; configured:
 
 function formatDate(date: Date | string): string {
   return new Date(date).toLocaleString('es-VE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit',
   })
 }
 
@@ -62,160 +71,228 @@ export default async function OdooIntegrationPage() {
 
   let logs: Awaited<ReturnType<typeof listRecentSyncLogs>> = []
   if (process.env.DATABASE_URL) {
-    try {
-      logs = await listRecentSyncLogs(10)
-    } catch {
-      // table may not exist yet — migration pending
-    }
+    try { logs = await listRecentSyncLogs(10) } catch { /* migration pending */ }
   }
 
-  return (
-    <div className="max-w-3xl space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">Integración Odoo</h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Sincronización de inventario entre Odoo ERP y la tienda. El SKU es el identificador de vínculo.
-        </p>
-      </div>
+  const lastSync = logs[0] ?? null
 
-      {/* Config status */}
-      <section className="bg-surface-2 rounded-2xl p-6 space-y-1">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-            Variables de entorno
-          </h2>
-          <span
-            className={[
-              'text-xs font-medium px-2.5 py-1 rounded-full',
-              configured
-                ? 'bg-success/15 text-success'
-                : 'bg-warning/15 text-warning',
-            ].join(' ')}
-          >
+  return (
+    <div className="p-6 md:p-10">
+      <div className="max-w-4xl mx-auto space-y-8">
+
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-gold/15">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <rect x="1" y="1" width="7" height="7" rx="1.5" stroke="#CA8C31" strokeWidth="1.5"/>
+                  <rect x="12" y="1" width="7" height="7" rx="1.5" stroke="#CA8C31" strokeWidth="1.5"/>
+                  <rect x="1" y="12" width="7" height="7" rx="1.5" stroke="#CA8C31" strokeWidth="1.5"/>
+                  <rect x="12" y="12" width="7" height="7" rx="1.5" stroke="#CA8C31" strokeWidth="1.5"/>
+                  <path d="M8 4.5h4M4.5 8v4M15.5 8v4M12 15.5H8" stroke="#CA8C31" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <h1 className="text-2xl font-semibold text-text-primary">Integración Odoo</h1>
+            </div>
+            <p className="text-sm text-text-secondary ml-13 pl-0.5">
+              Sincronización de inventario entre Odoo ERP y la tienda — vinculado por SKU.
+            </p>
+          </div>
+          <span className={[
+            'shrink-0 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full mt-1',
+            configured ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning',
+          ].join(' ')}>
+            <StatusDot ok={configured} />
             {configured ? 'Listo para conectar' : 'Configuración incompleta'}
           </span>
         </div>
 
-        {ENV_VARS.map(({ key, label, required }) => (
-          <ConfigRow
-            key={key}
-            label={label}
-            configured={!!process.env[key]}
-            required={required}
-          />
-        ))}
-      </section>
+        {/* ── Grid: Config + Último sync ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      {/* Interactive controls */}
-      <OdooControls />
+          {/* Variables de entorno */}
+          <section className="bg-surface-2 rounded-2xl p-6">
+            <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-4">
+              Variables de entorno
+            </h2>
+            {ENV_VARS.map(({ key, label, required }) => (
+              <ConfigRow
+                key={key}
+                label={label}
+                configured={!!process.env[key]}
+                required={required}
+              />
+            ))}
+          </section>
 
-      {/* Webhook info */}
-      <section className="bg-surface-2 rounded-2xl p-6 space-y-4">
-        <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-          Webhook — actualizaciones en tiempo real
-        </h2>
-        <p className="text-sm text-text-secondary">
-          Configura este endpoint en Odoo para recibir cambios de stock al instante,
-          sin esperar al cron horario.
-        </p>
+          {/* Resumen de sync */}
+          <section className="bg-surface-2 rounded-2xl p-6 flex flex-col justify-between">
+            <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-4">
+              Estado de sincronización
+            </h2>
 
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs text-text-secondary mb-1">URL del endpoint</p>
-            <code className="block bg-surface rounded-lg px-3 py-2 text-sm font-mono text-text-primary break-all select-all border border-border">
-              {webhookUrl}
-            </code>
-          </div>
-          <div>
-            <p className="text-xs text-text-secondary mb-1">Header requerido</p>
-            <code className="block bg-surface rounded-lg px-3 py-2 text-sm font-mono text-text-primary border border-border">
-              x-odoo-secret: {'<ODOO_WEBHOOK_SECRET>'}
-            </code>
-          </div>
-          <div>
-            <p className="text-xs text-text-secondary mb-1">Formato del payload (JSON)</p>
-            <code className="block bg-surface rounded-lg px-3 py-2 text-sm font-mono text-text-primary border border-border whitespace-pre">
-              {`// Un SKU:\n{ "sku": "SAV-001-NEG-38", "qty": 5 }\n\n// Varios SKUs:\n{ "items": [{ "sku": "SAV-001-NEG-38", "qty": 5 }, ...] }`}
-            </code>
-          </div>
+            {lastSync ? (
+              <div className="space-y-3 flex-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">Último sync</span>
+                  <span className="text-text-primary">{formatDate(lastSync.startedAt)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">Estado</span>
+                  <span className={[
+                    'text-xs font-medium px-2.5 py-1 rounded-full',
+                    lastSync.status === 'success' ? 'bg-success/15 text-success'
+                    : lastSync.status === 'partial' ? 'bg-warning/15 text-warning'
+                    : 'bg-error/15 text-error',
+                  ].join(' ')}>
+                    {lastSync.status === 'success' ? 'Exitoso'
+                     : lastSync.status === 'partial' ? 'Parcial' : 'Error'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">Variantes actualizadas</span>
+                  <span className="font-medium text-text-primary">{lastSync.itemsSynced}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">Duración</span>
+                  <span className="text-text-primary">{formatDuration(lastSync.durationMs)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center py-6 text-center gap-2">
+                <p className="text-sm text-text-secondary">Sin sincronizaciones aún</p>
+                <p className="text-xs text-text-secondary/60">
+                  Usa el botón de abajo para hacer el primer sync.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-4 pt-4 border-t border-border/50 text-xs text-text-secondary flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M6 3.5v3l2 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              Cron automático: cada hora
+            </div>
+          </section>
         </div>
-      </section>
 
-      {/* Sync log */}
-      <section className="bg-surface-2 rounded-2xl p-6 space-y-4">
-        <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-          Historial de sincronizaciones
-        </h2>
+        {/* ── Controles interactivos ── */}
+        <OdooControls />
 
-        {logs.length === 0 ? (
-          <p className="text-sm text-text-secondary">
-            {process.env.DATABASE_URL
-              ? 'Aún no hay sincronizaciones registradas. Ejecuta la migración 013 para activar el log.'
-              : 'Sin base de datos configurada.'}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-text-secondary border-b border-border">
-                  <th className="pb-2 font-medium">Fecha</th>
-                  <th className="pb-2 font-medium">Tipo</th>
-                  <th className="pb-2 font-medium">Estado</th>
-                  <th className="pb-2 font-medium text-right">Synced</th>
-                  <th className="pb-2 font-medium text-right">Skipped</th>
-                  <th className="pb-2 font-medium text-right">Failed</th>
-                  <th className="pb-2 font-medium text-right">Duración</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {logs.map((log) => (
-                  <tr key={log.id} className="text-text-primary">
-                    <td className="py-2.5 text-xs text-text-secondary whitespace-nowrap">
-                      {formatDate(log.startedAt)}
-                    </td>
-                    <td className="py-2.5">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-white/6 text-text-secondary">
-                        {log.type === 'full_sync' ? 'Cron' : 'Webhook'}
-                      </span>
-                    </td>
-                    <td className="py-2.5">
-                      <span
-                        className={[
-                          'text-xs px-2 py-0.5 rounded-full',
-                          log.status === 'success'
-                            ? 'bg-success/15 text-success'
-                            : log.status === 'partial'
-                              ? 'bg-warning/15 text-warning'
-                              : 'bg-error/15 text-error',
-                        ].join(' ')}
-                      >
-                        {log.status === 'success'
-                          ? 'Exitoso'
-                          : log.status === 'partial'
-                            ? 'Parcial'
-                            : 'Error'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-right">{log.itemsSynced}</td>
-                    <td className="py-2.5 text-right text-text-secondary">{log.itemsSkipped}</td>
-                    <td className="py-2.5 text-right">
-                      {log.itemsFailed > 0 ? (
-                        <span className="text-error">{log.itemsFailed}</span>
-                      ) : (
-                        <span className="text-text-secondary">0</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 text-right text-text-secondary">
-                      {formatDuration(log.durationMs)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* ── Webhook ── */}
+        <section className="bg-surface-2 rounded-2xl p-6 space-y-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Webhook — tiempo real
+              </h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Configura este endpoint en Odoo para recibir cambios de stock al instante.
+              </p>
+            </div>
           </div>
-        )}
-      </section>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-text-secondary">URL del endpoint</p>
+              <code className="block bg-surface rounded-xl px-3 py-2.5 text-xs font-mono text-text-primary break-all border border-border select-all">
+                {webhookUrl}
+              </code>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-text-secondary">Header requerido</p>
+              <code className="block bg-surface rounded-xl px-3 py-2.5 text-xs font-mono text-text-primary border border-border">
+                x-odoo-secret: {'<ODOO_WEBHOOK_SECRET>'}
+              </code>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-text-secondary">Payload (JSON)</p>
+            <code className="block bg-surface rounded-xl px-4 py-3 text-xs font-mono text-text-primary border border-border whitespace-pre leading-relaxed">
+{`// Un solo SKU
+{ "sku": "SAV-001-NEG-38", "qty": 5 }
+
+// Varios SKUs
+{ "items": [{ "sku": "SAV-001-NEG-38", "qty": 5 }, { "sku": "SAV-002-ROJ-37", "qty": 0 }] }`}
+            </code>
+          </div>
+        </section>
+
+        {/* ── Historial de syncs ── */}
+        <section className="bg-surface-2 rounded-2xl p-6 space-y-4">
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Historial de sincronizaciones
+          </h2>
+
+          {logs.length === 0 ? (
+            <div className="py-10 text-center">
+              <p className="text-sm text-text-secondary">Sin registros todavía.</p>
+              <p className="text-xs text-text-secondary/60 mt-1">
+                Cada sync (automático o manual) quedará registrado aquí.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-2 px-2">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead>
+                  <tr className="text-left text-xs text-text-secondary">
+                    <th className="pb-3 font-medium pr-4">Fecha</th>
+                    <th className="pb-3 font-medium pr-4">Tipo</th>
+                    <th className="pb-3 font-medium pr-4">Estado</th>
+                    <th className="pb-3 font-medium text-right pr-4">Actualizadas</th>
+                    <th className="pb-3 font-medium text-right pr-4">No encontradas</th>
+                    <th className="pb-3 font-medium text-right pr-4">Fallidas</th>
+                    <th className="pb-3 font-medium text-right">Duración</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((log, i) => (
+                    <tr
+                      key={log.id}
+                      className={[
+                        'border-t border-border/50',
+                        i === 0 ? 'text-text-primary' : 'text-text-secondary',
+                      ].join(' ')}
+                    >
+                      <td className="py-3 pr-4 text-xs whitespace-nowrap">
+                        {formatDate(log.startedAt)}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/5">
+                          {log.type === 'full_sync' ? 'Cron' : 'Webhook'}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className={[
+                          'text-xs px-2 py-0.5 rounded-full',
+                          log.status === 'success' ? 'bg-success/15 text-success'
+                          : log.status === 'partial' ? 'bg-warning/15 text-warning'
+                          : 'bg-error/15 text-error',
+                        ].join(' ')}>
+                          {log.status === 'success' ? 'Exitoso'
+                           : log.status === 'partial' ? 'Parcial' : 'Error'}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-right font-medium">{log.itemsSynced}</td>
+                      <td className="py-3 pr-4 text-right">{log.itemsSkipped}</td>
+                      <td className="py-3 pr-4 text-right">
+                        {log.itemsFailed > 0
+                          ? <span className="text-error font-medium">{log.itemsFailed}</span>
+                          : <span>0</span>}
+                      </td>
+                      <td className="py-3 text-right">{formatDuration(log.durationMs)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+      </div>
     </div>
   )
 }
