@@ -5,7 +5,7 @@ import { BlockSkeleton } from '@/app/admin/_components/DashboardSkeletons'
 import type { AdminCustomerFilters, CustomerTag } from '@/domains/admin/customers/types'
 
 type PageProps = {
-  searchParams: Promise<{ search?: string; tag?: string; page?: string }>
+  searchParams: Promise<{ search?: string; tag?: string; status?: string; page?: string }>
 }
 
 export default async function ClientesAdminPage({ searchParams }: PageProps) {
@@ -14,6 +14,7 @@ export default async function ClientesAdminPage({ searchParams }: PageProps) {
   const filters: AdminCustomerFilters = {
     search: params.search,
     tag: params.tag as CustomerTag | undefined,
+    status: params.status === 'active' || params.status === 'blocked' ? params.status : undefined,
     page: params.page ? Number(params.page) : 1,
   }
 

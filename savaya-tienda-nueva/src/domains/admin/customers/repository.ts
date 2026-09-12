@@ -16,7 +16,7 @@ const PAGE_SIZE = 25
 export async function listAdminCustomers(
   filters: AdminCustomerFilters = {},
 ): Promise<{ items: CustomerListItem[]; total: number }> {
-  const { search, tag, page = 1 } = filters
+  const { search, tag, status, page = 1 } = filters
   const offset = (page - 1) * PAGE_SIZE
 
   const searchFilter = search
@@ -34,6 +34,11 @@ export async function listAdminCustomers(
         WHERE ct.customer_id = c.id AND ct.tag = ${tag}
       )`
     : sql``
+
+  const statusFilter =
+    status === 'active'  ? sql`AND c.is_active = true`  :
+    status === 'blocked' ? sql`AND c.is_active = false`  :
+    sql``
 
   const rows = await rawQuery<{
     id: string
@@ -72,6 +77,7 @@ export async function listAdminCustomers(
     WHERE 1=1
       ${searchFilter}
       ${tagFilter}
+      ${statusFilter}
     ORDER BY c.last_order_at DESC NULLS LAST, c.created_at DESC
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
   `)
@@ -82,6 +88,7 @@ export async function listAdminCustomers(
     WHERE 1=1
       ${searchFilter}
       ${tagFilter}
+      ${statusFilter}
   `)
 
   return {

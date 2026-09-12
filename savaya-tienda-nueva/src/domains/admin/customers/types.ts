@@ -90,6 +90,7 @@ export type CustomerDetail = {
 export type AdminCustomerFilters = {
   search?: string
   tag?: CustomerTag
+  status?: 'active' | 'blocked'
   page?: number
 }
 
