@@ -351,3 +351,21 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Sitemap dinámico** (`src/app/sitemap.ts`): incluye products, categories y collections desde la DB. Páginas estáticas incluyen `/hombre` (priority 0.9). Si agregas una ruta nueva al sitio, agrégala al array `STATIC_PAGES`.
 - **Nunca hardcodees BASE_URL en páginas nuevas** — usa `process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'` (patrón ya establecido en categoria/coleccion) o la constante local `const BASE_URL = 'https://www.savayavzla.com'` (patrón en páginas estáticas).
 - **`revalidate`**: páginas de contenido editorial estático (FAQ, Tiendas, etc.) usan `export const revalidate = 86400`. La home usa `revalidate = 3600`. Las PLPs dinámicas no declaran revalidate (Next.js las trata como dinámicas por los searchParams).
+
+### 8.28 Favicon y brand assets
+
+- **Archivos en `src/app/`**: `favicon.ico` (multi-size 16/32/48), `icon.png` (512×512), `apple-icon.png` (180×180). Next.js App Router los sirve y genera los `<link>` automáticamente — no hace falta declararlos manualmente en `<head>`.
+- **Fuente del icono**: `public/images/savaya-mark.png` (símbolo de alas, sin texto). Para el favicon se usa el mark solo, no el logo completo.
+- **`icons` en `layout.tsx`**: se declara explícitamente para documentar los archivos y sus tamaños — no es estrictamente necesario porque Next.js los detecta automáticamente, pero hace la intención clara.
+- **OG image global**: `public/og-image.png` (1200×630) — logo completo centrado sobre fondo `#FAF7F2`. Se usa como imagen por defecto en `openGraph.images` y `twitter.images` en `layout.tsx`. Páginas con imagen propia (PDPs, colecciones) la sobreescriben en su `generateMetadata`.
+- **Twitter card completa**: `layout.tsx` declara `card: summary_large_image`, `site: @savayavzla`, `creator: @savayavzla`, `title`, `description` e `images` explícitos. Las páginas que sobrescriben `openGraph.images` también deben sobrescribir `twitter.images` para que X/Twitter los detecte correctamente.
+- **Script de regeneración**: `scripts/generate-favicons.cjs` — correr `node scripts/generate-favicons.cjs` desde la raíz si el cliente cambia el logo. Requiere `node_modules` instalados (usa `sharp`). El archivo es `.cjs` porque el proyecto tiene `"type": "module"` en `package.json`.
+
+### 8.29 Colores bicolor (hex2) — flujo completo DB → ColorSelector
+
+- **Columna `hex2`** en la tabla `colors` — segundo color para variantes bicolor (ej. azul y amarillo).
+- **`getProductBySlug`** en `src/domains/catalog/repository.ts`: el SELECT debe incluir `colorHex2: colors.hex2` y el mapeo de variantes debe incluir `hex2: v.colorHex2 ?? null` en el objeto `color`. Sin esto, `hex2` llega `undefined` aunque exista en la DB.
+- **`ProductDetail` type**: `variants[].color` tiene `hex2?: string | null` — cualquier función que reconstruya ese objeto debe preservar el campo.
+- **`getUniqueColors`** en `ProductVariantSelector.tsx`: el tipo de retorno incluye `hex2?: string | null` y hace `acc.push(v.color)` directamente (no destructura) para no perder campos.
+- **`colorOptions`** en `ProductVariantSelector.tsx`: incluye `hex2: color.hex2` explícitamente al mapear — si no se pasa, `ColorSelector` recibe `hex2: undefined` y renderiza la bolita con un solo color.
+- **`ColorSelector`**: el SVG diagonal (mitad izquierda `hex`, mitad derecha `hex2`) ya está implementado correctamente — solo requiere recibir `hex2` con valor.
