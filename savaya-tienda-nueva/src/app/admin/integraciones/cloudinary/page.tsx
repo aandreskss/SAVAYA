@@ -34,10 +34,6 @@ function NotificationBadge({ type }: { type: string }) {
 export default async function CloudinaryNotificationsPage() {
   await requireAdminPermission('integrations:manage')
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
-  const webhookUrl = `${appUrl}/api/webhooks/cloudinary`
-  const isConfigured = !!process.env.CLOUDINARY_API_SECRET
-
   let notifications: Awaited<ReturnType<typeof listCloudinaryNotifications>> = []
   if (process.env.DATABASE_URL) {
     try { notifications = await listCloudinaryNotifications(200) } catch { /* migration pending */ }
@@ -72,64 +68,28 @@ export default async function CloudinaryNotificationsPage() {
           </div>
         </div>
 
-        {/* Stats + Config */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {/* Resumen */}
-          <section className="bg-surface-2 rounded-2xl p-6 space-y-3">
-            <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-4">
-              Resumen
-            </h2>
-            <div className="flex items-center justify-between text-sm py-2.5 border-b border-border/50">
-              <span className="text-text-secondary">Total de eventos registrados</span>
-              <span className="font-semibold text-text-primary">{total}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm py-2.5 border-b border-border/50">
-              <span className="text-text-secondary">Eliminaciones detectadas</span>
-              <span className={`font-semibold ${deletions.length > 0 ? 'text-error' : 'text-success'}`}>
-                {deletions.length}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm py-2.5">
-              <span className="text-text-secondary">Último evento</span>
-              <span className="text-text-primary">
-                {notifications[0] ? formatDate(notifications[0].receivedAt) : '—'}
-              </span>
-            </div>
-          </section>
-
-          {/* Configuración webhook */}
-          <section className="bg-surface-2 rounded-2xl p-6 space-y-4">
-            <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-              Configuración webhook
-            </h2>
-            <div>
-              <p className="text-xs text-text-secondary mb-1.5">URL del webhook (copiar en Cloudinary)</p>
-              <code className="block text-xs bg-white/5 rounded-lg px-3 py-2.5 text-text-primary font-mono break-all">
-                {webhookUrl}
-              </code>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className={[
-                'h-2 w-2 rounded-full shrink-0',
-                isConfigured ? 'bg-success animate-pulse' : 'bg-warning',
-              ].join(' ')} />
-              <span className="text-text-secondary">
-                Verificación de firma: {' '}
-                <span className={isConfigured ? 'text-success' : 'text-warning font-medium'}>
-                  {isConfigured ? 'activa (CLOUDINARY_API_SECRET configurado)' : 'desactivada — falta CLOUDINARY_API_SECRET'}
-                </span>
-              </span>
-            </div>
-            <div className="text-xs text-text-secondary bg-white/5 rounded-lg p-3 space-y-1">
-              <p className="font-medium text-text-primary mb-1">Pasos en Cloudinary:</p>
-              <p>1. Settings → Webhook Notifications → Add URL</p>
-              <p>2. Pega la URL de arriba</p>
-              <p>3. Activa el tipo <span className="font-mono">resource_deleted</span></p>
-            </div>
-          </section>
-
-        </div>
+        {/* Resumen */}
+        <section className="bg-surface-2 rounded-2xl p-6 space-y-3">
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-4">
+            Resumen
+          </h2>
+          <div className="flex items-center justify-between text-sm py-2.5 border-b border-border/50">
+            <span className="text-text-secondary">Total de eventos registrados</span>
+            <span className="font-semibold text-text-primary">{total}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm py-2.5 border-b border-border/50">
+            <span className="text-text-secondary">Eliminaciones detectadas</span>
+            <span className={`font-semibold ${deletions.length > 0 ? 'text-error' : 'text-success'}`}>
+              {deletions.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm py-2.5">
+            <span className="text-text-secondary">Último evento</span>
+            <span className="text-text-primary">
+              {notifications[0] ? formatDate(notifications[0].receivedAt) : '—'}
+            </span>
+          </div>
+        </section>
 
         {/* Log de eventos */}
         <section className="bg-surface-2 rounded-2xl overflow-hidden">
