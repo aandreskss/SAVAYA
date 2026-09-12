@@ -49,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           .from(products)
           .where(eq(products.isActive, true)),
         db
-          .select({ slug: categories.slug })
+          .select({ slug: categories.slug, gender: categories.gender })
           .from(categories)
           .where(eq(categories.isActive, true)),
         db
@@ -65,12 +65,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           changeFrequency: 'weekly' as const,
           priority: 0.8,
         })),
-        ...categoryRows.map((c) => ({
-          url: `${BASE_URL}/categoria/${c.slug}`,
-          lastModified: now,
-          changeFrequency: 'weekly' as const,
-          priority: 0.85,
-        })),
+        ...categoryRows.map((c) => {
+          const prefix = c.gender === 'mujer' ? '/mujer' : c.gender === 'hombre' ? '/hombre' : ''
+          return {
+            url: `${BASE_URL}${prefix}/categoria/${c.slug}`,
+            lastModified: now,
+            changeFrequency: 'weekly' as const,
+            priority: 0.85,
+          }
+        }),
         ...collectionRows.map((c) => ({
           url: `${BASE_URL}/coleccion/${c.slug}`,
           lastModified: now,

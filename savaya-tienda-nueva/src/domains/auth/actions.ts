@@ -111,7 +111,40 @@ export async function registerCustomer(
     access_token: passwordHash, // hash stored here for credentials accounts
   })
 
-  // TODO (Fase 2): send email verification via Resend
+  // Send email verification — store token and send email if Resend is configured
+  const rawVerifyToken = randomBytes(32).toString('hex')
+  const verifyTokenHash = createHash('sha256').update(rawVerifyToken).digest('hex')
+  const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  const verifyIdentifier = `email-verification:${email}`
+
+  await db.insert(verificationTokens).values({
+    identifier: verifyIdentifier,
+    token: verifyTokenHash,
+    expires: verifyExpires,
+  })
+
+  if (process.env.RESEND_API_KEY) {
+    const rawBase = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
+    const appUrl = rawBase.startsWith('http') ? rawBase : `https://${rawBase}`
+    const verifyUrl = `${appUrl}/verificar-email?token=${rawVerifyToken}&email=${encodeURIComponent(email)}`
+
+    try {
+      const { Resend } = await import('resend')
+      const { render } = await import('@react-email/render')
+      const { EmailVerificationEmail } = await import('@/domains/notifications/emails/EmailVerification')
+
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      const html = await render(EmailVerificationEmail({ verifyUrl }))
+      await resend.emails.send({
+        from: 'SAVAYA <noreply@savayavzla.com>',
+        to: email,
+        subject: 'Verifica tu correo — SAVAYA',
+        html,
+      })
+    } catch (err) {
+      console.error('[auth] Email verification send failed:', err)
+    }
+  }
 
   return { success: true, data: undefined }
 }
@@ -346,6 +379,9 @@ export async function resetPassword(
   // Invalidate the token — single-use
   await db.delete(verificationTokens).where(eq(verificationTokens.identifier, identifier))
 
+  // If the user has an active session, invalidate it — their old password is no longer valid
+  await signOut({ redirect: false })
+
   return { success: true, data: undefined }
 }
 
@@ -387,30 +423,15 @@ export async function setup2FA(): Promise<
  * Verifies and activates 2FA for the authenticated user.
  * The user must provide a valid TOTP code generated from the secret returned by setup2FA.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function verify2FA(code: string): Promise<ActionResult<void>> {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return { success: false, error: 'No autenticado.' }
-  }
-
-  // The secret must have been generated in the current flow — client passes it back
-  // NOTE: In production, the pending secret should be stored in an encrypted session
-  // cookie or a short-lived DB record, not sent from the client.
-  // For now, we accept it as a parameter; the UI will pass it from setup2FA's response.
-  // TODO (Fase 4): store pending secret in encrypted cookie, not client-sent.
-
-  return { success: false, error: 'Llama a verify2FAWithSecret con el secreto pendiente.' }
-}
-
 /**
  * Verifies a TOTP code against a pending secret and saves it to DB.
  * Call this after setup2FA — pass both the secret from setup2FA and the user's code.
+ * Returns 10 single-use backup codes that the user must store securely.
  */
 export async function verify2FAWithSecret(
   pendingSecret: string,
   code: string,
-): Promise<ActionResult<void>> {
+): Promise<ActionResult<{ backupCodes: string[] }>> {
   const session = await auth()
   if (!session?.user?.id) {
     return { success: false, error: 'No autenticado.' }
@@ -424,19 +445,26 @@ export async function verify2FAWithSecret(
   const userId = session.user.id
 
   // Remove any existing secret first (idempotent enrollment)
-  await db
-    .delete(twoFactorSecrets)
-    .where(eq(twoFactorSecrets.userId, userId))
+  await db.delete(twoFactorSecrets).where(eq(twoFactorSecrets.userId, userId))
 
   // Save the new secret
-  await db.insert(twoFactorSecrets).values({
-    userId,
-    secret: pendingSecret,
-  })
+  await db.insert(twoFactorSecrets).values({ userId, secret: pendingSecret })
 
-  // TODO (Fase 4): generate and store backup codes
+  // Generate 10 backup codes — each is a random 12-char alphanumeric string
+  const plainCodes = Array.from({ length: 10 }, () =>
+    randomBytes(8).toString('base64url').slice(0, 12).toUpperCase(),
+  )
 
-  return { success: true, data: undefined }
+  // Replace any existing backup codes
+  await db.delete(twoFactorBackupCodes).where(eq(twoFactorBackupCodes.userId, userId))
+  await db.insert(twoFactorBackupCodes).values(
+    plainCodes.map((plain) => ({
+      userId,
+      codeHash: createHash('sha256').update(plain).digest('hex'),
+    })),
+  )
+
+  return { success: true, data: { backupCodes: plainCodes } }
 }
 
 /**

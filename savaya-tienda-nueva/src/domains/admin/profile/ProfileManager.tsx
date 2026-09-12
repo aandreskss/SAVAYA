@@ -24,6 +24,7 @@ export function ProfileManager({ user, has2FA }: Props) {
   const [pendingSecret, setPendingSecret] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [disableCode, setDisableCode] = useState('')
+  const [backupCodes, setBackupCodes] = useState<string[]>([])
 
   const [isPending, startTransition] = useTransition()
 
@@ -53,6 +54,7 @@ export function ProfileManager({ user, has2FA }: Props) {
       setVerifyCode('')
       setPendingSecret('')
       setQrCode('')
+      setBackupCodes(result.data.backupCodes)
       toast.success('2FA activado correctamente')
     })
   }
@@ -205,6 +207,29 @@ export function ProfileManager({ user, has2FA }: Props) {
                 </Button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Backup codes — mostrar una sola vez tras activar 2FA ── */}
+        {backupCodes.length > 0 && (
+          <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 space-y-3">
+            <p className="text-sm font-semibold text-text-primary">
+              ⚠ Guarda estos códigos de respaldo ahora
+            </p>
+            <p className="text-xs text-text-secondary">
+              Son de un solo uso. Si pierdes tu app autenticadora, podrás usar uno de estos para ingresar.
+              No los compartas con nadie.
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {backupCodes.map((code) => (
+                <code key={code} className="block bg-surface rounded-lg px-3 py-1.5 font-mono text-xs text-text-primary tracking-wider">
+                  {code}
+                </code>
+              ))}
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setBackupCodes([])}>
+              Ya los guardé — cerrar
+            </Button>
           </div>
         )}
 

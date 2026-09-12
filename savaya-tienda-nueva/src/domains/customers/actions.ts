@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { db } from '@/shared/lib/db'
 import { customers, addresses } from './schema'
 import { accounts } from '@/domains/auth/schema'
+import { signOut } from '@/domains/auth/auth'
 import { getSessionCustomer, ensureCustomerExists, assertAddressOwner, setDefaultAddress } from './service'
 import {
   UpdateProfileSchema,
@@ -239,6 +240,10 @@ export async function changePassword(data: ChangePasswordInput): Promise<ActionR
     .update(accounts)
     .set({ access_token: newHash })
     .where(eq(accounts.id, account.id))
+
+  // Invalidate the current session immediately so the new password takes effect.
+  // With JWT strategy, the old token remains valid until expiry without this.
+  await signOut({ redirect: false })
 
   return { success: true, data: undefined }
 }
