@@ -59,6 +59,26 @@ export async function subscribeToNewsletter(
     // Guardar en DB
     await saveSubscriber(normalizedEmail, resendContactId)
 
+    // Email de bienvenida — fire-and-forget, no bloquea la respuesta
+    if (apiKey) {
+      ;(async () => {
+        try {
+          const { render } = await import('@react-email/render')
+          const { NewsletterWelcomeEmail } = await import('@/domains/notifications/emails/NewsletterWelcome')
+          const resend = new Resend(apiKey)
+          const html = await render(NewsletterWelcomeEmail({ email: normalizedEmail }))
+          await resend.emails.send({
+            from: 'SAVAYA <noreply@savayavzla.com>',
+            to: normalizedEmail,
+            subject: '¡Bienvenida a SAVAYA! 🌟',
+            html,
+          })
+        } catch (err) {
+          console.error('[newsletter] Welcome email failed:', err)
+        }
+      })()
+    }
+
     return { success: true }
   } catch (error) {
     console.error('[newsletter] subscribeToNewsletter failed:', error)

@@ -9,7 +9,7 @@ export function StepConfirmation() {
   if (!orderResult) return null
 
   const { orderNumber, totalUsd, totalBs, status } = orderResult
-  const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '584141000000'
+  const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '584141100100'
 
   const waMessage = encodeURIComponent(
     `Hola! Acabo de realizar mi pedido *${orderNumber}* por $${totalUsd.toFixed(2)} USD. Quedo pendiente de la confirmación. ¡Gracias!`,
@@ -96,7 +96,7 @@ export function StepConfirmation() {
           </svg>
           Enviar pedido por WhatsApp
         </a>
-        <Link href="/mi-cuenta/pedidos" className="btn-secondary flex-1 text-center">
+        <Link href={`/mi-cuenta/pedidos/${orderNumber}`} className="btn-secondary flex-1 text-center">
           Ver mi pedido
         </Link>
       </div>
