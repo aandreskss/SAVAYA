@@ -17,7 +17,7 @@ export type ProductCardProps = {
   compareAtPrice?: number | null
   currency?: string
   images: { url: string; alt: string }[]
-  availableColors: { id: string; name: string; hex: string }[]
+  availableColors: { id: string; name: string; hex: string; hex2?: string | null }[]
   badges?: ProductBadge[]
   isVip?: boolean
   isInWishlist?: boolean
@@ -191,7 +191,11 @@ export function ProductCard({
                 title={color.name}
                 aria-label={color.name}
                 className="inline-block w-3.5 h-3.5 rounded-full border border-border shrink-0"
-                style={{ backgroundColor: color.hex }}
+                style={
+                  color.hex2
+                    ? { background: `linear-gradient(135deg, ${color.hex} 50%, ${color.hex2} 50%)` }
+                    : { backgroundColor: color.hex }
+                }
               />
             ))}
             {extraColors > 0 && (

@@ -56,7 +56,7 @@ export type ProductListItem = {
   isNew: boolean
   isFeatured: boolean
   isVip: boolean
-  availableColors: { id: string; name: string; hex: string }[]
+  availableColors: { id: string; name: string; hex: string; hex2?: string | null }[]
   images: { url: string; alt: string }[]
   hasStock: boolean
 }
@@ -467,6 +467,7 @@ export async function getProducts(
       colorId: colors.id,
       colorName: colors.name,
       colorHex: colors.hex,
+      colorHex2: colors.hex2,
     })
     .from(productVariants)
     .innerJoin(colors, eq(colors.id, productVariants.colorId))
@@ -476,7 +477,7 @@ export async function getProducts(
         eq(productVariants.isActive, true),
       ),
     )
-    .groupBy(productVariants.productId, colors.id, colors.name, colors.hex)
+    .groupBy(productVariants.productId, colors.id, colors.name, colors.hex, colors.hex2)
 
   // Fetch stock status per product (any variant with available stock)
   const stockRows = await db
@@ -504,11 +505,11 @@ export async function getProducts(
     }
   }
 
-  const colorsByProduct = new Map<string, { id: string; name: string; hex: string }[]>()
+  const colorsByProduct = new Map<string, { id: string; name: string; hex: string; hex2?: string | null }[]>()
   for (const c of colorRows) {
     const existing = colorsByProduct.get(c.productId) ?? []
     if (!existing.find((e) => e.id === c.colorId)) {
-      existing.push({ id: c.colorId, name: c.colorName, hex: c.colorHex ?? '#888888' })
+      existing.push({ id: c.colorId, name: c.colorName, hex: c.colorHex ?? '#888888', hex2: c.colorHex2 ?? null })
       colorsByProduct.set(c.productId, existing)
     }
   }
@@ -1159,6 +1160,7 @@ export async function getRelatedProducts(
       colorId: colors.id,
       colorName: colors.name,
       colorHex: colors.hex,
+      colorHex2: colors.hex2,
     })
     .from(productVariants)
     .innerJoin(colors, eq(colors.id, productVariants.colorId))
@@ -1168,7 +1170,7 @@ export async function getRelatedProducts(
         eq(productVariants.isActive, true),
       ),
     )
-    .groupBy(productVariants.productId, colors.id, colors.name, colors.hex)
+    .groupBy(productVariants.productId, colors.id, colors.name, colors.hex, colors.hex2)
 
   // Fetch stock status
   const stockRows = await db
@@ -1193,11 +1195,11 @@ export async function getRelatedProducts(
     }
   }
 
-  const colorsByProduct = new Map<string, { id: string; name: string; hex: string }[]>()
+  const colorsByProduct = new Map<string, { id: string; name: string; hex: string; hex2?: string | null }[]>()
   for (const c of colorRows) {
     const existing = colorsByProduct.get(c.productId) ?? []
     if (!existing.find((e) => e.id === c.colorId)) {
-      existing.push({ id: c.colorId, name: c.colorName, hex: c.colorHex ?? '#888888' })
+      existing.push({ id: c.colorId, name: c.colorName, hex: c.colorHex ?? '#888888', hex2: c.colorHex2 ?? null })
       colorsByProduct.set(c.productId, existing)
     }
   }
@@ -1269,6 +1271,7 @@ export async function getRecentlyViewedProducts(ids: string[]): Promise<ProductL
       colorId: colors.id,
       colorName: colors.name,
       colorHex: colors.hex,
+      colorHex2: colors.hex2,
     })
     .from(productVariants)
     .innerJoin(colors, eq(colors.id, productVariants.colorId))
@@ -1278,7 +1281,7 @@ export async function getRecentlyViewedProducts(ids: string[]): Promise<ProductL
         eq(productVariants.isActive, true),
       ),
     )
-    .groupBy(productVariants.productId, colors.id, colors.name, colors.hex)
+    .groupBy(productVariants.productId, colors.id, colors.name, colors.hex, colors.hex2)
 
   const mediaByProduct = new Map<string, { url: string; alt: string }[]>()
   for (const m of mediaRows) {
@@ -1289,11 +1292,11 @@ export async function getRecentlyViewedProducts(ids: string[]): Promise<ProductL
     }
   }
 
-  const colorsByProduct = new Map<string, { id: string; name: string; hex: string }[]>()
+  const colorsByProduct = new Map<string, { id: string; name: string; hex: string; hex2?: string | null }[]>()
   for (const c of colorRows) {
     const existing = colorsByProduct.get(c.productId) ?? []
     if (!existing.find((e) => e.id === c.colorId)) {
-      existing.push({ id: c.colorId, name: c.colorName, hex: c.colorHex ?? '#888888' })
+      existing.push({ id: c.colorId, name: c.colorName, hex: c.colorHex ?? '#888888', hex2: c.colorHex2 ?? null })
       colorsByProduct.set(c.productId, existing)
     }
   }
