@@ -19,6 +19,7 @@ import * as settingsSchema from '@/domains/settings/schema'
 import * as auditLogSchema from '@/domains/audit-log/schema'
 import * as notificationsSchema from '@/domains/notifications/schema'
 import * as wholesaleSchema from '@/domains/wholesale/schema'
+import * as odooSchema from '@/domains/integrations/odoo/schema'
 
 // ---------------------------------------------------------------------------
 // Neon HTTP driver — stateless HTTP requests per query, no persistent TCP
@@ -49,6 +50,7 @@ export const db = drizzle(sql, {
     ...auditLogSchema,
     ...notificationsSchema,
     ...wholesaleSchema,
+    ...odooSchema,
   },
 })
 

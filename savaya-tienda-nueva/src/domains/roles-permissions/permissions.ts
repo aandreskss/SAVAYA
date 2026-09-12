@@ -45,6 +45,8 @@ export const PERMISSIONS = {
   SETTINGS_READ: 'settings:read',
   SETTINGS_WRITE: 'settings:write',
   SETTINGS_PAYMENT_ACCOUNTS: 'settings:payment_accounts', // acción de alto riesgo
+  // Integraciones (solo super_admin)
+  INTEGRATIONS_MANAGE: 'integrations:manage',
 } as const
 
 /**
@@ -62,7 +64,8 @@ export type PermissionSlug = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
 export const ROLE_PERMISSIONS: Record<string, PermissionSlug[]> = {
   super_admin: Object.values(PERMISSIONS),
   admin: Object.values(PERMISSIONS).filter(
-    (p): p is PermissionSlug => p !== 'exchange_rates:override',
+    (p): p is PermissionSlug =>
+      p !== 'exchange_rates:override' && p !== 'integrations:manage',
   ),
   catalog: ['catalog:read', 'catalog:write', 'catalog:delete', 'inventory:read'],
   inventory: ['inventory:read', 'inventory:write', 'catalog:read'],

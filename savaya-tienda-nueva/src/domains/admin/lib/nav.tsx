@@ -128,6 +128,18 @@ function GearIcon() {
   )
 }
 
+function IntegrationsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <rect x="1.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="10.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="1.5" y="10.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="10.5" y="10.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7.5 4.5h3M4.5 7.5v3M13.5 7.5v3M10.5 13.5h-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function WalletIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -160,4 +172,5 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Analytics',     href: '/admin/analytics',    icon: <BarChartIcon />,   permission: 'analytics:read' },
   { label: 'Usuarios',      href: '/admin/usuarios',     icon: <ShieldIcon />,     permission: 'users:read' },
   { label: 'Configuración', href: '/admin/configuracion',icon: <GearIcon />,       permission: 'settings:read' },
+  { label: 'Integraciones', href: '/admin/integraciones/odoo', icon: <IntegrationsIcon />, permission: 'integrations:manage' },
 ]

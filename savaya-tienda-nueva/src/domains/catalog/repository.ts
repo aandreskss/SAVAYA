@@ -9,7 +9,7 @@ import {
   productCollections,
   collections,
 } from './schema'
-import { inventory } from '@/domains/inventory/schema'
+import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import {
   eq,
   and,
@@ -1365,4 +1365,77 @@ export async function listActiveCategories(): Promise<CategoryPill[]> {
     console.error('[catalog/repository] listActiveCategories failed:', error)
     return []
   }
+}
+
+// ---------------------------------------------------------------------------
+// updateStockBySku — Odoo inventory sync
+// Updates inventory.quantity for each variant found by SKU.
+// Respects the reserved <= quantity DB constraint: new_qty = max(odoo_qty, reserved).
+// Logs each change as an adjustment movement for audit trail.
+// ---------------------------------------------------------------------------
+
+export type StockSyncItem = { sku: string; qty: number }
+
+export type StockSyncResult = {
+  synced: number
+  skipped: number
+  failed: string[]
+}
+
+export async function updateStockBySku(items: StockSyncItem[]): Promise<StockSyncResult> {
+  if (items.length === 0) return { synced: 0, skipped: 0, failed: [] }
+
+  const skus = items.map((i) => i.sku)
+  const qtyBySku = new Map(items.map((i) => [i.sku, i.qty]))
+
+  // Find all matching variants + current inventory
+  const rows = await db
+    .select({
+      variantId: productVariants.id,
+      sku: productVariants.sku,
+      currentQty: inventory.quantity,
+      currentReserved: inventory.reserved,
+    })
+    .from(productVariants)
+    .innerJoin(inventory, eq(inventory.variantId, productVariants.id))
+    .where(inArray(productVariants.sku, skus))
+
+  const foundSkus = new Set(rows.map((r) => r.sku))
+  const skipped = skus.filter((s) => !foundSkus.has(s)).length
+  const failed: string[] = []
+  let synced = 0
+
+  for (const row of rows) {
+    const odooQty = qtyBySku.get(row.sku) ?? 0
+    const reserved = row.currentReserved ?? 0
+    // Never set quantity below reserved — that would violate the DB constraint
+    const newQty = Math.max(odooQty, reserved)
+    const delta = newQty - (row.currentQty ?? 0)
+
+    if (delta === 0) {
+      synced++
+      continue
+    }
+
+    try {
+      await db
+        .update(inventory)
+        .set({ quantity: newQty, updatedAt: new Date() })
+        .where(eq(inventory.variantId, row.variantId))
+
+      await db.insert(inventoryMovements).values({
+        variantId: row.variantId,
+        type: 'adjustment',
+        quantity: delta,
+        reason: `Sincronización Odoo ERP (SKU: ${row.sku})`,
+      })
+
+      synced++
+    } catch (err) {
+      console.error(`[catalog/repo] updateStockBySku failed for SKU ${row.sku}:`, err)
+      failed.push(row.sku)
+    }
+  }
+
+  return { synced, skipped, failed }
 }
