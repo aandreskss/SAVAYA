@@ -85,6 +85,7 @@ const CollectionFilterRulesSchema = z.object({
   onlyVip: z.boolean().optional(),
   colorIds: z.array(z.string().uuid()).optional(),
   sizeIds: z.array(z.string().uuid()).optional(),
+  categoryIds: z.array(z.string().uuid()).optional(),
   priceMin: z.number().nonnegative().nullable().optional(),
   priceMax: z.number().positive().nullable().optional(),
 }).nullable().optional()

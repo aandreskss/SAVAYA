@@ -44,3 +44,10 @@ export type SalesByMethodItem = {
   orderCount: number
   revenue: number
 }
+
+export type ProductWithImageItem = {
+  id: string
+  name: string
+  slug: string
+  imageUrl: string
+}

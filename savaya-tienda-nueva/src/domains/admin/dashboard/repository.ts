@@ -7,6 +7,7 @@ import type {
   LowStockItem,
   TopProductItem,
   SalesByMethodItem,
+  ProductWithImageItem,
 } from './types'
 
 type Row = Record<string, unknown>
@@ -249,6 +250,35 @@ export async function getSalesByMethod(start: Date, end: Date): Promise<SalesByM
     }))
   } catch (error) {
     console.error('[dashboard] getSalesByMethod failed:', error)
+    return []
+  }
+}
+
+// ---------------------------------------------------------------------------
+// getProductsWithImages — for broken image detection in BrokenImagesBlock
+// ---------------------------------------------------------------------------
+
+export async function getProductsWithImages(): Promise<ProductWithImageItem[]> {
+  if (!process.env.DATABASE_URL) return []
+
+  try {
+    const rows = await rawQuery<{ id: string; name: string; slug: string; image_url: string }>(sql`
+      SELECT p.id, p.name, p.slug, m.url AS image_url
+      FROM products p
+      INNER JOIN product_media m ON m.product_id = p.id AND m.is_primary = true
+      WHERE p.is_active = true
+      ORDER BY p.name ASC
+      LIMIT 300
+    `)
+
+    return rows.map((r) => ({
+      id: str(r.id),
+      name: str(r.name),
+      slug: str(r.slug),
+      imageUrl: str(r.image_url),
+    }))
+  } catch (error) {
+    console.error('[dashboard] getProductsWithImages failed:', error)
     return []
   }
 }

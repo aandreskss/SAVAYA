@@ -4,6 +4,7 @@ import {
   getAdminCollectionProducts,
   getAllColors,
   getAllSizes,
+  getAllCategoryOptions,
 } from '@/domains/admin/catalog/repository'
 import { CollectionEditor } from '@/domains/admin/catalog/components/CollectionEditor'
 import type { CollectionFilterRules } from '@/domains/admin/catalog/validators'
@@ -14,11 +15,12 @@ export default async function EditarColeccionPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [collection, collectionProducts, colors, sizes] = await Promise.all([
+  const [collection, collectionProducts, colors, sizes, categories] = await Promise.all([
     getAdminCollection(id),
     getAdminCollectionProducts(id),
     getAllColors(),
     getAllSizes(),
+    getAllCategoryOptions(),
   ])
 
   if (!collection) notFound()
@@ -41,6 +43,7 @@ export default async function EditarColeccionPage({
         initialProducts={collectionProducts}
         colors={colors}
         sizes={sizes}
+        categories={categories}
       />
     </div>
   )

@@ -6,6 +6,7 @@ import {
   getLowStockItems,
   getTopProducts,
   getSalesByMethod,
+  getProductsWithImages,
 } from '@/domains/admin/dashboard/repository'
 import { getPeriodBounds, getPeriodLabel, parsePeriod } from '@/domains/admin/dashboard/period'
 import { PeriodSelector } from './_components/PeriodSelector'
@@ -15,6 +16,7 @@ import { PendingPaymentsBlock } from './_components/PendingPaymentsBlock'
 import { LowStockBlock } from './_components/LowStockBlock'
 import { TopProductsBlock } from './_components/TopProductsBlock'
 import { SalesByMethodBlock } from './_components/SalesByMethodBlock'
+import { BrokenImagesBlock } from './_components/BrokenImagesBlock'
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -29,7 +31,7 @@ export default async function AdminDashboardPage({
   const periodLabel = getPeriodLabel(period)
   const forbidden = params.forbidden === '1'
 
-  const [kpis, chartData, pendingPayments, lowStock, topProducts, salesByMethod] =
+  const [kpis, chartData, pendingPayments, lowStock, topProducts, salesByMethod, productsWithImages] =
     await Promise.all([
       getDashboardKPIs(start, end),
       getSalesChartData(start, end),
@@ -37,6 +39,7 @@ export default async function AdminDashboardPage({
       getLowStockItems(),
       getTopProducts(start, end),
       getSalesByMethod(start, end),
+      getProductsWithImages(),
     ])
 
   return (
@@ -68,6 +71,7 @@ export default async function AdminDashboardPage({
           <div style={{ animation: 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 600ms both' }}>
             <LowStockBlock items={lowStock} />
           </div>
+          <BrokenImagesBlock products={productsWithImages} />
         </div>
         <div className="flex flex-col gap-6">
           <div style={{ animation: 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 560ms both' }}>

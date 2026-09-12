@@ -14,7 +14,7 @@ import {
 } from '../actions'
 import type { CollectionProductSummary } from '../repository'
 import type { CollectionFilterRules } from '../validators'
-import type { ColorOption, SizeOption } from '../types'
+import type { CategoryOption, ColorOption, SizeOption } from '../types'
 
 // ---------------------------------------------------------------------------
 // CollectionImageUpload
@@ -201,6 +201,7 @@ type Props = {
   initialProducts?: CollectionProductSummary[]
   colors?: ColorOption[]
   sizes?: SizeOption[]
+  categories?: CategoryOption[]
 }
 
 function toDatetimeLocal(d: Date | null): string {
@@ -241,6 +242,7 @@ type FilterState = {
   onlyVip: boolean
   colorIds: string[]
   sizeIds: string[]
+  categoryIds: string[]
   priceMin: string
   priceMax: string
 }
@@ -254,6 +256,7 @@ function initFilterState(rules: CollectionFilterRules): FilterState {
       onlyVip: false,
       colorIds: [],
       sizeIds: [],
+      categoryIds: [],
       priceMin: '',
       priceMax: '',
     }
@@ -265,6 +268,7 @@ function initFilterState(rules: CollectionFilterRules): FilterState {
     onlyVip: rules.onlyVip ?? false,
     colorIds: rules.colorIds ?? [],
     sizeIds: rules.sizeIds ?? [],
+    categoryIds: rules.categoryIds ?? [],
     priceMin: rules.priceMin != null ? String(rules.priceMin) : '',
     priceMax: rules.priceMax != null ? String(rules.priceMax) : '',
   }
@@ -278,6 +282,7 @@ function filterStateToRules(state: FilterState): CollectionFilterRules {
   if (state.onlyVip) rules.onlyVip = true
   if (state.colorIds.length > 0) rules.colorIds = state.colorIds
   if (state.sizeIds.length > 0) rules.sizeIds = state.sizeIds
+  if (state.categoryIds.length > 0) rules.categoryIds = state.categoryIds
   const min = parseFloat(state.priceMin)
   const max = parseFloat(state.priceMax)
   if (!isNaN(min) && min >= 0) rules.priceMin = min
@@ -289,11 +294,13 @@ function FilterRulesPanel({
   state,
   colors,
   sizes,
+  categories,
   onChange,
 }: {
   state: FilterState
   colors: ColorOption[]
   sizes: SizeOption[]
+  categories: CategoryOption[]
   onChange: (patch: Partial<FilterState>) => void
 }) {
   function toggleColor(id: string) {
@@ -308,6 +315,13 @@ function FilterRulesPanel({
       ? state.sizeIds.filter((s) => s !== id)
       : [...state.sizeIds, id]
     onChange({ sizeIds: next })
+  }
+
+  function toggleCategory(id: string) {
+    const next = state.categoryIds.includes(id)
+      ? state.categoryIds.filter((c) => c !== id)
+      : [...state.categoryIds, id]
+    onChange({ categoryIds: next })
   }
 
   return (
@@ -353,6 +367,39 @@ function FilterRulesPanel({
               />
             </div>
           </div>
+
+          {/* Categories */}
+          {categories.length > 0 && (
+            <div>
+              <p className="font-sans text-sm font-medium text-text-primary mb-2">
+                Filtrar por categoría
+                {state.categoryIds.length > 0 && (
+                  <span className="text-text-secondary font-normal ml-2">
+                    ({state.categoryIds.length} seleccionada{state.categoryIds.length !== 1 ? 's' : ''})
+                  </span>
+                )}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => {
+                  const selected = state.categoryIds.includes(category.id)
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => toggleCategory(category.id)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-sans font-medium border transition-colors duration-150 ${
+                        selected
+                          ? 'bg-accent-gold text-text-primary-inverse border-accent-gold'
+                          : 'bg-surface text-text-primary border-border hover:border-border-hover'
+                      }`}
+                    >
+                      {category.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Colors */}
           {colors.length > 0 && (
@@ -638,7 +685,7 @@ function ProductsPanel({
 // CollectionEditor
 // ---------------------------------------------------------------------------
 
-export function CollectionEditor({ collection, initialProducts = [], colors = [], sizes = [] }: Props) {
+export function CollectionEditor({ collection, initialProducts = [], colors = [], sizes = [], categories = [] }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -782,6 +829,7 @@ export function CollectionEditor({ collection, initialProducts = [], colors = []
         state={filterState}
         colors={colors}
         sizes={sizes}
+        categories={categories}
         onChange={(patch) => setFilterState((s) => ({ ...s, ...patch }))}
       />
 

@@ -84,6 +84,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
       onlyVip: rules.onlyVip || undefined,
       colorIds: rules.colorIds?.length ? rules.colorIds : urlFilters.colorIds,
       sizeIds: rules.sizeIds?.length ? rules.sizeIds : urlFilters.sizeIds,
+      categoryIds: rules.categoryIds?.length ? rules.categoryIds : undefined,
       minPrice: rules.priceMin != null ? rules.priceMin : urlFilters.minPrice,
       maxPrice: rules.priceMax != null ? rules.priceMax : urlFilters.maxPrice,
     }

@@ -30,6 +30,7 @@ import {
 
 export type ProductFilters = {
   categorySlug?: string
+  categoryIds?: string[]
   gender?: 'women' | 'men' | 'unisex'
   colorIds?: string[]
   sizeIds?: string[]
@@ -327,6 +328,10 @@ export async function getProducts(
     conditions.push(eq(products.categoryId, cat.id))
   }
 
+  if (filters.categoryIds?.length) {
+    conditions.push(inArray(products.categoryId, filters.categoryIds))
+  }
+
   // Collection filter — requires join with productCollections
   let collectionId: string | undefined
   if (filters.collectionSlug) {
@@ -615,6 +620,7 @@ export type CollectionFilterRules = {
   onlyVip?: boolean
   colorIds?: string[]
   sizeIds?: string[]
+  categoryIds?: string[]
   priceMin?: number | null
   priceMax?: number | null
 } | null | undefined
