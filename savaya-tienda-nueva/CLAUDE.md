@@ -435,3 +435,10 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Filas bloqueadas**: fondo `bg-error/[0.02]` sutil + badge "Bloqueado" en el nombre.
 - **Delete con FK**: si el cliente tiene pedidos, `deleteAdminCustomer` lanza constraint FK → la action captura el error y devuelve `"No se puede eliminar un cliente con pedidos. Puedes bloquearlo en su lugar."`.
 - **Backend ya existía completo**: `setCustomerStatus`, `deleteAdminCustomer`, `setCustomerStatusAction`, `deleteCustomerAction` estaban implementados desde Fase 4.6 — esta sesión solo expuso las acciones en la tabla.
+
+### 8.36 Checkout — reset del store al iniciar un pedido nuevo
+
+- **Problema resuelto (2026-09-12)**: el store de Zustand es singleton en memoria. Al completar un pedido (`step: 4`, `orderResult` set) y luego navegar a otro producto y volver a `/checkout` con un carrito nuevo, el store seguía en `step: 4` y mostraba la confirmación del pedido anterior.
+- **Fix**: `CheckoutClient.tsx` usa `useLayoutEffect(() => { if (step === 4) reset() }, [])` para detectar el estado obsoleto al montar y reiniciar el store antes del primer paint — sin flash visual.
+- **`reset()`** en `checkout-store.ts`: limpia todos los campos del store y genera una nueva `idempotencyKey` (evita riesgo de pedido duplicado).
+- **Regla**: cualquier estado de Zustand que pueda quedar "sucio" entre sesiones de navegación SPA debe tener una acción `reset()` y llamarla al montar el componente raíz del flujo si el estado indica que el flujo ya completó.
