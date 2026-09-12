@@ -29,7 +29,7 @@ export default function CategoryLoading() {
           <div className="flex justify-end mb-6">
             <Skeleton height={36} className="w-36 rounded-md" />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-5 md:gap-7">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="aspect-square w-full rounded-lg" />

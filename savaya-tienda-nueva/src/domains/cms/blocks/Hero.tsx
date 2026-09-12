@@ -67,6 +67,11 @@ export function Hero({
           className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/8 via-transparent to-transparent"
         />
 
+        {/* Mirror sweep — light reflection that crosses the hero every 8s */}
+        <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none rounded-[32px]">
+          <div className="absolute inset-y-0 left-0 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/[0.07] to-transparent [animation:hero-shimmer_8s_ease-in-out_3s_infinite]" />
+        </div>
+
         {/* Content — bottom left, fade-up on load */}
         <div className="absolute left-7 bottom-10 md:left-12 md:bottom-14 z-10 max-w-[520px] animate-[fadeUp_0.7s_ease-out_both]">
           {eyebrow && (
