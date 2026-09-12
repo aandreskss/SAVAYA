@@ -407,3 +407,31 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Wrapper exterior**: `<div className="p-6 md:p-10">` — no `p-6 md:p-8` como en páginas más simples (ver tasas que usa p-6 md:p-8; integraciones usa md:p-10 por ser más densa).
 - **Contenedor de contenido**: `<div className="max-w-4xl mx-auto space-y-8">` para páginas de gestión con varias secciones. `max-w-2xl` para páginas de formulario simple (ej. perfil).
 - **Regla general**: toda página admin debe tener su propio padding (`p-6 md:p-8` o `p-6 md:p-10`). El `<main>` del `AdminShell` no aplica padding — cada página es responsable del suyo.
+
+### 8.33 Smart Collections — filtro por categorías
+
+- **`categoryIds?: string[]`** en `CollectionFilterRules` tanto en `src/domains/admin/catalog/validators.ts` (Zod) como en `src/domains/catalog/repository.ts` (tipo TypeScript).
+- **`ProductFilters`** (`src/domains/catalog/repository.ts`) incluye `categoryIds?: string[]`. En `getProducts`, se aplica como `inArray(products.categoryId, filters.categoryIds)` directo en la query principal (no requiere subquery de variantes).
+- **Storefront** (`/coleccion/[slug]/page.tsx`): cuando `filterRules` tiene `categoryIds`, se pasa a `filters.categoryIds`. El usuario puede combinar este filtro con sort y paginación por URL.
+- **Admin `FilterRulesPanel`** (`CollectionEditor.tsx`): nueva sección "Filtrar por categoría" entre los toggles booleanos y el filtro de color. Mismas pills que tallas (estilo gold al seleccionar). Carga `categories` vía `getAllCategoryOptions()` pasado como prop desde las páginas `nuevo/` y `[id]/`.
+- **`getAllCategoryOptions()`** ya existía en `src/domains/admin/catalog/repository.ts` — devuelve `{ id, name, parentId }` ordenado por `sortOrder, name`.
+
+### 8.34 Dashboard admin — detector de imágenes rotas
+
+- **`getProductsWithImages()`** en `src/domains/admin/dashboard/repository.ts`: SQL que devuelve hasta 300 productos activos con su `primary_image_url` (JOIN con `product_media WHERE is_primary = true`). Tipo: `ProductWithImageItem { id, name, slug, imageUrl }`.
+- **`BrokenImagesBlock`** (`src/app/admin/_components/BrokenImagesBlock.tsx`): client component. Al montar lanza `new Image()` por cada producto, usando la URL transformada `toProbeUrl(url)` que reemplaza `/upload/` por `/upload/c_scale,w_4/` para descargar solo un thumbnail de 4px en lugar de la imagen completa.
+- **`onerror`** dispara si Cloudinary devuelve 404 (asset eliminado). El bloque acumula los productos con error, los ordena alfabéticamente y los muestra al terminar con badge rojo parpadeante + lista con nombre, URL (monospace) y link directo a `/admin/productos/{id}`.
+- **Botón "Ocultar/Mostrar"**: permite colapsar la lista cuando hay muchas imágenes rotas.
+- **Ubicación en el dashboard**: columna izquierda, debajo de `LowStockBlock`. Los datos se cargan en el `Promise.all` principal del Server Component.
+- **Regla de transformación Cloudinary**: `url.replace('/upload/', '/upload/c_scale,w_4/')`. Si la URL no contiene `/upload/`, se usa tal cual (evita romper URLs externas).
+
+### 8.35 Clientes admin — acciones de bloquear/activar y eliminar desde la tabla
+
+- **`AdminCustomerFilters`** agrega `status?: 'active' | 'blocked'`. La query `listAdminCustomers` aplica `AND c.is_active = true/false` según el valor.
+- **Página `/admin/clientes`**: parsea `?status=` del searchParam y lo pasa al filtro. Página acepta ahora `{ search?, tag?, status?, page? }`.
+- **`CustomersTable`**: nuevo select "Todos los estados / Activos / Bloqueados" junto a los filtros existentes. Nueva columna "Acciones" al final de cada fila.
+- **Componente `RowActions`** (dentro de `CustomersTable.tsx`): botón bloquear/activar (ícono candado/check) + botón eliminar (ícono papelera). El eliminar muestra confirmación inline "¿Eliminar? Sí / No" antes de ejecutar.
+- **Estado optimista**: `CustomersTable` mantiene `localItems` en `useState`. `handleStatusChange` actualiza `isActive` de la fila al instante; `handleDeleted` filtra la fila del array — sin reload de página.
+- **Filas bloqueadas**: fondo `bg-error/[0.02]` sutil + badge "Bloqueado" en el nombre.
+- **Delete con FK**: si el cliente tiene pedidos, `deleteAdminCustomer` lanza constraint FK → la action captura el error y devuelve `"No se puede eliminar un cliente con pedidos. Puedes bloquearlo en su lugar."`.
+- **Backend ya existía completo**: `setCustomerStatus`, `deleteAdminCustomer`, `setCustomerStatusAction`, `deleteCustomerAction` estaban implementados desde Fase 4.6 — esta sesión solo expuso las acciones en la tabla.
