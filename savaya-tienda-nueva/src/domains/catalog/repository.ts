@@ -57,7 +57,7 @@ export type ProductListItem = {
   isFeatured: boolean
   isVip: boolean
   availableColors: { id: string; name: string; hex: string; hex2?: string | null }[]
-  images: { url: string; alt: string }[]
+  images: { url: string; alt: string; colorId?: string | null }[]
   hasStock: boolean
 }
 
@@ -447,13 +447,14 @@ export async function getProducts(
 
   const productIds = rows.map((r) => r.id)
 
-  // Fetch media (primary images first, max 2 per product)
+  // Fetch media (primary first, up to 10 per product to support per-color images)
   const mediaRows = await db
     .select({
       productId: productMedia.productId,
       url: productMedia.url,
       altText: productMedia.altText,
       isPrimary: productMedia.isPrimary,
+      colorId: productMedia.colorId,
       sortOrder: productMedia.sortOrder,
     })
     .from(productMedia)
@@ -496,11 +497,11 @@ export async function getProducts(
     .groupBy(productVariants.productId)
 
   // Build maps
-  const mediaByProduct = new Map<string, { url: string; alt: string }[]>()
+  const mediaByProduct = new Map<string, { url: string; alt: string; colorId: string | null }[]>()
   for (const m of mediaRows) {
     const existing = mediaByProduct.get(m.productId) ?? []
-    if (existing.length < 2) {
-      existing.push({ url: m.url, alt: m.altText ?? '' })
+    if (existing.length < 10) {
+      existing.push({ url: m.url, alt: m.altText ?? '', colorId: m.colorId ?? null })
       mediaByProduct.set(m.productId, existing)
     }
   }
@@ -1140,12 +1141,13 @@ export async function getRelatedProducts(
 
   const relatedIds = relatedRows.map((r) => r.id)
 
-  // Fetch primary images
+  // Fetch images per product (up to 10 to support per-color images)
   const mediaRows = await db
     .select({
       productId: productMedia.productId,
       url: productMedia.url,
       altText: productMedia.altText,
+      colorId: productMedia.colorId,
       isPrimary: productMedia.isPrimary,
       sortOrder: productMedia.sortOrder,
     })
@@ -1186,11 +1188,11 @@ export async function getRelatedProducts(
     )
     .groupBy(productVariants.productId)
 
-  const mediaByProduct = new Map<string, { url: string; alt: string }[]>()
+  const mediaByProduct = new Map<string, { url: string; alt: string; colorId: string | null }[]>()
   for (const m of mediaRows) {
     const existing = mediaByProduct.get(m.productId) ?? []
-    if (existing.length < 2) {
-      existing.push({ url: m.url, alt: m.altText ?? '' })
+    if (existing.length < 10) {
+      existing.push({ url: m.url, alt: m.altText ?? '', colorId: m.colorId ?? null })
       mediaByProduct.set(m.productId, existing)
     }
   }
@@ -1259,6 +1261,7 @@ export async function getRecentlyViewedProducts(ids: string[]): Promise<ProductL
       url: productMedia.url,
       altText: productMedia.altText,
       isPrimary: productMedia.isPrimary,
+      colorId: productMedia.colorId,
       sortOrder: productMedia.sortOrder,
     })
     .from(productMedia)
@@ -1283,11 +1286,11 @@ export async function getRecentlyViewedProducts(ids: string[]): Promise<ProductL
     )
     .groupBy(productVariants.productId, colors.id, colors.name, colors.hex, colors.hex2)
 
-  const mediaByProduct = new Map<string, { url: string; alt: string }[]>()
+  const mediaByProduct = new Map<string, { url: string; alt: string; colorId: string | null }[]>()
   for (const m of mediaRows) {
     const existing = mediaByProduct.get(m.productId) ?? []
-    if (existing.length < 2) {
-      existing.push({ url: m.url, alt: m.altText ?? '' })
+    if (existing.length < 10) {
+      existing.push({ url: m.url, alt: m.altText ?? '', colorId: m.colorId ?? null })
       mediaByProduct.set(m.productId, existing)
     }
   }
