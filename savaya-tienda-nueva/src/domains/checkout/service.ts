@@ -2,28 +2,72 @@
 
 import { db, rawQuery } from '@/shared/lib/db'
 import { auth } from '@/domains/auth/auth'
-import { sql, eq, inArray, and } from 'drizzle-orm'
+import { sql, eq, inArray, and, isNull, or } from 'drizzle-orm'
 import { orders, orderItems, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { cartItems } from '@/domains/cart/schema'
 import { productVariants, products, colors, sizes, productMedia } from '@/domains/catalog/schema'
 import { customers } from '@/domains/customers/schema'
-import { shippingMethods } from '@/domains/shipping/schema'
+import { shippingMethods, shippingRates } from '@/domains/shipping/schema'
 import { validateCoupon, calculateDiscount } from '@/domains/discounts-promotions/service'
 import { recordCouponUsage } from '@/domains/discounts-promotions/repository'
+import { getLatestRate } from '@/domains/exchange-rates/repository'
 import { sendOrderConfirmation } from '@/domains/notifications/service'
 import type { CreateOrderServiceInput } from './validators'
 import type { OrderResult } from './types'
 
 // ── Order number generation ───────────────────────────────────────────────────
+// Uses a PostgreSQL sequence (savaya_order_seq) to guarantee uniqueness under
+// concurrent requests — COUNT(*)+1 has a race condition with two simultaneous orders.
+// Run scripts/run-migration-012.js once to create the sequence.
 
 async function generateOrderNumber(): Promise<string> {
-  const [{ count }] = await rawQuery<{ count: string }>(
-    sql`SELECT COUNT(*) as count FROM orders`,
+  const [{ nextval }] = await rawQuery<{ nextval: string }>(
+    sql`SELECT nextval('savaya_order_seq')`,
   )
-  const next = parseInt(count, 10) + 1
-  return `SAV-${String(next).padStart(6, '0')}`
+  return `SAV-${String(parseInt(nextval, 10)).padStart(6, '0')}`
+}
+
+// ── Shipping cost resolution ──────────────────────────────────────────────────
+// Returns the server-authoritative shipping cost from shipping_rates.
+// Prefers city-specific rate over zone-wide (cityId IS NULL) fallback.
+// Returns null if no matching rate is found for the method + order amount.
+
+async function resolveShippingCost(
+  methodId: string,
+  cityId: string | undefined,
+  orderAmountUsd: number,
+): Promise<number | null> {
+  const rates = await db
+    .select()
+    .from(shippingRates)
+    .where(
+      and(
+        eq(shippingRates.methodId, methodId),
+        cityId
+          ? or(eq(shippingRates.cityId, cityId), isNull(shippingRates.cityId))
+          : isNull(shippingRates.cityId),
+      ),
+    )
+
+  // Prefer city-specific match; fall back to zone-wide (null city)
+  const citySpecific = rates.filter((r) => r.cityId === cityId)
+  const fallback = rates.filter((r) => r.cityId === null)
+  const candidates = citySpecific.length > 0 ? citySpecific : fallback
+
+  const match = candidates.find((r) => {
+    const min = Number(r.minOrderUsd)
+    const max = r.maxOrderUsd != null ? Number(r.maxOrderUsd) : Infinity
+    return orderAmountUsd >= min && orderAmountUsd <= max
+  })
+
+  if (!match) return null
+
+  const threshold =
+    match.freeShippingThresholdUsd != null ? Number(match.freeShippingThresholdUsd) : null
+  if (threshold !== null && orderAmountUsd >= threshold) return 0
+  return Number(match.rateUsd)
 }
 
 // ── Partial payment helpers ───────────────────────────────────────────────────
@@ -215,7 +259,7 @@ export async function createOrder(
     }
   }
 
-  // ── 7. Calculate totals ───────────────────────────────────────────────────
+  // ── 7. Calculate totals (server-authoritative — never trust client values) ───
   let subtotalUsd = 0
   for (const cartRow of cartRows) {
     const variant = variantMap.get(cartRow.variantId)!
@@ -228,8 +272,27 @@ export async function createOrder(
       : 0
 
   const discountedSubtotal = Math.max(0, subtotalUsd - couponDiscountUsd)
-  const totalUsd = discountedSubtotal + shippingCostUsd
-  const totalBs = totalUsd * exchangeRate
+
+  // Recalculate shipping cost from DB — ignore client-supplied shippingCostUsd
+  const resolvedShipping = await resolveShippingCost(
+    shippingData.methodId,
+    shippingData.cityId,
+    discountedSubtotal,
+  )
+  if (resolvedShipping === null) {
+    return { success: false, error: 'No se encontró una tarifa de envío válida para tu selección.' }
+  }
+  const serverShippingCostUsd = resolvedShipping
+
+  // Recalculate exchange rate from DB — ignore client-supplied exchangeRate
+  const rateRecord = await getLatestRate('usd')
+  if (!rateRecord) {
+    return { success: false, error: 'No hay tasa de cambio disponible. Intenta en unos minutos.' }
+  }
+  const serverExchangeRate = rateRecord.rateVes
+
+  const totalUsd = discountedSubtotal + serverShippingCostUsd
+  const totalBs = totalUsd * serverExchangeRate
 
   const orderNumber = await generateOrderNumber()
 
@@ -256,9 +319,9 @@ export async function createOrder(
         status: initialStatus as typeof orders.$inferInsert['status'],
         subtotalUsd: subtotalUsd.toFixed(2),
         discountUsd: couponDiscountUsd.toFixed(2),
-        shippingCostUsd: shippingCostUsd.toFixed(2),
+        shippingCostUsd: serverShippingCostUsd.toFixed(2),
         totalUsd: totalUsd.toFixed(2),
-        exchangeRateSnapshot: exchangeRate.toFixed(4),
+        exchangeRateSnapshot: serverExchangeRate.toFixed(4),
         totalBs: totalBs.toFixed(2),
         reservationPaymentType:
           paymentData.partialPaymentType as typeof orders.$inferInsert['reservationPaymentType'],
@@ -276,7 +339,7 @@ export async function createOrder(
           parish: shippingData.parish,
           address: shippingData.address,
           reference: shippingData.reference,
-          costUsd: shippingCostUsd.toFixed(2),
+          costUsd: serverShippingCostUsd.toFixed(2),
         },
         reservedUntil,
         idempotencyKey,

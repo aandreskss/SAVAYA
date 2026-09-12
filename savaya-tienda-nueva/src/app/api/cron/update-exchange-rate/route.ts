@@ -3,6 +3,9 @@ import { refreshRate, refreshEurRate } from '@/domains/exchange-rates/service'
 
 async function handler(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 500 })
+  }
   const headerSecret = req.headers.get('x-cron-secret')
   const urlSecret = new URL(req.url).searchParams.get('secret')
   if (headerSecret !== cronSecret && urlSecret !== cronSecret) {

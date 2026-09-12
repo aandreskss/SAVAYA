@@ -11,12 +11,13 @@ import { eq, and, lte, sql } from 'drizzle-orm'
 
 async function handler(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const headerSecret = request.headers.get('x-cron-secret')
-    const urlSecret = new URL(request.url).searchParams.get('secret')
-    if (headerSecret !== cronSecret && urlSecret !== cronSecret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 500 })
+  }
+  const headerSecret = request.headers.get('x-cron-secret')
+  const urlSecret = new URL(request.url).searchParams.get('secret')
+  if (headerSecret !== cronSecret && urlSecret !== cronSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   if (!process.env.DATABASE_URL) {
