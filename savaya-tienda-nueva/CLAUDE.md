@@ -385,9 +385,22 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Variables de entorno requeridas**: `ODOO_URL`, `ODOO_DB`, `ODOO_USER`, `ODOO_PASS`, `ODOO_WEBHOOK_SECRET`. Opcional: `ODOO_STOCK_LOCATION_ID` (ID numérico de la ubicación de stock; sin él filtra por `location_id.usage = internal`).
 - **Permiso `integrations:manage`**: exclusivo de `super_admin` (igual que `exchange_rates:override`). Excluido explícitamente del rol `admin` en `ROLE_PERMISSIONS`. Úsalo como guard en cualquier página o acción de integración.
 - **Panel admin** (`/admin/integraciones/odoo`): Server Component con `requireAdminPermission('integrations:manage')`. Layout: `p-6 md:p-10` como padding exterior + `max-w-4xl mx-auto` para centrar. Estructura: header con ícono + badge de estado global → grid 2 col (config vars + resumen último sync) → grid 2 col (test conexión + sync manual, `OdooControls.tsx` client component) → sección webhook → tabla de historial.
-- **Nav**: ítem "Integraciones" visible solo a quienes tengan `integrations:manage`. Posición: antes de Configuración.
+- **Nav**: ítem "Integraciones" apunta a `/admin/integraciones` (índice con cards para Odoo y Cloudinary). Visible solo a quienes tengan `integrations:manage`. Posición: antes de Configuración.
 - **JWT y permisos nuevos**: si se agrega un permiso nuevo a un rol existente vía migración, los usuarios con ese rol deben cerrar sesión y volver a entrar para que el JWT incluya el permiso nuevo.
 - **Migración 013** (`scripts/run-migration-013.js`): crea enums, tabla `odoo_sync_logs`, inserta permiso `integrations:manage` y lo asigna a `super_admin`. Ya ejecutada en Neon.
+
+### 8.32 Cloudinary — log de notificaciones webhook
+
+- **Propósito**: auditar eliminaciones inesperadas de assets en Cloudinary. Cloudinary llama al webhook cada vez que se elimina (o sube) un asset, y la app lo registra en Neon.
+- **Dominio**: `src/domains/integrations/cloudinary/` — schema, repository. No mezclar con el dominio de Odoo.
+  - `schema.ts` — tabla `cloudinary_notifications` (Drizzle): `notification_type`, `public_ids text[]`, `resource_type`, `payload jsonb`, `received_at`.
+  - `repository.ts` — `saveCloudinaryNotification()` y `listCloudinaryNotifications(limit=200)`.
+- **Webhook** (`POST /api/webhooks/cloudinary`): público (sin sesión). Verifica firma `SHA1(raw_body + X-Cld-Timestamp + CLOUDINARY_API_SECRET)` contra header `X-Cld-Signature`. Rechaza timestamps con más de 1 hora de antigüedad. Si `CLOUDINARY_API_SECRET` no está configurado, acepta sin verificar (útil en dev). Nunca lanza error — siempre devuelve 200 para que Cloudinary no reintente.
+- **Extracción de `public_ids`**: para `resource_deleted`, Cloudinary envía `{ resources: [{public_id, ...}] }`. Para otros tipos (upload, etc.) envía `{ public_id: "..." }`. El handler normaliza ambos a `string[]`.
+- **Panel admin** (`/admin/integraciones/cloudinary`): Server Component, guard `integrations:manage`. Muestra: stats (total eventos, eliminaciones, último evento) + tabla con badge de color por tipo (`resource_deleted` = rojo, `upload` = verde). Filas de eliminación tienen fondo `bg-error/5`.
+- **Índice de integraciones** (`/admin/integraciones`): página nueva con dos cards (Odoo ERP y Cloudinary Assets) que enlaza a cada sub-página. El nav apunta aquí en lugar de ir directo a `/admin/integraciones/odoo`.
+- **Migración 014** (`scripts/run-migration-014.js`): crea tabla `cloudinary_notifications` + índice por `received_at DESC`. Ya ejecutada en Neon.
+- **Configuración en Cloudinary**: Settings → Webhook Notifications → Add URL → `https://www.savayavzla.com/api/webhooks/cloudinary` → activar tipo `resource_deleted`.
 
 ### 8.31 Layout de páginas admin — padding y centrado
 
