@@ -5,6 +5,12 @@ import { PersonalDataSchema } from '../validators'
 import { useCheckoutStore } from '../checkout-store'
 import type { PersonalData } from '../types'
 
+declare global {
+  interface Window {
+    SyncLead?: { capture: (d: Record<string, string>) => Promise<unknown> }
+  }
+}
+
 export function StepPersonalData() {
   const { personalData, setPersonalData } = useCheckoutStore()
 
@@ -31,6 +37,11 @@ export function StepPersonalData() {
       return
     }
     setPersonalData(result.data)
+    void window.SyncLead?.capture({
+      name:  `${result.data.firstName} ${result.data.lastName}`.trim(),
+      email: result.data.email,
+      phone: result.data.whatsapp,
+    })
   }
 
   return (
