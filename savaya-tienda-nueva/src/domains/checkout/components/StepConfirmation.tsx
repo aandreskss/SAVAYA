@@ -10,7 +10,13 @@ export function StepConfirmation() {
 
   useEffect(() => {
     if (!orderResult) return
-    trackPurchaseClient(orderResult.orderNumber, [], orderResult.totalUsd)
+    const items = (orderResult.analyticsItems ?? []).map((i) => ({
+      item_id: i.sku || i.id,
+      item_name: i.name,
+      price: i.price,
+      quantity: i.quantity,
+    }))
+    trackPurchaseClient(orderResult.orderNumber, items, orderResult.totalUsd)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

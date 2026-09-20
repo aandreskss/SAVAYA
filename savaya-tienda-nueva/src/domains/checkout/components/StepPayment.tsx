@@ -196,8 +196,18 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
 
     if (result.success) {
       trackAddPaymentInfo([], totalUsd, selectedMethod?.type ?? 'unknown')
+      const cartSummary = useCartStore.getState().summary
       clearCart()
-      setOrderResult(result.data)
+      setOrderResult({
+        ...result.data,
+        analyticsItems: (cartSummary?.items ?? []).map((i) => ({
+          id: i.productId,
+          name: i.productName,
+          sku: i.sku,
+          price: i.unitPriceUsd,
+          quantity: i.quantity,
+        })),
+      })
     } else {
       setSubmitError(result.error)
     }

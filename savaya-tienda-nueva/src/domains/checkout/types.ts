@@ -125,6 +125,7 @@ export type OrderResult = {
   totalUsd: number
   totalBs: number
   status: string
+  analyticsItems?: Array<{ id: string; name: string; sku: string; price: number; quantity: number }>
 }
 
 // ── Initial page data (SSR) ───────────────────────────────────────────────────
