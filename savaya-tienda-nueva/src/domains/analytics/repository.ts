@@ -1,5 +1,5 @@
 import { db } from '@/shared/lib/db'
-import { eq, gte, sql, desc, count, countDistinct } from 'drizzle-orm'
+import { and, eq, gte, sql, desc, count, countDistinct } from 'drizzle-orm'
 import { orderAttributions, pageViews } from './schema'
 
 export type AttributionData = {
@@ -141,6 +141,20 @@ export async function getTrafficSummary(days: number = 30): Promise<TrafficSumma
       totalViews: 0, uniqueSessions: 0, topPages: [], topCountries: [],
       topReferrers: [], deviceBreakdown: [], browserBreakdown: [], dailyViews: [],
     }
+  }
+}
+
+export async function getProductViewerCount(slug: string): Promise<number> {
+  if (!process.env.DATABASE_URL) return 0
+  try {
+    const cutoff = new Date(Date.now() - 15 * 60 * 1000)
+    const [row] = await db
+      .select({ count: countDistinct(pageViews.sessionId) })
+      .from(pageViews)
+      .where(and(eq(pageViews.path, `/producto/${slug}`), gte(pageViews.createdAt, cutoff)))
+    return row?.count ?? 0
+  } catch {
+    return 0
   }
 }
 

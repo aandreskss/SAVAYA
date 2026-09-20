@@ -13,6 +13,7 @@ import {
   Modal,
 } from '@/shared/ui'
 import { ProductVariantSelector } from './ProductVariantSelector'
+import { LiveViewers } from './LiveViewers'
 import { convertToVes, formatVes, type ExchangeRate } from '@/domains/exchange-rates/utils'
 import type { ProductDetail } from '@/domains/catalog/repository'
 import type { ActionResult } from '@/shared/lib/types'
@@ -273,6 +274,16 @@ export function ProductInfo({
           <p className="font-sans text-sm text-text-secondary">
             ≈ {formatVes(priceVes)}
           </p>
+        </div>
+
+        {/* Social proof */}
+        <div className="flex flex-col gap-1">
+          {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 && (
+            <p className="font-sans text-sm font-semibold text-accent-gold">
+              ¡Solo quedan {selectedVariant.stock}!
+            </p>
+          )}
+          <LiveViewers slug={product.slug} />
         </div>
 
         {/* Variant selector */}
