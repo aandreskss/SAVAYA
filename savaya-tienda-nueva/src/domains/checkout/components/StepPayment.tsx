@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useCheckoutStore } from '../checkout-store'
 import { useCartStore } from '@/domains/cart/cart-store'
+import { trackAddPaymentInfo } from '@/domains/analytics/service'
 import { PaymentDataSchema } from '../validators'
 import { submitOrder } from '../actions'
 import type { PaymentMethodOption, PartialPaymentType, PaymentData } from '../types'
@@ -194,6 +195,7 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
     setSubmitting(false)
 
     if (result.success) {
+      trackAddPaymentInfo([], totalUsd, selectedMethod?.type ?? 'unknown')
       clearCart()
       setOrderResult(result.data)
     } else {

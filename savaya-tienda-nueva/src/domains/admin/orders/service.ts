@@ -123,14 +123,15 @@ export async function approvePayment(
     ip: actor.ip,
   })
 
-  // Fire-and-forget notification
+  // Fire-and-forget: email notification + Meta CAPI Purchase
   rawQuery<{ order_number: string; total_usd: string; total_bs: string; customer_id: string; first_name: string; last_name: string; email: string }>(
     sql`SELECT o.order_number, o.total_usd, o.total_bs, o.customer_id,
                c.first_name, c.last_name, c.email
         FROM orders o JOIN customers c ON c.id = o.customer_id
         WHERE o.id = ${orderId} LIMIT 1`,
-  ).then(([row]) => {
+  ).then(async ([row]) => {
     if (!row) return
+
     sendPaymentApproved({
       orderId,
       customerId: row.customer_id,
@@ -141,6 +142,44 @@ export async function approvePayment(
       totalBs: Number(row.total_bs),
       items: [],
     }).catch((e) => console.error('[notifications] payment approved email failed:', e))
+
+    // Meta CAPI — server-side Purchase event
+    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+    const accessToken = process.env.META_CAPI_ACCESS_TOKEN
+    if (!pixelId || !accessToken) return
+
+    const items = await rawQuery<{ sku: string; quantity: number }>(
+      sql`SELECT COALESCE(pv.sku, '') AS sku, oi.quantity
+          FROM order_items oi
+          LEFT JOIN product_variants pv ON pv.id = oi.variant_id
+          WHERE oi.order_id = ${orderId}`,
+    ).catch(() => [] as { sku: string; quantity: number }[])
+
+    fetch(
+      `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${accessToken}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: [{
+            event_name: 'Purchase',
+            event_time: Math.floor(Date.now() / 1000),
+            event_id: `order-${row.order_number}`,
+            event_source_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout`,
+            action_source: 'website',
+            user_data: {},
+            custom_data: {
+              value: Number(row.total_usd),
+              currency: 'USD',
+              order_id: row.order_number,
+              content_ids: items.map((i) => i.sku).filter(Boolean),
+              content_type: 'product',
+              num_items: items.reduce((s, i) => s + i.quantity, 0),
+            },
+          }],
+        }),
+      },
+    ).catch((e) => console.error('[analytics] CAPI purchase failed:', e))
   }).catch(() => {})
 }
 

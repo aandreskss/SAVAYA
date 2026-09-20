@@ -1,10 +1,18 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { trackPurchaseClient } from '@/domains/analytics/service'
 import { useCheckoutStore } from '../checkout-store'
 
 export function StepConfirmation() {
   const { orderResult, personalData } = useCheckoutStore()
+
+  useEffect(() => {
+    if (!orderResult) return
+    trackPurchaseClient(orderResult.orderNumber, [], orderResult.totalUsd)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!orderResult) return null
 

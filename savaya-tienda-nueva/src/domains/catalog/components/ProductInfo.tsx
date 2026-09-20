@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useCartStore } from '@/domains/cart/cart-store'
+import { trackAddToCart } from '@/domains/analytics/service'
 import type { CartSummary } from '@/domains/cart/repository'
 import Link from 'next/link'
 import {
@@ -208,6 +209,13 @@ export function ProductInfo({
     startTransition(async () => {
       const result = await onAddToCart(selectedVariant.id, quantity)
       if (result.success) {
+        trackAddToCart({
+          item_id: product.id,
+          item_name: product.name,
+          price: selectedVariant.price ?? product.basePrice,
+          quantity,
+          item_category: product.category?.name,
+        })
         setCartSuccess(true)
         setTimeout(() => setCartSuccess(false), 2500)
         if (result.data) {

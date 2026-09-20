@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ProductGallery } from './ProductGallery'
 import { ProductInfo } from './ProductInfo'
 import { toggleWishlist } from '@/domains/customers/wishlist-actions'
+import { trackViewItem, trackAddToWishlist } from '@/domains/analytics/service'
 import type { ProductDetail } from '@/domains/catalog/repository'
 import type { ExchangeRate } from '@/domains/exchange-rates/utils'
 import type { ActionResult } from '@/shared/lib/types'
@@ -32,6 +33,17 @@ export function ProductClientShell({
   )
   const [wishlistSet, setWishlistSet] = useState(() => new Set(wishlistVariantIds))
 
+  useEffect(() => {
+    trackViewItem({
+      item_id: product.id,
+      item_name: product.name,
+      price: product.basePrice,
+      quantity: 1,
+      item_category: product.category?.name,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id])
+
   const activeVariantId = selectedVariantId ?? product.variants[0]?.id
   const isInWishlist = !!activeVariantId && wishlistSet.has(activeVariantId)
 
@@ -47,6 +59,14 @@ export function ProductClientShell({
     const result = await toggleWishlist(variantId)
 
     if (result.success && result.data !== undefined) {
+      if (result.data.isInWishlist) {
+        trackAddToWishlist({
+          item_id: product.id,
+          item_name: product.name,
+          price: product.basePrice,
+          quantity: 1,
+        })
+      }
       // Sync with server truth
       setWishlistSet((prev) => {
         const next = new Set(prev)

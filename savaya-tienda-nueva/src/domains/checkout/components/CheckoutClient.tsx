@@ -1,7 +1,8 @@
 'use client'
 
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useEffect } from 'react'
 import Link from 'next/link'
+import { trackBeginCheckout } from '@/domains/analytics/service'
 import { useCheckoutStore } from '../checkout-store'
 import { CheckoutStepper } from './CheckoutStepper'
 import { StepPersonalData } from './StepPersonalData'
@@ -21,6 +22,11 @@ export function CheckoutClient({ initialData }: Props) {
   useLayoutEffect(() => {
     if (step === 4) reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    trackBeginCheckout([], initialData.cartSubtotalUsd)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const {

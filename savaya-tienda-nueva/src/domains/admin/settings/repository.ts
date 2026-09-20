@@ -22,6 +22,15 @@ export async function listSettings(): Promise<AdminSetting[]> {
   }))
 }
 
+export async function getSettingValue(key: string): Promise<string | null> {
+  const [row] = await db
+    .select({ value: applicationSettings.value })
+    .from(applicationSettings)
+    .where(eq(applicationSettings.key, key))
+    .limit(1)
+  return row?.value ?? null
+}
+
 export async function upsertSetting(
   key: string,
   value: string,

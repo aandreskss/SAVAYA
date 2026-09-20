@@ -131,6 +131,20 @@ const META: Record<string, SettingMeta> = {
     type: 'textarea',
     placeholder: 'Envía al wallet TRC-20: T...',
   },
+  meta_pixel_id: {
+    label: 'Meta Pixel ID',
+    description: 'ID del Pixel de Meta (Facebook). Se usa para rastrear eventos en el navegador (PageView, AddToCart, Purchase, etc.).',
+    impact: ['Analytics'],
+    type: 'text',
+    placeholder: '27355395054120748',
+  },
+  meta_capi_token: {
+    label: 'Meta CAPI Access Token',
+    description: 'Token de acceso para la API de Conversiones de Meta (server-side). Se usa para enviar el evento Purchase cuando se aprueba un pago. Rota cada 60 días en el Administrador de Eventos de Facebook.',
+    impact: ['Analytics'],
+    type: 'textarea',
+    placeholder: 'EAA...',
+  },
 }
 
 const IMPACT_STYLE: Record<string, string> = {
@@ -142,6 +156,7 @@ const IMPACT_STYLE: Record<string, string> = {
   Admin:       'bg-surface-2 text-text-secondary border border-border',
   Inventario:  'bg-green-500/15 text-green-300',
   SEO:         'bg-teal-500/15 text-teal-300',
+  Analytics:   'bg-rose-500/15 text-rose-300',
 }
 
 // ---------------------------------------------------------------------------
@@ -195,6 +210,14 @@ function IconCreditCard() {
   )
 }
 
+function IconMeta() {
+  return (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+    </svg>
+  )
+}
+
 const GROUPS: Group[] = [
   {
     label: 'Datos de la tienda',
@@ -225,6 +248,12 @@ const GROUPS: Group[] = [
     description: 'Textos e instrucciones mostrados al cliente durante el pago.',
     icon: <IconCreditCard />,
     keys: ['usdt_policy'],
+  },
+  {
+    label: 'Meta / Facebook',
+    description: 'Credenciales para el Pixel de Meta y la API de Conversiones (CAPI). El token CAPI se rota cada ~60 días en el Administrador de Eventos.',
+    icon: <IconMeta />,
+    keys: ['meta_pixel_id', 'meta_capi_token'],
   },
 ]
 

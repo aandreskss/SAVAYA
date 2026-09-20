@@ -1,5 +1,6 @@
 import Script from 'next/script'
 import { headers } from 'next/headers'
+import { getSettingValue } from '@/domains/admin/settings/repository'
 import { Navbar } from '@/domains/layout/Navbar'
 import { Footer } from '@/domains/layout/Footer'
 import { SearchOverlay } from '@/domains/layout/SearchOverlay'
@@ -17,17 +18,19 @@ import type { BlockContent } from '@/domains/cms/block-schemas'
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   const now = new Date()
-  const [nonce, announcementSection, activePopup] = await Promise.all([
+  const [nonce, announcementSection, activePopup, dbPixelId] = await Promise.all([
     headers().then((h) => h.get('x-nonce') ?? ''),
     getAnnouncementBarSection(),
     getActivePopup(now),
+    getSettingValue('meta_pixel_id').catch(() => null),
   ])
+  const metaPixelId = dbPixelId || process.env.NEXT_PUBLIC_META_PIXEL_ID
 
   return (
     <CartProvider>
       <AnalyticsProvider
         ga4Id={process.env.NEXT_PUBLIC_GA4_ID}
-        metaPixelId={process.env.NEXT_PUBLIC_META_PIXEL_ID}
+        metaPixelId={metaPixelId}
         nonce={nonce}
       />
       <SiteTracker />

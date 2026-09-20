@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState, useId } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useNavStore } from './nav-store'
+import { trackSearch } from '@/domains/analytics/service'
 import { cn } from '@/shared/lib/utils'
 import type { SearchResult } from '@/domains/catalog/search'
 
@@ -98,7 +99,9 @@ export function SearchOverlay() {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`)
         const data = (await res.json()) as { results: SearchResult[] }
-        setResults(data.results ?? [])
+        const r = data.results ?? []
+        setResults(r)
+        if (r.length > 0) trackSearch(trimmed)
       } catch {
         setResults([])
       } finally {

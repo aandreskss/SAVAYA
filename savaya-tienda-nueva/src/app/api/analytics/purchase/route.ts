@@ -5,6 +5,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkRateLimit } from '@/shared/lib/rate-limit'
+import { getSettingValue } from '@/domains/admin/settings/repository'
 
 const PurchaseSchema = z.object({
   eventId: z.string(),           // shared with browser pixel for deduplication
@@ -20,8 +21,12 @@ const PurchaseSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
-  const accessToken = process.env.META_CAPI_ACCESS_TOKEN
+  const [dbPixelId, dbToken] = await Promise.all([
+    getSettingValue('meta_pixel_id').catch(() => null),
+    getSettingValue('meta_capi_token').catch(() => null),
+  ])
+  const pixelId = dbPixelId || process.env.NEXT_PUBLIC_META_PIXEL_ID
+  const accessToken = dbToken || process.env.META_CAPI_ACCESS_TOKEN
 
   if (!pixelId || !accessToken) {
     return NextResponse.json({ skipped: true, reason: 'Meta CAPI not configured' })
