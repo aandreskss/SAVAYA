@@ -451,8 +451,7 @@ export function SettingsManager({ initialSettings, canEdit }: Props) {
       <div className="flex flex-col gap-5">
         {GROUPS.map((group) => {
           const groupSettings = group.keys
-            .map((key) => settingMap.get(key))
-            .filter((s): s is AdminSetting => s !== undefined)
+            .map((key) => settingMap.get(key) ?? { id: `__new__${key}`, key, value: '', description: null })
 
           if (groupSettings.length === 0) return null
 
