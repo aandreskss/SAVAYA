@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import { headers } from 'next/headers'
 import { Navbar } from '@/domains/layout/Navbar'
 import { Footer } from '@/domains/layout/Footer'
@@ -30,6 +31,11 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         nonce={nonce}
       />
       <SiteTracker />
+      <Script
+        id="synclead-collector"
+        strategy="afterInteractive"
+        nonce={nonce}
+      >{`(function(){var token="77f5e752f9458eab1d4c2ab4c46180d9586dc5705f3cbc33d88307ec10d08989";var collector="https://sync-lead-eight.vercel.app/api/collect/"+token;function send(e,p){fetch(collector,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({eventName:e,pageUrl:window.location.href,environment:"production",parameters:p||{}})})}window.__synclead_collect=send})()`}</Script>
       <GenderSync />
       <div className="min-h-screen flex flex-col">
         {/* Announcement bar — sits above the sticky navbar, scrolls away */}
