@@ -12,7 +12,7 @@ function buildCSP(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://www.facebook.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://api.cloudinary.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://pydolarve.org https://ve.dolarapi.com https://graph.facebook.com https://www.facebook.com https://sync-lead-eight.vercel.app",
+    "connect-src 'self' https://api.cloudinary.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://pydolarve.org https://ve.dolarapi.com https://graph.facebook.com https://www.facebook.com https://*.on.aws https://*.run.app https://sync-lead-eight.vercel.app",
     "media-src 'self' https://res.cloudinary.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
