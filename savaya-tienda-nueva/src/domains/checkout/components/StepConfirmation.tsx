@@ -5,6 +5,15 @@ import Link from 'next/link'
 import { trackPurchaseClient } from '@/domains/analytics/service'
 import { useCheckoutStore } from '../checkout-store'
 
+declare global {
+  interface Window {
+    SyncLead?: {
+      capture:  (d: Record<string, string>) => Promise<unknown>
+      purchase: (d: Record<string, unknown>) => Promise<unknown>
+    }
+  }
+}
+
 export function StepConfirmation() {
   const { orderResult, personalData } = useCheckoutStore()
 
@@ -17,6 +26,12 @@ export function StepConfirmation() {
       quantity: i.quantity,
     }))
     trackPurchaseClient(orderResult.orderNumber, items, orderResult.totalUsd)
+    void window.SyncLead?.purchase({
+      amount:   orderResult.totalUsd,
+      currency: 'USD',
+      order_id: orderResult.orderId,
+      email:    personalData?.email ?? '',
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

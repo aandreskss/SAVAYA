@@ -7,7 +7,10 @@ import type { PersonalData } from '../types'
 
 declare global {
   interface Window {
-    SyncLead?: { capture: (d: Record<string, string>) => Promise<unknown> }
+    SyncLead?: {
+      capture:  (d: Record<string, string>) => Promise<unknown>
+      purchase: (d: Record<string, unknown>) => Promise<unknown>
+    }
   }
 }
 
