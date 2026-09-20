@@ -38,7 +38,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         id="synclead-collector"
         strategy="afterInteractive"
         nonce={nonce}
-      >{`(function(){var token="77f5e752f9458eab1d4c2ab4c46180d9586dc5705f3cbc33d88307ec10d08989";var collector="https://sync-lead-eight.vercel.app/api/collect/"+token;function send(e,p){fetch(collector,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({eventName:e,pageUrl:window.location.href,environment:"production",parameters:p||{}})})}window.__synclead_collect=send})()`}</Script>
+      >{`(function(){var collector="https://sync-lead-eight.vercel.app/api/collect/4bcfefdb0d9ce9223485776e1eb29f06287ff496865e88f6b977aedd13547279";function send(n,p){var b={};if(p&&typeof p==="object")Object.keys(p).forEach(function(k){b[k]=true;});fetch(collector,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({eventName:n,pageUrl:window.location.href,environment:"production",parameters:b})});}window.__synclead_collect=send;function wrap(orig){return function(){var a=Array.prototype.slice.call(arguments);if(a[0]==="track"||a[0]==="trackCustom")send(a[1],a[2]||{});return orig.apply(this,arguments);};}if(typeof window.fbq==="function"){window.fbq=wrap(window.fbq);}else{Object.defineProperty(window,"fbq",{configurable:true,set:function(v){Object.defineProperty(window,"fbq",{configurable:true,writable:true,value:typeof v==="function"?wrap(v):v});}});}})()`}</Script>
       <GenderSync />
       <div className="min-h-screen flex flex-col">
         {/* Announcement bar — sits above the sticky navbar, scrolls away */}
