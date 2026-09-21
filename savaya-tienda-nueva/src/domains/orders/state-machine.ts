@@ -23,7 +23,7 @@ export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS]
  * the transition is invalid and the service must reject it.
  */
 export const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending_payment: ['payment_under_review', 'cancelled'],
+  pending_payment: ['paid', 'payment_under_review', 'cancelled'],
   payment_under_review: ['paid', 'payment_rejected'],
   payment_rejected: ['pending_payment', 'cancelled'],
   paid: ['preparing', 'refunded'],
@@ -68,12 +68,6 @@ export function getTransitionErrorMessage(
   }
   if (from === ORDER_STATUS.REFUNDED) {
     return 'Un pedido reembolsado no puede reactivarse.'
-  }
-  if (
-    from === ORDER_STATUS.PENDING_PAYMENT &&
-    to === ORDER_STATUS.PAID
-  ) {
-    return 'Un pedido pendiente no puede aprobarse directamente — debe revisarse el comprobante primero.'
   }
   return `Transición inválida: ${from} → ${to}`
 }

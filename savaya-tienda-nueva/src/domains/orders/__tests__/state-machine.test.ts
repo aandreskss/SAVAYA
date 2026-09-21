@@ -19,8 +19,8 @@ describe('isValidTransition', () => {
     expect(isValidTransition('pending_payment', 'cancelled')).toBe(true)
   })
 
-  it('bloquea pending_payment → paid (sin pasar por revisión)', () => {
-    expect(isValidTransition('pending_payment', 'paid')).toBe(false)
+  it('permite pending_payment → paid (pago en tienda / efectivo)', () => {
+    expect(isValidTransition('pending_payment', 'paid')).toBe(true)
   })
 
   it('permite payment_under_review → paid', () => {
@@ -38,6 +38,21 @@ describe('isValidTransition', () => {
 
   it('bloquea transiciones desde estado terminal cancelled', () => {
     expect(isValidTransition('cancelled', 'pending_payment')).toBe(false)
+  })
+
+  it('permite el flujo de retiro en tienda (sin comprobante)', () => {
+    const cashFlow: Array<[string, string]> = [
+      ['pending_payment', 'paid'],
+      ['paid', 'preparing'],
+      ['preparing', 'shipped'],
+      ['shipped', 'delivered'],
+    ]
+    for (const [from, to] of cashFlow) {
+      expect(
+        isValidTransition(from as Parameters<typeof isValidTransition>[0], to as Parameters<typeof isValidTransition>[1]),
+        `${from} → ${to}`,
+      ).toBe(true)
+    }
   })
 
   it('permite el flujo completo happy path', () => {
