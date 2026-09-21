@@ -442,3 +442,27 @@ Plantilla: `public/samples/savaya-productos-ejemplo.csv`
 - **Fix**: `CheckoutClient.tsx` usa `useLayoutEffect(() => { if (step === 4) reset() }, [])` para detectar el estado obsoleto al montar y reiniciar el store antes del primer paint — sin flash visual.
 - **`reset()`** en `checkout-store.ts`: limpia todos los campos del store y genera una nueva `idempotencyKey` (evita riesgo de pedido duplicado).
 - **Regla**: cualquier estado de Zustand que pueda quedar "sucio" entre sesiones de navegación SPA debe tener una acción `reset()` y llamarla al montar el componente raíz del flujo si el estado indica que el flujo ya completó.
+
+### 8.37 Estado de pedidos — máquina de estados (`src/domains/orders/state-machine.ts`)
+
+Única fuente de verdad para las transiciones válidas. `OrderDetailView` genera los botones de acción dinámicamente desde `VALID_TRANSITIONS[order.status]` — agregar una transición aquí la expone automáticamente en la UI.
+
+**Transiciones válidas:**
+
+```
+pending_payment      → paid (pago en tienda/efectivo), payment_under_review, cancelled
+payment_under_review → paid (aprobar comprobante), payment_rejected
+payment_rejected     → pending_payment, cancelled
+paid                 → preparing, refunded
+preparing            → shipped
+shipped              → delivered
+delivered / cancelled / refunded → [] (terminal)
+```
+
+**Dos flujos distintos para llegar a `paid`:**
+1. **Digital** (Pago Móvil, Zelle, USDT, etc.): `pending_payment → payment_under_review → paid`. El admin aprueba el comprobante vía `approvePaymentAction`, que actualiza tanto el pedido como el `payment_proof`.
+2. **Efectivo / retiro en tienda**: `pending_payment → paid` directo. El admin hace clic en "Pagado" cuando el cliente entrega el efectivo en tienda. Usa `transitionOrderStatusAction` (sin comprobante).
+
+**Regla crítica**: `OrderDetailView` ya maneja la diferencia. El caso especial de aprobación de comprobante (`approvePaymentAction`) se activa solo cuando `toStatus === 'paid' && order.status === 'payment_under_review' && order.proof`. Para `pending_payment → paid` cae en el flujo regular. No duplicar esta lógica.
+
+**Dashboard revenue**: solo incluye pedidos en `paid | preparing | shipped | delivered`. Los pedidos de retiro en efectivo solo aparecen en los KPIs una vez que el admin los marca como `paid` — no antes.
