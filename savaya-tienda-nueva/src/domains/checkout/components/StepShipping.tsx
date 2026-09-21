@@ -105,8 +105,9 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
   }
 
   function selectZone(zoneId: string) {
+    const zone = shippingOptions.find((o) => o.zone.id === zoneId)
     setSelectedZoneId(zoneId)
-    setSelectedMethodId('')
+    setSelectedMethodId(zone?.methods.length === 1 ? zone.methods[0].id : '')
     setSelectedCityId('')
     setErrors({})
   }
