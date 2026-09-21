@@ -34,8 +34,11 @@ export async function getDashboardKPIs(start: Date, end: Date): Promise<Dashboar
           WHERE status IN ('paid', 'preparing', 'shipped', 'delivered')
         ), 0) AS revenue,
         COUNT(*) FILTER (
-          WHERE status NOT IN ('cancelled', 'payment_rejected', 'pending_payment', 'payment_under_review', 'refunded')
+          WHERE status NOT IN ('cancelled', 'payment_rejected', 'refunded')
         )::int AS order_count,
+        COUNT(*) FILTER (
+          WHERE status IN ('paid', 'preparing', 'shipped', 'delivered')
+        )::int AS paid_order_count,
         COUNT(DISTINCT customer_id) FILTER (
           WHERE status NOT IN ('cancelled', 'payment_rejected', 'refunded')
         )::int AS unique_customers,
@@ -55,12 +58,12 @@ export async function getDashboardKPIs(start: Date, end: Date): Promise<Dashboar
 
     const row = rows[0] ?? {}
     const revenue = num(row.revenue)
-    const orderCount = num(row.order_count)
+    const paidOrderCount = num(row.paid_order_count)
 
     return {
       revenue,
-      orderCount,
-      avgTicket: orderCount > 0 ? revenue / orderCount : 0,
+      orderCount: num(row.order_count),
+      avgTicket: paidOrderCount > 0 ? revenue / paidOrderCount : 0,
       uniqueCustomers: num(row.unique_customers),
       newCustomers: num(row.new_customers),
     }
