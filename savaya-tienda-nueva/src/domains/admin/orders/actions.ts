@@ -121,6 +121,7 @@ export async function transitionOrderStatusAction(
       parsed.data.reason,
     )
     revalidatePath('/admin/pedidos')
+    revalidatePath('/admin/pagos')
     if (parsed.data.orderNumber) {
       revalidatePath(`/admin/pedidos/${parsed.data.orderNumber}`)
     }

@@ -120,14 +120,33 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
         c.first_name || ' ' || c.last_name AS customer_name,
         pm.name AS payment_method_name,
         pp.id AS proof_id,
-        pp.created_at AS submitted_at
+        pp.created_at AS submitted_at,
+        'proof' AS type
       FROM payment_proofs pp
       JOIN orders o ON o.id = pp.order_id
       JOIN customers c ON c.id = o.customer_id
       LEFT JOIN payment_methods pm ON pm.id = pp.payment_method_id
       WHERE pp.status = 'pending'
         AND o.status = 'payment_under_review'
-      ORDER BY pp.created_at ASC
+
+      UNION ALL
+
+      SELECT
+        o.id AS order_id,
+        o.order_number,
+        o.total_usd,
+        c.first_name || ' ' || c.last_name AS customer_name,
+        pm.name AS payment_method_name,
+        NULL AS proof_id,
+        o.created_at AS submitted_at,
+        'cash' AS type
+      FROM orders o
+      JOIN customers c ON c.id = o.customer_id
+      JOIN payment_methods pm ON pm.id = o.payment_method_id
+      WHERE o.status = 'pending_payment'
+        AND pm.type = 'cash'
+
+      ORDER BY submitted_at ASC
       LIMIT 20
     `)
 
@@ -137,8 +156,9 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
       totalUsd: num(r.total_usd),
       customerName: str(r.customer_name),
       paymentMethodName: str(r.payment_method_name) || 'Desconocido',
-      proofId: str(r.proof_id),
+      proofId: r.proof_id ? str(r.proof_id) : null,
       submittedAt: str(r.submitted_at),
+      type: str(r.type) === 'cash' ? 'cash' : 'proof',
     }))
   } catch (error) {
     console.error('[dashboard] getPendingPayments failed:', error)

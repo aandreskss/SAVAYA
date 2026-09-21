@@ -299,18 +299,19 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
     total_usd: string
     total_bs: string
     order_created_at: Date
-    proof_id: string
-    proof_status: string
-    amount_paid: string
-    currency: string
-    reference: string
-    payment_date: string
-    holder_name: string
+    proof_id: string | null
+    proof_status: string | null
+    amount_paid: string | null
+    currency: string | null
+    reference: string | null
+    payment_date: string | null
+    holder_name: string | null
     cloudinary_public_id: string | null
     rejection_reason: string | null
     reviewed_at: Date | null
     metadata: Record<string, unknown> | null
     payment_method_name: string
+    type: string
   }>(sql`
     SELECT
       o.id            AS order_id,
@@ -332,14 +333,46 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
       pp.rejection_reason,
       pp.reviewed_at,
       pp.metadata,
-      pm.name         AS payment_method_name
+      pm.name         AS payment_method_name,
+      'proof'         AS type
     FROM orders o
-    JOIN customers c             ON c.id  = o.customer_id
-    JOIN payment_proofs pp        ON pp.order_id = o.id
-    JOIN payment_methods pm       ON pm.id = pp.payment_method_id
+    JOIN customers c              ON c.id  = o.customer_id
+    JOIN payment_proofs pp         ON pp.order_id = o.id
+    LEFT JOIN payment_methods pm   ON pm.id = pp.payment_method_id
     WHERE o.status = 'payment_under_review'
       AND pp.status = 'pending'
-    ORDER BY o.created_at ASC
+
+    UNION ALL
+
+    SELECT
+      o.id            AS order_id,
+      o.order_number,
+      c.first_name    AS customer_first_name,
+      c.last_name     AS customer_last_name,
+      c.email         AS customer_email,
+      o.total_usd,
+      o.total_bs,
+      o.created_at    AS order_created_at,
+      NULL            AS proof_id,
+      NULL            AS proof_status,
+      NULL            AS amount_paid,
+      NULL            AS currency,
+      NULL            AS reference,
+      NULL            AS payment_date,
+      NULL            AS holder_name,
+      NULL            AS cloudinary_public_id,
+      NULL            AS rejection_reason,
+      NULL            AS reviewed_at,
+      NULL            AS metadata,
+      pm.name         AS payment_method_name,
+      'cash'          AS type
+    FROM orders o
+    JOIN customers c              ON c.id  = o.customer_id
+    JOIN payment_methods pm        ON pm.id = o.payment_method_id
+    WHERE o.status = 'pending_payment'
+      AND pm.type = 'cash'
+
+    ORDER BY order_created_at ASC
   `)
 
   return rows.map((r) => ({
@@ -350,21 +383,24 @@ export async function getPendingPayments(): Promise<PendingPaymentItem[]> {
     totalUsd: r.total_usd,
     totalBs: r.total_bs,
     createdAt: r.order_created_at,
-    proof: {
-      id: r.proof_id,
-      orderId: r.order_id,
-      status: r.proof_status as AdminPaymentProof['status'],
-      amountPaid: r.amount_paid,
-      currency: r.currency,
-      reference: r.reference,
-      paymentDate: r.payment_date,
-      holderName: r.holder_name,
-      cloudinaryPublicId: r.cloudinary_public_id,
-      rejectionReason: r.rejection_reason,
-      reviewedAt: r.reviewed_at,
-      metadata: r.metadata,
-      paymentMethodName: r.payment_method_name,
-    },
+    type: r.type === 'cash' ? 'cash' : 'proof',
+    proof: r.proof_id
+      ? {
+          id: r.proof_id,
+          orderId: r.order_id,
+          status: r.proof_status as AdminPaymentProof['status'],
+          amountPaid: r.amount_paid ?? '',
+          currency: r.currency ?? '',
+          reference: r.reference ?? '',
+          paymentDate: r.payment_date ?? '',
+          holderName: r.holder_name ?? '',
+          cloudinaryPublicId: r.cloudinary_public_id,
+          rejectionReason: r.rejection_reason,
+          reviewedAt: r.reviewed_at,
+          metadata: r.metadata,
+          paymentMethodName: r.payment_method_name,
+        }
+      : undefined,
   }))
 }
 

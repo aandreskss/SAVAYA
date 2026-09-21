@@ -18,8 +18,9 @@ export type PendingPaymentItem = {
   totalUsd: number
   customerName: string
   paymentMethodName: string
-  proofId: string
+  proofId: string | null
   submittedAt: string
+  type: 'proof' | 'cash'
 }
 
 export type LowStockItem = {

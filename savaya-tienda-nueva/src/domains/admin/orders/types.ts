@@ -87,7 +87,8 @@ export type PendingPaymentItem = {
   totalUsd: string
   totalBs: string
   createdAt: Date
-  proof: AdminPaymentProof
+  type: 'proof' | 'cash'
+  proof?: AdminPaymentProof
 }
 
 export type ActionResult<T = void> =

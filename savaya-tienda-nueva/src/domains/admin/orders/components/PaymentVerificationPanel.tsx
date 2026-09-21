@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/Button'
 import { Modal } from '@/shared/ui/Modal'
 import { OrderStatusBadge } from './OrderStatusBadge'
 import { PaymentProofViewer } from './PaymentProofViewer'
-import { approvePaymentAction, rejectPaymentAction } from '../actions'
+import { approvePaymentAction, rejectPaymentAction, transitionOrderStatusAction } from '../actions'
 import { toast } from '@/shared/ui/toast-store'
 import type { PendingPaymentItem } from '../types'
 
@@ -31,10 +31,10 @@ export function PaymentVerificationPanel({ items }: { items: PendingPaymentItem[
   }
 
   function handleApprove() {
-    if (!selected) return
+    if (!selected?.proof) return
     startTransition(async () => {
       const result = await approvePaymentAction({
-        proofId: selected.proof.id,
+        proofId: selected.proof!.id,
         orderId: selected.orderId,
         orderNumber: selected.orderNumber,
       })
@@ -47,12 +47,29 @@ export function PaymentVerificationPanel({ items }: { items: PendingPaymentItem[
     })
   }
 
+  function handleMarkCashPaid() {
+    if (!selected) return
+    startTransition(async () => {
+      const result = await transitionOrderStatusAction({
+        orderId: selected.orderId,
+        toStatus: 'paid',
+        orderNumber: selected.orderNumber,
+      })
+      if (result.success) {
+        toast.success('Pedido marcado como pagado')
+        setSelected(items.find((i) => i.orderId !== selected.orderId) ?? null)
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
   function handleRejectConfirm() {
-    if (!selected || rejectReason.trim().length < 5) return
+    if (!selected?.proof || rejectReason.trim().length < 5) return
     const reason = rejectReason.trim()
     startTransition(async () => {
       const result = await rejectPaymentAction({
-        proofId: selected.proof.id,
+        proofId: selected.proof!.id,
         orderId: selected.orderId,
         reason,
         orderNumber: selected.orderNumber,
@@ -86,13 +103,20 @@ export function PaymentVerificationPanel({ items }: { items: PendingPaymentItem[
                     : 'border-border bg-surface hover:border-accent-gold/40'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs font-medium">{item.orderNumber}</span>
-                  <span className="text-xs opacity-70">
-                    {new Date(item.createdAt).toLocaleDateString('es-VE', {
-                      day: '2-digit', month: 'short',
-                    })}
-                  </span>
+                <div className="flex items-center justify-between mb-1 gap-1">
+                  <span className="font-mono text-xs font-medium truncate">{item.orderNumber}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {item.type === 'cash' && (
+                      <span className="text-[9px] font-semibold px-1 py-0.5 rounded bg-warning/20 text-warning">
+                        Efectivo
+                      </span>
+                    )}
+                    <span className="text-xs opacity-70">
+                      {new Date(item.createdAt).toLocaleDateString('es-VE', {
+                        day: '2-digit', month: 'short',
+                      })}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-sm font-medium truncate">{item.customerName}</p>
                 <p className="text-xs opacity-70">${item.totalUsd}</p>
@@ -111,7 +135,12 @@ export function PaymentVerificationPanel({ items }: { items: PendingPaymentItem[
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-mono text-sm font-medium">{selected.orderNumber}</span>
-                  <OrderStatusBadge status="payment_under_review" />
+                  <OrderStatusBadge status={selected.type === 'cash' ? 'pending_payment' : 'payment_under_review'} />
+                  {selected.type === 'cash' && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning/15 text-warning">
+                      Cobro en tienda
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-text-secondary">{selected.customerName} · {selected.customerEmail}</p>
               </div>
@@ -120,41 +149,71 @@ export function PaymentVerificationPanel({ items }: { items: PendingPaymentItem[
                 <p className="text-xs text-text-secondary">Bs. {selected.totalBs}</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Link
-                href={`/admin/pedidos/${selected.orderNumber}`}
-                className="text-xs text-text-secondary hover:underline"
-                target="_blank"
-              >
-                Ver pedido completo ↗
-              </Link>
+            <Link
+              href={`/admin/pedidos/${selected.orderNumber}`}
+              className="text-xs text-text-secondary hover:underline"
+              target="_blank"
+            >
+              Ver pedido completo ↗
+            </Link>
+          </div>
+
+          {/* Cash order — no proof to review */}
+          {selected.type === 'cash' ? (
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <rect x="2" y="6" width="20" height="12" rx="2" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M6 12h.01M18 12h.01" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Pago en efectivo</p>
+                  <p className="text-xs text-text-secondary">El cliente pagará al retirar el pedido en tienda. Márcalo como pagado cuando recibas el dinero.</p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="primary"
+                  isLoading={isPending}
+                  onClick={handleMarkCashPaid}
+                >
+                  ✓ Marcar como pagado
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Proof viewer */}
+              {selected.proof && (
+                <PaymentProofViewer
+                  proof={selected.proof}
+                  orderId={selected.orderId}
+                />
+              )}
 
-          {/* Proof viewer */}
-          <PaymentProofViewer
-            proof={selected.proof}
-            orderId={selected.orderId}
-          />
-
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-end">
-            <Button
-              variant="ghost"
-              isLoading={isPending}
-              onClick={() => setShowRejectModal(true)}
-              className="border border-error/30 text-error hover:bg-error/5"
-            >
-              Rechazar pago
-            </Button>
-            <Button
-              variant="primary"
-              isLoading={isPending}
-              onClick={handleApprove}
-            >
-              Aprobar pago
-            </Button>
-          </div>
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                <Button
+                  variant="ghost"
+                  isLoading={isPending}
+                  onClick={() => setShowRejectModal(true)}
+                  className="border border-error/30 text-error hover:bg-error/5"
+                >
+                  Rechazar pago
+                </Button>
+                <Button
+                  variant="primary"
+                  isLoading={isPending}
+                  onClick={handleApprove}
+                >
+                  Aprobar pago
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-xl p-8 text-center text-text-secondary">

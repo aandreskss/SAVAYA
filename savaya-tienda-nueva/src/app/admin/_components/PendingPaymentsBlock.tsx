@@ -33,15 +33,22 @@ export function PendingPaymentsBlock({ items }: { items: PendingPaymentItem[] })
       ) : (
         <ul className="divide-y divide-border/50">
           {items.map((item) => (
-            <li key={item.proofId} className="py-3">
+            <li key={item.proofId ?? item.orderId} className="py-3">
               <Link
-                href={`/admin/pagos/${item.orderId}`}
+                href="/admin/pagos"
                 className="flex items-start justify-between gap-3 group"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium group-hover:underline truncate">
-                    {item.orderNumber}
-                  </p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <p className="text-sm font-medium group-hover:underline truncate">
+                      {item.orderNumber}
+                    </p>
+                    {item.type === 'cash' && (
+                      <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-warning/15 text-warning">
+                        Efectivo
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-text-secondary mt-0.5 truncate">
                     {item.customerName} · {item.paymentMethodName}
                   </p>
