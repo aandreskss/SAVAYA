@@ -18,17 +18,23 @@ type CategoryData = {
   description: string | null
   parentId: string | null
   imageUrl: string | null
-  gender: 'mujer' | 'hombre' | 'unisex'
+  gender: string
   isActive: boolean
   sortOrder: number
+}
+
+type GenderOption = {
+  slug: string
+  label: string
 }
 
 type Props = {
   category?: CategoryData
   parentOptions: CategoryOption[]
+  genderOptions: GenderOption[]
 }
 
-export function CategoryEditor({ category, parentOptions }: Props) {
+export function CategoryEditor({ category, parentOptions, genderOptions }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -37,7 +43,7 @@ export function CategoryEditor({ category, parentOptions }: Props) {
   const [description, setDescription] = useState(category?.description ?? '')
   const [parentId, setParentId] = useState(category?.parentId ?? '')
   const [imageUrl, setImageUrl] = useState(category?.imageUrl ?? '')
-  const [gender, setGender] = useState<'mujer' | 'hombre' | 'unisex'>(category?.gender ?? 'unisex')
+  const [gender, setGender] = useState<string>(category?.gender ?? 'unisex')
   const [isActive, setIsActive] = useState(category?.isActive ?? true)
   const [sortOrder, setSortOrder] = useState(String(category?.sortOrder ?? 0))
 
@@ -126,11 +132,12 @@ export function CategoryEditor({ category, parentOptions }: Props) {
           <Select
             label="Género"
             value={gender}
-            onChange={(e) => setGender(e.target.value as 'mujer' | 'hombre' | 'unisex')}
+            onChange={(e) => setGender(e.target.value)}
           >
-            <option value="unisex">Unisex (aparece en ambos)</option>
-            <option value="mujer">Mujer</option>
-            <option value="hombre">Hombre</option>
+            <option value="unisex">Unisex (aparece en todos)</option>
+            {genderOptions.map((g) => (
+              <option key={g.slug} value={g.slug}>{g.label}</option>
+            ))}
           </Select>
         </div>
 

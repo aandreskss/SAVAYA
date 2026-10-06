@@ -177,7 +177,7 @@ export type SaveCategoryPayload = {
   description: string | null
   parentId: string | null
   imageUrl: string | null
-  gender: 'mujer' | 'hombre' | 'unisex'
+  gender: string
   isActive: boolean
   sortOrder: number
 }
