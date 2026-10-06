@@ -7,7 +7,7 @@ import { PopupsManager } from './PopupsManager'
 import { GenderHeroEditor } from './GenderHeroEditor'
 import { NavbarEditor } from './NavbarEditor'
 import { PagesManager } from './PagesManager'
-import type { AdminSection, AdminBanner, AdminNavItem, AdminPage, AdminPopup } from '../types'
+import type { AdminSection, AdminBanner, AdminNavItem, AdminPage, AdminPopup, GenderOption } from '../types'
 import type { GenderHero } from '@/domains/cms/repository'
 
 type Tab = 'home' | 'hombre' | 'mujer' | 'navbar' | 'paginas' | 'banners' | 'popups'
@@ -27,6 +27,7 @@ type Props = {
   banners: AdminBanner[]
   popups: AdminPopup[]
   navItems: AdminNavItem[]
+  genders: GenderOption[]
   customPages: AdminPage[]
   hombreHero: GenderHero | null
   mujerHero: GenderHero | null
@@ -38,6 +39,7 @@ export function ContenidoView({
   banners,
   popups,
   navItems,
+  genders,
   customPages,
   hombreHero,
   mujerHero,
@@ -71,7 +73,7 @@ export function ContenidoView({
       {activeTab === 'home' && <HomeSectionsEditor initialSections={sections} />}
       {activeTab === 'hombre' && <GenderHeroEditor slug="hombre" initial={hombreHero} />}
       {activeTab === 'mujer' && <GenderHeroEditor slug="mujer" initial={mujerHero} />}
-      {activeTab === 'navbar' && <NavbarEditor initialItems={navItems} />}
+      {activeTab === 'navbar' && <NavbarEditor initialItems={navItems} initialGenders={genders} />}
       {activeTab === 'paginas' && <PagesManager initialPages={customPages} />}
       {activeTab === 'banners' && <BannersManager initialBanners={banners} />}
       {activeTab === 'popups' && <PopupsManager initialPopups={popups} />}

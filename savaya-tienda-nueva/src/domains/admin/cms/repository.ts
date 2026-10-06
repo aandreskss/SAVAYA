@@ -1,7 +1,7 @@
 import { eq, asc, desc, and, like, count } from 'drizzle-orm'
 import { db } from '@/shared/lib/db'
-import { pages, pageSections, pageSectionTypeEnum, banners, popups, navItems } from '@/domains/cms/schema'
-import type { AdminSection, AdminBanner, AdminPopup, AdminNavItem, AdminPage } from './types'
+import { pages, pageSections, pageSectionTypeEnum, banners, popups, navItems, genders } from '@/domains/cms/schema'
+import type { AdminSection, AdminBanner, AdminPopup, AdminNavItem, AdminPage, GenderOption } from './types'
 
 // ---------------------------------------------------------------------------
 // Sections
@@ -385,6 +385,27 @@ export async function toggleAdminNavItem(id: string, isActive: boolean): Promise
     .update(navItems)
     .set({ isActive, updatedAt: new Date() })
     .where(eq(navItems.id, id))
+}
+
+// ---------------------------------------------------------------------------
+// Genders CRUD
+// ---------------------------------------------------------------------------
+
+export async function listGenders(): Promise<GenderOption[]> {
+  const rows = await db
+    .select({ slug: genders.slug, label: genders.label })
+    .from(genders)
+    .where(eq(genders.isActive, true))
+    .orderBy(asc(genders.sortOrder), asc(genders.label))
+  return rows
+}
+
+export async function createGender(slug: string, label: string): Promise<GenderOption> {
+  const [row] = await db
+    .insert(genders)
+    .values({ slug, label })
+    .returning({ slug: genders.slug, label: genders.label })
+  return row
 }
 
 // ---------------------------------------------------------------------------

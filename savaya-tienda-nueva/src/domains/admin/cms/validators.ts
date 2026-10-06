@@ -60,7 +60,7 @@ export const NavItemFormSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => v || null),
-  gender: z.enum(['mujer', 'hombre']).nullable().optional(),
+  gender: z.string().min(1).nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
 })

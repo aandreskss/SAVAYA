@@ -40,12 +40,17 @@ export type AdminPopup = {
   createdAt: Date
 }
 
+export type GenderOption = {
+  slug: string
+  label: string
+}
+
 export type AdminNavItem = {
   id: string
   label: string
   href: string | null
   type: 'link' | 'category_group'
-  gender: 'mujer' | 'hombre' | null
+  gender: string | null
   sortOrder: number
   isActive: boolean
 }

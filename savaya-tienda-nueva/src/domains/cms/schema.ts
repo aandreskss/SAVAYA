@@ -134,6 +134,22 @@ export const navItems = pgTable(
   ],
 )
 
+export const genders = pgTable(
+  'genders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    slug: text('slug').notNull().unique(),
+    label: text('label').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('genders_slug_idx').on(t.slug),
+    index('genders_sort_order_idx').on(t.sortOrder),
+  ],
+)
+
 // ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------

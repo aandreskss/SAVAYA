@@ -23,6 +23,8 @@ import {
   deleteAdminNavItem,
   reorderAdminNavItems,
   toggleAdminNavItem,
+  listGenders,
+  createGender,
   listAdminCustomPages,
   createAdminCustomPage,
   updateAdminCustomPageMeta,
@@ -44,7 +46,7 @@ import {
   type NavItemFormPayload,
   type CustomPageFormPayload,
 } from './validators'
-import type { ActionResult, AdminBanner, AdminNavItem, AdminPage, AdminPopup, AdminSection } from './types'
+import type { ActionResult, AdminBanner, AdminNavItem, AdminPage, AdminPopup, AdminSection, GenderOption } from './types'
 import {
   getAllCategorySlugsForPicker,
   getAllCollectionSlugsForPicker,
@@ -613,6 +615,48 @@ export async function toggleNavItemAction(
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Error al actualizar el ítem' }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Genders
+// ---------------------------------------------------------------------------
+
+export async function listGendersAction(): Promise<ActionResult<GenderOption[]>> {
+  try {
+    const data = await listGenders()
+    return { success: true, data }
+  } catch {
+    return { success: false, error: 'Error al cargar géneros' }
+  }
+}
+
+export async function createGenderAction(
+  label: string,
+): Promise<ActionResult<GenderOption>> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso' }
+  }
+
+  const trimmed = label.trim()
+  if (!trimmed) return { success: false, error: 'El nombre es requerido' }
+
+  const slug = trimmed
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  if (!slug) return { success: false, error: 'Nombre inválido' }
+
+  try {
+    const data = await createGender(slug, trimmed)
+    return { success: true, data }
+  } catch {
+    return { success: false, error: `Ya existe un género con ese nombre` }
   }
 }
 

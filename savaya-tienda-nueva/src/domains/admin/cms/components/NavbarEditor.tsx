@@ -13,23 +13,20 @@ import {
   deleteNavItemAction,
   reorderNavItemsAction,
   toggleNavItemAction,
+  createGenderAction,
 } from '../actions'
-import type { AdminNavItem } from '../types'
+import type { AdminNavItem, GenderOption } from '../types'
 
 type Props = {
   initialItems: AdminNavItem[]
-}
-
-const GENDER_LABELS: Record<string, string> = {
-  mujer: 'Mujer',
-  hombre: 'Hombre',
+  initialGenders: GenderOption[]
 }
 
 type FormState = {
   label: string
   type: 'link' | 'category_group'
   href: string
-  gender: 'mujer' | 'hombre' | ''
+  gender: string
   sortOrder: string
   isActive: boolean
 }
@@ -43,12 +40,18 @@ const DEFAULT_FORM: FormState = {
   isActive: true,
 }
 
-export function NavbarEditor({ initialItems }: Props) {
+export function NavbarEditor({ initialItems, initialGenders }: Props) {
   const [items, setItems] = useState<AdminNavItem[]>(initialItems)
+  const [genders, setGenders] = useState<GenderOption[]>(initialGenders)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [isPending, startTransition] = useTransition()
+
+  // Inline gender creation
+  const [showNewGender, setShowNewGender] = useState(false)
+  const [newGenderLabel, setNewGenderLabel] = useState('')
+  const [isCreatingGender, startCreatingGender] = useTransition()
 
   function openCreate() {
     setEditingId(null)
@@ -73,6 +76,35 @@ export function NavbarEditor({ initialItems }: Props) {
     setShowForm(false)
     setEditingId(null)
     setForm(DEFAULT_FORM)
+    setShowNewGender(false)
+    setNewGenderLabel('')
+  }
+
+  function handleGenderSelectChange(value: string) {
+    if (value === '__new__') {
+      setShowNewGender(true)
+      setNewGenderLabel('')
+    } else {
+      setShowNewGender(false)
+      setForm((f) => ({ ...f, gender: value }))
+    }
+  }
+
+  function handleCreateGender() {
+    if (!newGenderLabel.trim()) return
+    startCreatingGender(async () => {
+      const result = await createGenderAction(newGenderLabel.trim())
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      const created = result.data
+      setGenders((prev) => [...prev, created])
+      setForm((f) => ({ ...f, gender: created.slug }))
+      setShowNewGender(false)
+      setNewGenderLabel('')
+      toast.success(`Género "${created.label}" creado`)
+    })
   }
 
   function handleSave() {
@@ -80,10 +112,8 @@ export function NavbarEditor({ initialItems }: Props) {
       const payload = {
         label: form.label,
         type: form.type,
-        href: form.type === 'link' ? (form.href || null) : (form.href || null),
-        gender: form.type === 'category_group' && form.gender
-          ? (form.gender as 'mujer' | 'hombre')
-          : null,
+        href: form.href || null,
+        gender: form.type === 'category_group' && form.gender ? form.gender : null,
         sortOrder: parseInt(form.sortOrder) || 0,
         isActive: form.isActive,
       }
@@ -93,9 +123,7 @@ export function NavbarEditor({ initialItems }: Props) {
         if (!result.success) { toast.error(result.error); return }
         setItems((prev) =>
           prev.map((it) =>
-            it.id === editingId
-              ? { ...it, ...payload, gender: payload.gender ?? null }
-              : it,
+            it.id === editingId ? { ...it, ...payload } : it,
           ),
         )
         toast.success('Ítem actualizado')
@@ -157,15 +185,16 @@ export function NavbarEditor({ initialItems }: Props) {
     })
   }
 
+  const genderLabel = (slug: string) =>
+    genders.find((g) => g.slug === slug)?.label ?? slug
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-text-secondary">
-            Controla qué ítems aparecen en el navbar y en qué orden. Los ítems tipo
-            &ldquo;Grupo de categorías&rdquo; muestran un dropdown con las categorías del género elegido.
-          </p>
-        </div>
+        <p className="text-sm text-text-secondary">
+          Controla qué ítems aparecen en el navbar y en qué orden. Los ítems tipo
+          &ldquo;Grupo de categorías&rdquo; muestran un dropdown con las categorías del género elegido.
+        </p>
         {!showForm && (
           <Button size="sm" onClick={openCreate}>
             + Nuevo ítem
@@ -211,15 +240,52 @@ export function NavbarEditor({ initialItems }: Props) {
 
           {form.type === 'category_group' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select
-                label="Género del grupo"
-                value={form.gender}
-                onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as 'mujer' | 'hombre' | '' }))}
-              >
-                <option value="">Seleccionar...</option>
-                <option value="mujer">Mujer</option>
-                <option value="hombre">Hombre</option>
-              </Select>
+              <div className="space-y-2">
+                <Select
+                  label="Género del grupo"
+                  value={showNewGender ? '__new__' : form.gender}
+                  onChange={(e) => handleGenderSelectChange(e.target.value)}
+                >
+                  <option value="">Seleccionar...</option>
+                  {genders.map((g) => (
+                    <option key={g.slug} value={g.slug}>{g.label}</option>
+                  ))}
+                  <option value="__new__">＋ Crear nuevo género...</option>
+                </Select>
+
+                {showNewGender && (
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <Input
+                        label="Nombre del género"
+                        value={newGenderLabel}
+                        onChange={(e) => setNewGenderLabel(e.target.value)}
+                        placeholder="Ej: Niños, Bebés, Unisex..."
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreateGender() } }}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex gap-1 pb-px">
+                      <Button
+                        size="sm"
+                        onClick={handleCreateGender}
+                        isLoading={isCreatingGender}
+                        disabled={!newGenderLabel.trim()}
+                      >
+                        Crear
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => { setShowNewGender(false); setNewGenderLabel('') }}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-1">
                 <label className="font-sans text-sm font-medium text-text-primary">URL del encabezado</label>
                 <UrlPicker
@@ -299,7 +365,7 @@ export function NavbarEditor({ initialItems }: Props) {
                 </p>
                 <p className="font-sans text-xs text-text-muted truncate">
                   {item.type === 'category_group'
-                    ? `Grupo: ${GENDER_LABELS[item.gender ?? ''] ?? '—'}`
+                    ? `Grupo: ${genderLabel(item.gender ?? '')}`
                     : `Enlace: ${item.href ?? '—'}`}
                 </p>
               </div>

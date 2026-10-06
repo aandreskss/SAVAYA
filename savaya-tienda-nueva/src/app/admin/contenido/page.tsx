@@ -8,6 +8,7 @@ import {
   getGenderHeroContent,
   listAdminNavItems,
   listAdminCustomPages,
+  listGenders,
 } from '@/domains/admin/cms/repository'
 import { ContenidoView } from '@/domains/admin/cms/components/ContenidoView'
 import type { GenderHero } from '@/domains/cms/repository'
@@ -17,12 +18,13 @@ export const metadata = {
 }
 
 async function ContenidoData() {
-  const [sections, banners, popups, navItems, customPages, hombreHero, mujerHero, session] =
+  const [sections, banners, popups, navItems, genders, customPages, hombreHero, mujerHero, session] =
     await Promise.all([
       getAdminSections('home'),
       listAdminBanners(),
       listAdminPopups(),
       listAdminNavItems(),
+      listGenders(),
       listAdminCustomPages(),
       getGenderHeroContent('hombre'),
       getGenderHeroContent('mujer'),
@@ -38,6 +40,7 @@ async function ContenidoData() {
       banners={banners}
       popups={popups}
       navItems={navItems}
+      genders={genders}
       customPages={customPages}
       hombreHero={hombreHero as GenderHero | null}
       mujerHero={mujerHero as GenderHero | null}
