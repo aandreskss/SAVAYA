@@ -13,6 +13,7 @@ import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import {
   eq,
   and,
+  or,
   inArray,
   gte,
   lte,
@@ -1444,4 +1445,27 @@ export async function updateStockBySku(items: StockSyncItem[]): Promise<StockSyn
   }
 
   return { synced, skipped, failed }
+}
+
+// ---------------------------------------------------------------------------
+// Gender-based category lookup (for dynamic gender pages)
+// ---------------------------------------------------------------------------
+
+export async function getCategoryIdsByGender(genderSlug: string): Promise<string[]> {
+  if (!process.env.DATABASE_URL) return []
+  try {
+    const rows = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(
+        and(
+          or(eq(categories.gender, genderSlug), eq(categories.gender, 'unisex')),
+          eq(categories.isActive, true),
+        ),
+      )
+    return rows.map((r) => r.id)
+  } catch (error) {
+    console.error('[catalog/repo] getCategoryIdsByGender failed:', error)
+    return []
+  }
 }

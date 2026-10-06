@@ -249,7 +249,7 @@ export async function getAnnouncementBarSection(): Promise<PageSection | null> {
  * Fetches the hero section for /hombre or /mujer from the DB.
  * Returns null if the page/section hasn't been configured yet (storefront uses hardcoded fallback).
  */
-export async function getGenderHeroSection(slug: 'hombre' | 'mujer'): Promise<GenderHero | null> {
+export async function getGenderHeroSection(slug: string): Promise<GenderHero | null> {
   if (!process.env.DATABASE_URL) return null
 
   try {

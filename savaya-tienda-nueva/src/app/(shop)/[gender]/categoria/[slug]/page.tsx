@@ -1,10 +1,11 @@
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import {
   getCategoryBySlug,
   getProducts,
   getAvailableFilters,
 } from '@/domains/catalog/repository'
+import { getGenderBySlug } from '@/domains/admin/cms/repository'
 import {
   parsePLPSearchParams,
   searchParamsToFilters,
@@ -21,106 +22,89 @@ const LIMIT = 24
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
 
 type Props = {
-  params: Promise<{ slug: string }>
+  params: Promise<{ gender: string; slug: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const { slug } = await params
+  const { gender, slug } = await params
   const rawParams = await searchParams
 
-  const category = await getCategoryBySlug(slug)
-  if (!category) return {}
+  const [genderData, category] = await Promise.all([
+    getGenderBySlug(gender),
+    getCategoryBySlug(slug),
+  ])
+
+  if (!genderData || !category) return {}
 
   const parsedParams = parsePLPSearchParams(rawParams)
   const noindex = shouldNoindex(parsedParams)
 
-  const title = category.seoTitle ?? `${category.name} — SAVAYA`
-  const description =
-    category.seoDescription ??
-    `Descubre nuestra colección de ${category.name.toLowerCase()} venezolano de autor`
-
-  const genderPrefix =
-    category.gender && category.gender !== 'unisex' ? `/${category.gender}` : ''
-  const canonicalPath = `${genderPrefix}/categoria/${slug}`
-
   return {
-    title,
-    description,
-    alternates: {
-      canonical: `${BASE_URL}${canonicalPath}`,
-    },
-    openGraph: {
-      title,
-      description,
-      url: `${BASE_URL}${canonicalPath}`,
-      siteName: 'SAVAYA',
-      locale: 'es_VE',
-      type: 'website',
-    },
+    title: `${category.name} ${genderData.label} — SAVAYA`,
+    description: `Colección ${genderData.label.toLowerCase()} ${category.name.toLowerCase()} — SAVAYA Calzado venezolano`,
+    alternates: { canonical: `${BASE_URL}/${gender}/categoria/${slug}` },
     ...(noindex && { robots: { index: false, follow: true } }),
   }
 }
 
-export default async function CategoryPage({ params, searchParams }: Props) {
-  const { slug } = await params
+export default async function DynamicGenderCategoryPage({ params, searchParams }: Props) {
+  const { gender, slug } = await params
   const rawParams = await searchParams
 
-  const category = await getCategoryBySlug(slug)
+  const [genderData, category] = await Promise.all([
+    getGenderBySlug(gender),
+    getCategoryBySlug(slug),
+  ])
+
+  if (!genderData) notFound()
   if (!category) notFound()
 
-  if (category.gender && category.gender !== 'unisex') {
-    redirect(`/${category.gender}/categoria/${slug}`)
+  const parsedParams = parsePLPSearchParams(rawParams)
+  const filters = {
+    ...searchParamsToFilters(parsedParams, slug),
+    limit: LIMIT,
   }
 
-  const parsedParams = parsePLPSearchParams(rawParams)
-  const filters = searchParamsToFilters(parsedParams, slug)
-
   const [{ items, total }, availableFilters] = await Promise.all([
-    getProducts({ ...filters, limit: LIMIT }),
+    getProducts(filters),
     getAvailableFilters(slug),
   ])
 
   const totalPages = Math.ceil(total / LIMIT)
 
-  // Build lookup maps for chip labels
   const colorNames: Record<string, string> = {}
-  for (const c of availableFilters.colors) {
-    colorNames[c.id] = c.name
-  }
-  const sizeNames: Record<string, string> = {}
-  for (const s of availableFilters.sizes) {
-    sizeNames[s.id] = s.name
-  }
+  for (const c of availableFilters.colors) colorNames[c.id] = c.name
 
-  // BreadcrumbList structured data
+  const sizeNames: Record<string, string> = {}
+  for (const s of availableFilters.sizes) sizeNames[s.id] = s.name
+
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Inicio', item: BASE_URL },
-      { '@type': 'ListItem', position: 2, name: category.name },
+      { '@type': 'ListItem', position: 2, name: genderData.label, item: `${BASE_URL}/${gender}` },
+      { '@type': 'ListItem', position: 3, name: category.name },
     ],
   }
 
   return (
     <>
-      {/* Structured data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       <div className="max-w-screen-xl mx-auto px-4 md:px-10 py-8">
-        {/* Breadcrumb */}
         <Breadcrumb
           items={[
             { label: 'Inicio', href: '/' },
+            { label: genderData.label, href: `/${gender}` },
             { label: category.name },
           ]}
         />
 
-        {/* Category header */}
         <div className="mt-6 mb-8">
           <h1 className="font-display font-black text-[34px] md:text-[38px] uppercase tracking-tight text-text-primary">
             {category.name}
@@ -132,7 +116,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </div>
 
         <div className="flex gap-8">
-          {/* Filter sidebar — desktop only */}
           <aside className="hidden md:block w-56 flex-shrink-0" aria-label="Filtros de productos">
             <FilterSidebar
               availableColors={availableFilters.colors}
@@ -142,9 +125,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             />
           </aside>
 
-          {/* Main content */}
           <div className="flex-1 min-w-0">
-            {/* Top bar: active chips + sort */}
             <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
               <ActiveFilterChips
                 activeFilters={parsedParams}
@@ -156,7 +137,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               </div>
             </div>
 
-            {/* Product grid */}
             {items.length === 0 ? (
               <EmptyState
                 title="Sin resultados"
@@ -191,7 +171,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               </div>
             )}
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="mt-12 flex justify-center">
                 <PLPPagination
@@ -204,7 +183,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        {/* Mobile filter bottom sheet */}
         <FilterBottomSheet
           availableColors={availableFilters.colors}
           availableSizes={availableFilters.sizes}

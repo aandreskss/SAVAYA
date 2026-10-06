@@ -408,6 +408,15 @@ export async function createGender(slug: string, label: string): Promise<GenderO
   return row
 }
 
+export async function getGenderBySlug(slug: string): Promise<GenderOption | null> {
+  const [row] = await db
+    .select({ slug: genders.slug, label: genders.label })
+    .from(genders)
+    .where(and(eq(genders.slug, slug), eq(genders.isActive, true)))
+    .limit(1)
+  return row ?? null
+}
+
 // ---------------------------------------------------------------------------
 // Custom pages CRUD (pages with slug starting with 'p/')
 // ---------------------------------------------------------------------------
