@@ -14,6 +14,7 @@ import {
   reorderNavItemsAction,
   toggleNavItemAction,
   createGenderAction,
+  deleteGenderAction,
 } from '../actions'
 import type { AdminNavItem, GenderOption } from '../types'
 
@@ -52,6 +53,11 @@ export function NavbarEditor({ initialItems, initialGenders }: Props) {
   const [showNewGender, setShowNewGender] = useState(false)
   const [newGenderLabel, setNewGenderLabel] = useState('')
   const [isCreatingGender, startCreatingGender] = useTransition()
+
+  // Gender management section
+  const [showGenderManager, setShowGenderManager] = useState(false)
+  const [isDeletingGender, startDeletingGender] = useTransition()
+  const [confirmDeleteSlug, setConfirmDeleteSlug] = useState<string | null>(null)
 
   function openCreate() {
     setEditingId(null)
@@ -182,6 +188,16 @@ export function NavbarEditor({ initialItems, initialGenders }: Props) {
         reordered.map((it) => ({ id: it.id, sortOrder: it.sortOrder })),
       )
       if (!result.success) toast.error(result.error)
+    })
+  }
+
+  function handleDeleteGender(slug: string) {
+    startDeletingGender(async () => {
+      const result = await deleteGenderAction(slug)
+      if (!result.success) { toast.error(result.error); return }
+      setGenders((prev) => prev.filter((g) => g.slug !== slug))
+      setConfirmDeleteSlug(null)
+      toast.success('Género eliminado')
     })
   }
 
@@ -406,6 +422,64 @@ export function NavbarEditor({ initialItems, initialGenders }: Props) {
           ))}
         </div>
       )}
+
+      {/* Gender manager */}
+      <div className="border border-border rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowGenderManager((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
+        >
+          <span>Gestionar géneros ({genders.length})</span>
+          <span>{showGenderManager ? '▲' : '▼'}</span>
+        </button>
+
+        {showGenderManager && (
+          <div className="border-t border-border p-4 space-y-2">
+            {genders.length === 0 ? (
+              <p className="text-xs text-text-muted">No hay géneros creados.</p>
+            ) : (
+              genders.map((g) => (
+                <div key={g.slug} className="flex items-center justify-between gap-2 py-1">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary font-medium">{g.label}</span>
+                    <span className="ml-2 text-xs text-text-muted font-mono">/{g.slug}</span>
+                  </div>
+                  {confirmDeleteSlug === g.slug ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-xs text-text-secondary">¿Eliminar?</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteGender(g.slug)}
+                        disabled={isDeletingGender}
+                        className="px-2 py-0.5 text-xs font-sans rounded border border-error/50 text-error hover:bg-error/10 transition-colors"
+                      >
+                        Sí
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteSlug(null)}
+                        className="px-2 py-0.5 text-xs font-sans rounded border border-border text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteSlug(g.slug)}
+                      disabled={isDeletingGender}
+                      className="shrink-0 px-2.5 py-1 text-xs font-sans rounded border border-border bg-surface-2 text-text-secondary hover:text-error transition-colors"
+                    >
+                      &#10005;
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
 
       <p className="text-xs text-text-muted">
         Los grupos de categorías muestran automáticamente las categorías etiquetadas con ese género (o &ldquo;unisex&rdquo;).

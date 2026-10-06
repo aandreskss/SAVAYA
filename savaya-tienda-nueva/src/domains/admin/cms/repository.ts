@@ -417,6 +417,10 @@ export async function getGenderBySlug(slug: string): Promise<GenderOption | null
   return row ?? null
 }
 
+export async function deleteGender(slug: string): Promise<void> {
+  await db.delete(genders).where(eq(genders.slug, slug))
+}
+
 // ---------------------------------------------------------------------------
 // Custom pages CRUD (pages with slug starting with 'p/')
 // ---------------------------------------------------------------------------

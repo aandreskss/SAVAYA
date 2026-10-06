@@ -25,6 +25,7 @@ import {
   toggleAdminNavItem,
   listGenders,
   createGender,
+  deleteGender,
   listAdminCustomPages,
   createAdminCustomPage,
   updateAdminCustomPageMeta,
@@ -657,6 +658,20 @@ export async function createGenderAction(
     return { success: true, data }
   } catch {
     return { success: false, error: `Ya existe un género con ese nombre` }
+  }
+}
+
+export async function deleteGenderAction(slug: string): Promise<ActionResult<void>> {
+  const actor = await getActor()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('cms:write')) {
+    return { success: false, error: 'Sin permiso' }
+  }
+  try {
+    await deleteGender(slug)
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al eliminar el género' }
   }
 }
 
