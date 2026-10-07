@@ -466,3 +466,40 @@ delivered / cancelled / refunded → [] (terminal)
 **Regla crítica**: `OrderDetailView` ya maneja la diferencia. El caso especial de aprobación de comprobante (`approvePaymentAction`) se activa solo cuando `toStatus === 'paid' && order.status === 'payment_under_review' && order.proof`. Para `pending_payment → paid` cae en el flujo regular. No duplicar esta lógica.
 
 **Dashboard revenue**: solo incluye pedidos en `paid | preparing | shipped | delivered`. Los pedidos de retiro en efectivo solo aparecen en los KPIs una vez que el admin los marca como `paid` — no antes.
+
+### 8.38 URLs de producto con prefijo de género
+
+- **`productHref(gender, slug)`** en `src/shared/lib/product-href.ts` es la única fuente de verdad para construir URLs de producto. Nunca construyas `/producto/${slug}` manualmente en ningún archivo.
+- **Regla**: géneros distintos a `'unisex'` → `/${gender}/producto/${slug}`. Unisex → `/producto/${slug}`.
+- **Rutas estáticas** para mujer y hombre (Next.js static segments tienen precedencia sobre `[gender]`):
+  - `src/app/(shop)/mujer/producto/[slug]/page.tsx`
+  - `src/app/(shop)/hombre/producto/[slug]/page.tsx`
+- **Ruta dinámica** para géneros custom (niñas, niños, etc.): `src/app/(shop)/[gender]/producto/[slug]/page.tsx`
+- **`GenericProductPage`** (`src/domains/catalog/components/GenericProductPage.tsx`): componente server compartido por los tres route files. Recibe `slug` y `genderContext` (el género de la URL). Si el género del producto en DB no coincide con `genderContext`, hace `redirect()` a la URL canónica.
+- **`/producto/[slug]`** (unisex): si el producto tiene género distinto a unisex, `GenericProductPage` redirige automáticamente a la URL correcta. Es la ruta de fallback/migración.
+- **`ProductListItem.gender`**: el campo `gender: string` ya está incluido en el SELECT de `getProducts`, `getRelatedProducts` y `getRecentlyViewedProducts`. Siempre pásalo a `<ProductCard gender={p.gender} />`.
+- **Sitemap, search, wishlist, analytics**: todos usan `productHref` — no hardcodear `/producto/` en ninguno de esos dominios.
+- **`revalidatePath`** en `admin/catalog/actions.ts`: usa `productHref(data.gender, data.slug)` para invalidar la ruta correcta después de guardar.
+- **`getProductViewerCount(slug, gender)`**: acepta gender como segundo parámetro para rastrear la ruta correcta en `page_views`. La API `/api/products/viewers` también acepta `?gender=`.
+
+### 8.39 `products.gender` — columna text (no pgEnum)
+
+- **Migración 016** (`scripts/run-migration-016.js`): convirtió `products.gender` de `pgEnum('gender', ['women','men','unisex'])` a `text`. Ya ejecutada en Neon.
+- El enum `genderEnum` sigue en la DB (tiene dependencias) pero la columna ya es `text` — es inofensivo.
+- En `src/domains/catalog/schema.ts`: `gender: text('gender').notNull().default('women')`.
+- Los géneros válidos ahora vienen de la tabla `genders` (CMS) — no de un enum fijo. El valor por defecto `'women'` es legacy; los nuevos productos usan el slug del género seleccionado en el form (ej. `'mujer'`, `'hombre'`, `'niñas'`).
+- **Validators**: `gender: z.string().min(1)` — nunca volver a `z.enum([...])` con géneros hardcodeados.
+
+### 8.40 Neon HTTP driver — sin soporte de transacciones
+
+- **`db.transaction(async (tx) => {...})`** lanza `"no transactions support in neon-http driver"` — nunca lo uses.
+- **Patrón correcto para operaciones multi-insert**: inserts secuenciales con `try/catch` de cleanup. Crear el registro raíz primero, luego los dependientes en el `try`. En el `catch`, eliminar el registro raíz (las relaciones con `onDelete: 'cascade'` se limpian en cascada) y relanzar el error.
+- Ver `createProduct` en `src/domains/admin/catalog/repository.ts` como referencia canónica.
+- El import masivo CSV (`src/app/api/admin/catalog/import/route.ts`) también sigue este patrón.
+
+### 8.41 Stock inicial de variantes — solo para variantes nuevas
+
+- La columna **"Stock inicial"** en el tab Variantes del admin solo aparece para variantes **sin ID** (no guardadas aún en DB). La condición es `activeVariants.some((v) => !v.id)` para el header y `!v.id && !inactive` para el input de cada fila.
+- **Flujo al crear un producto nuevo**: seleccionar colores → seleccionar tallas → el sistema genera las variantes en memoria (sin `v.id`) → aparece la columna Stock inicial.
+- **Para ajustar stock de variantes existentes** (con `v.id`): ir a Admin → Inventario → buscar el producto → ajustar cantidad. La columna no reaparece en modo edición.
+- El valor de `initialStock` se guarda en `inventory.quantity` al hacer `createProduct` o `updateProduct` (solo para variantes sin `id`). En `updateProduct`, el insert de inventario usa `onConflictDoUpdate` por si quedó un registro previo con `quantity=0`.
