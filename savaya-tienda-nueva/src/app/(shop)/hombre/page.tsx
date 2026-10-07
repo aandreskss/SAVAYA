@@ -190,6 +190,7 @@ export default async function HombrePage({ searchParams }: Props) {
                   key={product.id}
                   id={product.id}
                   slug={product.slug}
+                  gender={product.gender}
                   name={product.name}
                   basePrice={product.basePrice}
                   compareAtPrice={product.compareAtPrice}

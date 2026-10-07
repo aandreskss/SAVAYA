@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { productHref } from '@/shared/lib/product-href'
 import { headers } from 'next/headers'
 import { auth } from '@/domains/auth/auth'
 import { BLOCK_SCHEMAS } from '@/domains/cms/block-schemas'
@@ -98,7 +99,7 @@ export async function getSiteUrlOptionsAction(): Promise<ActionResult<SiteUrlOpt
     data: {
       categories: cats.map((c) => ({ label: c.name, url: `/categoria/${c.slug}` })),
       collections: colls.map((c) => ({ label: c.name, url: `/coleccion/${c.slug}` })),
-      products: prods.map((p) => ({ label: p.name, url: `/producto/${p.slug}` })),
+      products: prods.map((p) => ({ label: p.name, url: productHref(p.gender, p.slug) })),
       pages: customPages.map((p) => ({ label: p.title, url: `/p/${p.slug}` })),
     },
   }

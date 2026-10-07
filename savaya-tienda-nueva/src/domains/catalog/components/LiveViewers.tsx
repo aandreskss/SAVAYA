@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 const POLL_MS = 60_000
 const MIN_SHOW = 2
 
-export function LiveViewers({ slug }: { slug: string }) {
+export function LiveViewers({ slug, gender = 'unisex' }: { slug: string; gender?: string }) {
   const [count, setCount] = useState<number | null>(null)
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export function LiveViewers({ slug }: { slug: string }) {
 
     async function load() {
       try {
-        const res = await fetch(`/api/products/viewers?slug=${encodeURIComponent(slug)}`)
+        const res = await fetch(`/api/products/viewers?slug=${encodeURIComponent(slug)}&gender=${encodeURIComponent(gender)}`)
         const data = (await res.json()) as { count: number }
         if (!cancelled) setCount(data.count)
       } catch {

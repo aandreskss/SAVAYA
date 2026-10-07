@@ -88,6 +88,7 @@ export async function getWishlistProducts(
     .select({
       variantId: wishlistItems.productVariantId,
       productSlug: products.slug,
+      productGender: products.gender,
       productName: products.name,
       colorName: colors.name,
       sizeName: sizes.name,
@@ -116,6 +117,7 @@ export async function getWishlistProducts(
   return rows.map((r) => ({
     variantId: r.variantId,
     productSlug: r.productSlug,
+    productGender: r.productGender,
     productName: r.productName,
     colorName: r.colorName,
     sizeName: r.sizeName,

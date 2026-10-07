@@ -31,8 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function ProductPage({ params }: Props) {
+export default async function MujerProductPage({ params }: Props) {
   const { slug } = await params
-  // GenericProductPage handles the redirect for gendered products
-  return <GenericProductPage slug={slug} genderContext="unisex" />
+  return <GenericProductPage slug={slug} genderContext="mujer" />
 }

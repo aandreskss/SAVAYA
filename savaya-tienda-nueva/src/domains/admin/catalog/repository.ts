@@ -404,9 +404,9 @@ export async function getAllCollectionOptions(): Promise<CollectionOption[]> {
   return rows
 }
 
-export async function getAllProductSlugsForPicker(): Promise<{ name: string; slug: string }[]> {
+export async function getAllProductSlugsForPicker(): Promise<{ name: string; slug: string; gender: string }[]> {
   return db
-    .select({ name: products.name, slug: products.slug })
+    .select({ name: products.name, slug: products.slug, gender: products.gender })
     .from(products)
     .where(eq(products.isActive, true))
     .orderBy(asc(products.name))

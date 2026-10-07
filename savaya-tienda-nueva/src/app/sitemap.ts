@@ -45,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       const [productRows, categoryRows, collectionRows] = await Promise.all([
         db
-          .select({ slug: products.slug, updatedAt: products.updatedAt })
+          .select({ slug: products.slug, gender: products.gender, updatedAt: products.updatedAt })
           .from(products)
           .where(eq(products.isActive, true)),
         db
@@ -58,9 +58,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           .where(eq(collections.isActive, true)),
       ])
 
+      const { productHref } = await import('@/shared/lib/product-href')
+
       dynamicEntries = [
         ...productRows.map((p) => ({
-          url: `${BASE_URL}/producto/${p.slug}`,
+          url: `${BASE_URL}${productHref(p.gender ?? 'unisex', p.slug)}`,
           lastModified: p.updatedAt,
           changeFrequency: 'weekly' as const,
           priority: 0.8,

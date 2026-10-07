@@ -7,6 +7,7 @@ import { useNavStore } from './nav-store'
 import { trackSearch } from '@/domains/analytics/service'
 import { cn } from '@/shared/lib/utils'
 import type { SearchResult } from '@/domains/catalog/search'
+import { productHref } from '@/shared/lib/product-href'
 
 const DEBOUNCE_MS = 300
 const RECENT_KEY = 'savaya_recent_searches'
@@ -227,7 +228,7 @@ export function SearchOverlay() {
                   {results.map((result) => {
                     const href =
                       result.type === 'product'
-                        ? `/producto/${result.slug}`
+                        ? productHref(result.gender ?? 'unisex', result.slug)
                         : `/${result.slug}`
 
                     return (

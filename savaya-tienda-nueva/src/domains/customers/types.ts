@@ -35,6 +35,7 @@ export type CustomerAddress = {
 export type WishlistProduct = {
   variantId: string
   productSlug: string
+  productGender: string
   productName: string
   colorName: string
   sizeName: string

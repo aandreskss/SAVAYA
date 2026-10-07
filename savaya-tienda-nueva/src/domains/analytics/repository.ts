@@ -144,14 +144,16 @@ export async function getTrafficSummary(days: number = 30): Promise<TrafficSumma
   }
 }
 
-export async function getProductViewerCount(slug: string): Promise<number> {
+export async function getProductViewerCount(slug: string, gender = 'unisex'): Promise<number> {
   if (!process.env.DATABASE_URL) return 0
   try {
+    const { productHref } = await import('@/shared/lib/product-href')
+    const path = productHref(gender, slug)
     const cutoff = new Date(Date.now() - 15 * 60 * 1000)
     const [row] = await db
       .select({ count: countDistinct(pageViews.sessionId) })
       .from(pageViews)
-      .where(and(eq(pageViews.path, `/producto/${slug}`), gte(pageViews.createdAt, cutoff)))
+      .where(and(eq(pageViews.path, path), gte(pageViews.createdAt, cutoff)))
     return row?.count ?? 0
   } catch {
     return 0

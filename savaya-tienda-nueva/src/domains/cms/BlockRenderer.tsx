@@ -43,6 +43,7 @@ async function fetchCarouselProducts(
     return items.map((p) => ({
       id: p.id,
       slug: p.slug,
+      gender: p.gender,
       name: p.name,
       basePrice: p.basePrice,
       compareAtPrice: p.compareAtPrice,
@@ -146,6 +147,7 @@ function toCardProps(items: ProductListItem[]): ProductCardProps[] {
   return items.map((p) => ({
     id: p.id,
     slug: p.slug,
+    gender: p.gender,
     name: p.name,
     basePrice: p.basePrice,
     compareAtPrice: p.compareAtPrice,

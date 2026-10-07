@@ -283,7 +283,7 @@ export function ProductInfo({
               ¡Solo quedan {selectedVariant.stock}!
             </p>
           )}
-          <LiveViewers slug={product.slug} />
+          <LiveViewers slug={product.slug} gender={product.gender} />
         </div>
 
         {/* Variant selector */}

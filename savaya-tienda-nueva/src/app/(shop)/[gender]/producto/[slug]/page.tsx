@@ -3,7 +3,7 @@ import { productHref } from '@/shared/lib/product-href'
 import { GenericProductPage } from '@/domains/catalog/components/GenericProductPage'
 import type { Metadata } from 'next'
 
-type Props = { params: Promise<{ slug: string }> }
+type Props = { params: Promise<{ gender: string; slug: string }> }
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
 
@@ -31,8 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function ProductPage({ params }: Props) {
-  const { slug } = await params
-  // GenericProductPage handles the redirect for gendered products
-  return <GenericProductPage slug={slug} genderContext="unisex" />
+export default async function DynamicGenderProductPage({ params }: Props) {
+  const { gender, slug } = await params
+  return <GenericProductPage slug={slug} genderContext={gender} />
 }

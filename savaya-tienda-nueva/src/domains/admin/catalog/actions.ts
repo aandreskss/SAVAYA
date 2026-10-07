@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { productHref } from '@/shared/lib/product-href'
 import { headers } from 'next/headers'
 import crypto from 'crypto'
 import { auth } from '@/domains/auth/auth'
@@ -76,13 +77,13 @@ export async function saveProductAction(
       await updateProduct(data.id, data as SaveProductPayload, actor.actorId, actor.actorEmail, actor.ip)
       revalidatePath('/admin/productos')
       revalidatePath(`/admin/productos/${data.id}`)
-      revalidatePath(`/producto/${data.slug}`)
+      revalidatePath(productHref(data.gender as string, data.slug as string))
       revalidatePath('/categoria', 'layout')
       return { success: true, data: { id: data.id } }
     } else {
       const id = await createProduct(data as SaveProductPayload, actor.actorId, actor.actorEmail, actor.ip)
       revalidatePath('/admin/productos')
-      revalidatePath(`/producto/${data.slug}`)
+      revalidatePath(productHref(data.gender as string, data.slug as string))
       revalidatePath('/categoria', 'layout')
       return { success: true, data: { id } }
     }

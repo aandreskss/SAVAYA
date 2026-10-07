@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toggleWishlist } from '../wishlist-actions'
 import type { WishlistProduct } from '../types'
+import { productHref } from '@/shared/lib/product-href'
 
 interface Props {
   products: WishlistProduct[]
@@ -44,7 +45,7 @@ export function WishlistView({ products: initialProducts }: Props) {
           key={product.variantId}
           className="border border-border rounded-lg overflow-hidden group"
         >
-          <Link href={`/producto/${product.productSlug}`} className="block">
+          <Link href={productHref(product.productGender, product.productSlug)} className="block">
             <div className="aspect-square bg-surface overflow-hidden relative">
               {product.imageUrl ? (
                 <img
@@ -66,7 +67,7 @@ export function WishlistView({ products: initialProducts }: Props) {
           </Link>
 
           <div className="p-3">
-            <Link href={`/producto/${product.productSlug}`}>
+            <Link href={productHref(product.productGender, product.productSlug)}>
               <p className="text-sm font-medium truncate hover:underline">
                 {product.productName}
               </p>

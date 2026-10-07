@@ -159,6 +159,7 @@ export default async function HombreCategoryPage({ params, searchParams }: Props
                     key={product.id}
                     id={product.id}
                     slug={product.slug}
+                    gender={product.gender}
                     name={product.name}
                     basePrice={product.basePrice}
                     compareAtPrice={product.compareAtPrice}

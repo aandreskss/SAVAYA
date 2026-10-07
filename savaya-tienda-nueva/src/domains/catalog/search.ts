@@ -7,6 +7,7 @@ export type SearchResult = {
   id: string
   name: string
   slug: string
+  gender?: string
   imageUrl?: string
   price?: number
   currency: string
@@ -38,6 +39,7 @@ export class PostgresSearchProvider implements SearchProvider {
         id: string
         name: string
         slug: string
+        gender: string
         base_price: string
         image_url: string | null
         rank: number
@@ -46,6 +48,7 @@ export class PostgresSearchProvider implements SearchProvider {
           p.id,
           p.name,
           p.slug,
+          p.gender,
           p.base_price,
           pm.url AS image_url,
           (
@@ -94,6 +97,7 @@ export class PostgresSearchProvider implements SearchProvider {
           id: p.id,
           name: p.name,
           slug: p.slug,
+          gender: p.gender,
           price: Number(p.base_price),
           imageUrl: p.image_url ?? undefined,
           currency: 'USD',
@@ -113,10 +117,11 @@ export class PostgresSearchProvider implements SearchProvider {
         id: string
         name: string
         slug: string
+        gender: string
         base_price: string
         image_url: string | null
       }>(sql`
-        SELECT p.id, p.name, p.slug, p.base_price,
+        SELECT p.id, p.name, p.slug, p.gender, p.base_price,
                pm.url AS image_url
         FROM products p
         LEFT JOIN LATERAL (
@@ -146,6 +151,7 @@ export class PostgresSearchProvider implements SearchProvider {
           id: p.id,
           name: p.name,
           slug: p.slug,
+          gender: p.gender,
           price: Number(p.base_price),
           imageUrl: p.image_url ?? undefined,
           currency: 'USD',

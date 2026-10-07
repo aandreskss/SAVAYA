@@ -6,12 +6,14 @@ import Link from 'next/link'
 import { Badge } from './Badge'
 import { Price } from './Price'
 import { cn } from '@/shared/lib/utils'
+import { productHref } from '@/shared/lib/product-href'
 
 type ProductBadge = 'new' | 'bestseller' | 'sale' | 'low_stock' | 'web_exclusive'
 
 export type ProductCardProps = {
   id: string
   slug: string
+  gender?: string
   name: string
   basePrice: number
   compareAtPrice?: number | null
@@ -51,6 +53,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 export function ProductCard({
   id,
   slug,
+  gender = 'unisex',
   name,
   basePrice,
   compareAtPrice,
@@ -63,6 +66,7 @@ export function ProductCard({
   onWishlistToggle,
   priority = false,
 }: ProductCardProps) {
+  const href = productHref(gender, slug)
   const [isHovered, setIsHovered] = useState(false)
   const [selectedColorId, setSelectedColorId] = useState<string | undefined>(
     availableColors[0]?.id,
@@ -88,7 +92,7 @@ export function ProductCard({
   return (
     <div className="group relative flex flex-col gap-3">
       <Link
-        href={`/producto/${slug}`}
+        href={href}
         className="relative focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded-[24px]"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -187,7 +191,7 @@ export function ProductCard({
 
       {/* Info — nombre, colores y precio fuera del mismo link para que los botones de color sean válidos */}
       <div className="flex flex-col gap-1.5 px-0.5">
-        <Link href={`/producto/${slug}`} className="block">
+        <Link href={href} className="block">
           <p className="font-sans text-[13px] font-bold text-text-primary leading-snug line-clamp-2 hover:text-text-primary/80 transition-colors">
             {name}
           </p>
@@ -229,7 +233,7 @@ export function ProductCard({
           </div>
         )}
 
-        <Link href={`/producto/${slug}`} className="block">
+        <Link href={href} className="block">
           <Price
             amount={basePrice}
             currency={currency}

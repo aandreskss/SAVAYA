@@ -16,6 +16,7 @@ import type { VariantRow } from './tabs/VariantsTab'
 import type { SeoTabState } from './tabs/SeoTab'
 import type { AdminProductForEdit, ColorOption, SizeOption, CategoryOption, CollectionOption } from '../types'
 import type { GenderOption } from '@/domains/admin/cms/types'
+import { productHref } from '@/shared/lib/product-href'
 
 type Props = {
   product?: AdminProductForEdit
@@ -244,7 +245,7 @@ export function ProductEditor({ product, colors: initialColors, sizes, categorie
         <div className="flex items-center gap-3 shrink-0">
           {product && (
             <a
-              href={`/producto/${product.slug}`}
+              href={productHref(product.gender, product.slug)}
               target="_blank"
               rel="noopener noreferrer"
               className="font-sans text-sm text-text-secondary hover:text-text-primary underline-offset-2 hover:underline transition-colors"
