@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import {
   getProducts,
   getAvailableFilters,
-  getCategoryIdsByGender,
 } from '@/domains/catalog/repository'
 import { getGenderHeroSection } from '@/domains/cms/repository'
 import { getGenderBySlug } from '@/domains/admin/cms/repository'
@@ -56,11 +55,9 @@ export default async function DynamicGenderPage({ params, searchParams }: Props)
 
   const parsedParams = parsePLPSearchParams(rawParams)
 
-  const categoryIds = await getCategoryIdsByGender(gender)
-
   const filters = {
     ...searchParamsToFilters(parsedParams),
-    ...(categoryIds.length > 0 ? { categoryIds } : {}),
+    gender,
     limit: LIMIT,
   }
 

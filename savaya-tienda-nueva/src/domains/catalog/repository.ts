@@ -32,7 +32,7 @@ import {
 export type ProductFilters = {
   categorySlug?: string
   categoryIds?: string[]
-  gender?: 'women' | 'men' | 'unisex'
+  gender?: string
   colorIds?: string[]
   sizeIds?: string[]
   minPrice?: number

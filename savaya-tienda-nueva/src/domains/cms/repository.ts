@@ -442,7 +442,16 @@ export async function buildNavCategories(): Promise<NavCategory[]> {
       if (item.type === 'category_group' && item.gender) {
         const subs = catRows
           .filter((c) => c.gender === item.gender || c.gender === 'unisex')
-          .map((c) => ({ name: c.name, href: `/${item.gender}/categoria/${c.slug}` }))
+          .map((c) => {
+            // mujer/hombre tienen rutas dedicadas; otros géneros usan la ruta genérica
+            const href =
+              c.gender === 'mujer'
+                ? `/mujer/categoria/${c.slug}`
+                : c.gender === 'hombre'
+                  ? `/hombre/categoria/${c.slug}`
+                  : `/categoria/${c.slug}`
+            return { name: c.name, href }
+          })
 
         return {
           label: item.label,
