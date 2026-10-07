@@ -6,6 +6,7 @@ import {
   getAllCategoryOptions,
   getAllCollectionOptions,
 } from '@/domains/admin/catalog/repository'
+import { listGenders } from '@/domains/admin/cms/repository'
 import { ProductEditor } from '@/domains/admin/catalog/components/ProductEditor'
 
 export default async function EditarProductoPage({
@@ -15,12 +16,13 @@ export default async function EditarProductoPage({
 }) {
   const { id } = await params
 
-  const [product, colors, sizes, categories, collections] = await Promise.all([
+  const [product, colors, sizes, categories, collections, genders] = await Promise.all([
     getAdminProductForEdit(id),
     getAllColors(),
     getAllSizes(),
     getAllCategoryOptions(),
     getAllCollectionOptions(),
+    listGenders(),
   ])
 
   if (!product) notFound()
@@ -33,6 +35,7 @@ export default async function EditarProductoPage({
         sizes={sizes}
         categories={categories}
         collections={collections}
+        genders={genders}
       />
     </div>
   )

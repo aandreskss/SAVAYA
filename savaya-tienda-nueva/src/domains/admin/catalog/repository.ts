@@ -439,41 +439,43 @@ export async function createProduct(
   actorEmail: string,
   ip: string,
 ): Promise<string> {
-  return await db.transaction(async (tx) => {
-    const [product] = await tx
-      .insert(products)
-      .values({
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        categoryId: data.categoryId,
-        gender: data.gender,
-        productType: data.productType,
-        basePrice: String(data.basePrice),
-        compareAtPrice: data.compareAtPrice != null ? String(data.compareAtPrice) : null,
-        isFeatured: data.isFeatured,
-        isNew: data.isNew,
-        isVip: data.isVip,
-        isActive: data.isActive,
-        tags: data.tags,
-        seoTitle: data.seoTitle,
-        seoDescription: data.seoDescription,
-        seoKeywords: data.seoKeywords,
-        metaImageUrl: data.metaImageUrl,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
-      })
-      .returning({ id: products.id })
+  // neon-http driver no soporta db.transaction() — usamos inserts secuenciales
+  // con cleanup en catch. El producto queda isActive=false hasta que todo esté ok.
+  const [product] = await db
+    .insert(products)
+    .values({
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      categoryId: data.categoryId,
+      gender: data.gender,
+      productType: data.productType,
+      basePrice: String(data.basePrice),
+      compareAtPrice: data.compareAtPrice != null ? String(data.compareAtPrice) : null,
+      isFeatured: data.isFeatured,
+      isNew: data.isNew,
+      isVip: data.isVip,
+      isActive: data.isActive,
+      tags: data.tags,
+      seoTitle: data.seoTitle,
+      seoDescription: data.seoDescription,
+      seoKeywords: data.seoKeywords,
+      metaImageUrl: data.metaImageUrl,
+      publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
+    })
+    .returning({ id: products.id })
 
-    const id = product.id
+  const id = product.id
 
+  try {
     if (data.collectionIds.length > 0) {
-      await tx.insert(productCollections).values(
+      await db.insert(productCollections).values(
         data.collectionIds.map((collectionId) => ({ productId: id, collectionId })),
       )
     }
 
     if (data.variants.length > 0) {
-      const insertedVariants = await tx
+      const insertedVariants = await db
         .insert(productVariants)
         .values(
           data.variants.map((v) => ({
@@ -488,7 +490,7 @@ export async function createProduct(
         )
         .returning({ id: productVariants.id })
 
-      await tx.insert(inventory).values(
+      await db.insert(inventory).values(
         insertedVariants.map((v, i) => ({
           variantId: v.id,
           quantity: data.variants[i].initialStock,
@@ -498,7 +500,7 @@ export async function createProduct(
     }
 
     if (data.media.length > 0) {
-      await tx.insert(productMedia).values(
+      await db.insert(productMedia).values(
         data.media.map((m) => ({
           productId: id,
           cloudinaryPublicId: m.cloudinaryPublicId,
@@ -511,7 +513,7 @@ export async function createProduct(
       )
     }
 
-    await tx.insert(auditLog).values({
+    await db.insert(auditLog).values({
       actorId,
       actorEmail,
       action: 'product.create',
@@ -522,7 +524,11 @@ export async function createProduct(
     })
 
     return id
-  })
+  } catch (err) {
+    // Cleanup: eliminar el producto creado (cascade borra variantes, inventario, media)
+    await db.delete(products).where(eq(products.id, id)).catch(() => {})
+    throw err
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,12 +1,14 @@
 import { getAllColors, getAllSizes, getAllCategoryOptions, getAllCollectionOptions } from '@/domains/admin/catalog/repository'
+import { listGenders } from '@/domains/admin/cms/repository'
 import { ProductEditor } from '@/domains/admin/catalog/components/ProductEditor'
 
 export default async function NuevoProductoPage() {
-  const [colors, sizes, categories, collections] = await Promise.all([
+  const [colors, sizes, categories, collections, genders] = await Promise.all([
     getAllColors(),
     getAllSizes(),
     getAllCategoryOptions(),
     getAllCollectionOptions(),
+    listGenders(),
   ])
 
   return (
@@ -16,6 +18,7 @@ export default async function NuevoProductoPage() {
         sizes={sizes}
         categories={categories}
         collections={collections}
+        genders={genders}
       />
     </div>
   )

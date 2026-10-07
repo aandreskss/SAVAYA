@@ -5,6 +5,7 @@ import { Select } from '@/shared/ui/Select'
 import { Toggle } from '@/shared/ui/Toggle'
 import { slugify } from '@/shared/lib/slugify'
 import type { CategoryOption, CollectionOption } from '../../types'
+import type { GenderOption } from '@/domains/admin/cms/types'
 
 export type GeneralTabState = {
   name: string
@@ -12,7 +13,7 @@ export type GeneralTabState = {
   description: string
   categoryId: string
   collectionIds: string[]
-  gender: 'women' | 'men' | 'unisex'
+  gender: string
   productType: string
   basePrice: string
   compareAtPrice: string
@@ -27,10 +28,11 @@ type Props = {
   state: GeneralTabState
   categories: CategoryOption[]
   collections: CollectionOption[]
+  genders: GenderOption[]
   onChange: (patch: Partial<GeneralTabState>) => void
 }
 
-export function GeneralTab({ state, categories, collections, onChange }: Props) {
+export function GeneralTab({ state, categories, collections, genders, onChange }: Props) {
   function handleNameChange(name: string) {
     onChange({ name, slug: slugify(name) })
   }
@@ -92,11 +94,13 @@ export function GeneralTab({ state, categories, collections, onChange }: Props) 
         <Select
           label="Género"
           value={state.gender}
-          onChange={(e) => onChange({ gender: e.target.value as GeneralTabState['gender'] })}
+          onChange={(e) => onChange({ gender: e.target.value })}
         >
-          <option value="women">Mujer</option>
-          <option value="men">Hombre</option>
-          <option value="unisex">Unisex</option>
+          {genders.map((g) => (
+            <option key={g.slug} value={g.slug}>
+              {g.label}
+            </option>
+          ))}
         </Select>
 
         <Input

@@ -53,7 +53,7 @@ export type AdminProductForEdit = {
   description: string | null
   categoryId: string | null
   collectionIds: string[]
-  gender: 'women' | 'men' | 'unisex'
+  gender: string
   productType: string
   basePrice: number
   compareAtPrice: number | null
@@ -151,7 +151,7 @@ export type SaveProductPayload = {
   description: string | null
   categoryId: string | null
   collectionIds: string[]
-  gender: 'women' | 'men' | 'unisex'
+  gender: string
   productType: string
   basePrice: number
   compareAtPrice: number | null

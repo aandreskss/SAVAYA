@@ -21,8 +21,6 @@ import { customers } from '@/domains/customers/schema'
 // Enums
 // ---------------------------------------------------------------------------
 
-export const genderEnum = pgEnum('gender', ['women', 'men', 'unisex'])
-
 export const mediaTypeEnum = pgEnum('media_type', ['image', 'video'])
 
 // ---------------------------------------------------------------------------
@@ -105,7 +103,7 @@ export const products = pgTable(
     categoryId: uuid('category_id').references(() => categories.id, {
       onDelete: 'set null',
     }),
-    gender: genderEnum('gender').notNull().default('women'),
+    gender: text('gender').notNull().default('women'),
     productType: text('product_type').notNull().default('shoes'),
     basePrice: numeric('base_price', { precision: 10, scale: 2 }).notNull(),
     compareAtPrice: numeric('compare_at_price', { precision: 10, scale: 2 }),

@@ -15,6 +15,7 @@ import type { MediaItem } from './tabs/MediaTab'
 import type { VariantRow } from './tabs/VariantsTab'
 import type { SeoTabState } from './tabs/SeoTab'
 import type { AdminProductForEdit, ColorOption, SizeOption, CategoryOption, CollectionOption } from '../types'
+import type { GenderOption } from '@/domains/admin/cms/types'
 
 type Props = {
   product?: AdminProductForEdit
@@ -22,6 +23,7 @@ type Props = {
   sizes: SizeOption[]
   categories: CategoryOption[]
   collections: CollectionOption[]
+  genders: GenderOption[]
 }
 
 function initGeneral(product?: AdminProductForEdit): GeneralTabState {
@@ -84,7 +86,7 @@ function initSeo(product?: AdminProductForEdit): SeoTabState {
   }
 }
 
-export function ProductEditor({ product, colors: initialColors, sizes, categories, collections }: Props) {
+export function ProductEditor({ product, colors: initialColors, sizes, categories, collections, genders }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -181,6 +183,7 @@ export function ProductEditor({ product, colors: initialColors, sizes, categorie
           state={general}
           categories={categories}
           collections={collections}
+          genders={genders}
           onChange={(patch) => setGeneral((s) => ({ ...s, ...patch }))}
         />
       ),

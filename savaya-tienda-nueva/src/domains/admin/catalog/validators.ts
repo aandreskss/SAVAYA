@@ -32,7 +32,7 @@ export const SaveProductSchema = z.object({
   description: z.string().max(5000).nullable(),
   categoryId: z.string().uuid().nullable(),
   collectionIds: z.array(z.string().uuid()),
-  gender: z.enum(['women', 'men', 'unisex']),
+  gender: z.string().min(1),
   productType: z.string().min(1).max(100).default('shoes'),
   basePrice: z.number().positive('El precio base debe ser mayor a 0'),
   compareAtPrice: z.number().positive().nullable(),
