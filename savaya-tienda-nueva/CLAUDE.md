@@ -482,13 +482,15 @@ delivered / cancelled / refunded → [] (terminal)
 - **`revalidatePath`** en `admin/catalog/actions.ts`: usa `productHref(data.gender, data.slug)` para invalidar la ruta correcta después de guardar.
 - **`getProductViewerCount(slug, gender)`**: acepta gender como segundo parámetro para rastrear la ruta correcta en `page_views`. La API `/api/products/viewers` también acepta `?gender=`.
 
-### 8.39 `products.gender` — columna text (no pgEnum)
+### 8.39 `products.gender` — columna text, slugs en español
 
 - **Migración 016** (`scripts/run-migration-016.js`): convirtió `products.gender` de `pgEnum('gender', ['women','men','unisex'])` a `text`. Ya ejecutada en Neon.
-- El enum `genderEnum` sigue en la DB (tiene dependencias) pero la columna ya es `text` — es inofensivo.
-- En `src/domains/catalog/schema.ts`: `gender: text('gender').notNull().default('women')`.
-- Los géneros válidos ahora vienen de la tabla `genders` (CMS) — no de un enum fijo. El valor por defecto `'women'` es legacy; los nuevos productos usan el slug del género seleccionado en el form (ej. `'mujer'`, `'hombre'`, `'niñas'`).
+- **Migración 017** (`scripts/run-migration-017.js`): normalizó los valores legacy en inglés → slugs en español: `'women'→'mujer'`, `'men'→'hombre'`. Ya ejecutada en Neon (27 productos actualizados).
+- Los géneros válidos vienen de la tabla `genders` (CMS) como slugs en español: `'mujer'`, `'hombre'`, `'ninos'`, `'ninas'`, `'unisex'`.
+- **Regla crítica**: los filtros de storefront (`/mujer/`, `/hombre/`, etc.) deben usar el slug español (`gender: 'mujer'`, `gender: 'hombre'`), nunca los valores legacy en inglés (`'women'`, `'men'`). Bug resuelto 2026-10-13.
+- **`ProductEditor` default**: `gender: product?.gender ?? 'mujer'` — nunca `'women'`.
 - **Validators**: `gender: z.string().min(1)` — nunca volver a `z.enum([...])` con géneros hardcodeados.
+- **Slugs de géneros infantiles**: en la tabla `genders`, niños = `'ninos'` y niñas = `'ninas'` (sin tilde — slugificado automáticamente). No confundir con `'niños'`/`'niñas'` con ñ.
 
 ### 8.40 Neon HTTP driver — sin soporte de transacciones
 
@@ -503,3 +505,13 @@ delivered / cancelled / refunded → [] (terminal)
 - **Flujo al crear un producto nuevo**: seleccionar colores → seleccionar tallas → el sistema genera las variantes en memoria (sin `v.id`) → aparece la columna Stock inicial.
 - **Para ajustar stock de variantes existentes** (con `v.id`): ir a Admin → Inventario → buscar el producto → ajustar cantidad. La columna no reaparece en modo edición.
 - El valor de `initialStock` se guarda en `inventory.quantity` al hacer `createProduct` o `updateProduct` (solo para variantes sin `id`). En `updateProduct`, el insert de inventario usa `onConflictDoUpdate` por si quedó un registro previo con `quantity=0`.
+
+### 8.42 Tallas infantiles — filtro por género en el admin
+
+- **Migración 018** (`scripts/run-migration-018.js`): agregó tallas 8–34 a la tabla `sizes` y normalizó `sort_order` de todas las tallas para que coincida con el valor numérico del nombre (8–49 en orden). Ya ejecutada en Neon.
+- **`VariantsTab`** acepta prop `gender: string` y calcula `visibleSizes` según el género:
+  - Géneros infantiles (`KIDS_GENDERS = ['ninos', 'ninas']`): muestra tallas 8–37.
+  - Otros géneros: muestra tallas 35 en adelante.
+- **`ProductEditor`** pasa `gender={general.gender}` al `VariantsTab` — reactivo: si el usuario cambia el género en el tab General, las tallas disponibles cambian al pasar al tab Variantes.
+- **Constantes en `VariantsTab.tsx`**: `KIDS_GENDERS`, `KIDS_SIZE_MAX = 37`, `ADULT_SIZE_MIN = 35`. Cambiarlas si se agregan más géneros infantiles.
+- **Slugs sin tilde**: los slugs de DB son `'ninos'` y `'ninas'` (sin ñ). Nunca usar `'niños'`/`'niñas'` con ñ en estas constantes.
