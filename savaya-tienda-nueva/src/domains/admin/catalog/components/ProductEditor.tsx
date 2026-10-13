@@ -209,6 +209,7 @@ export function ProductEditor({ product, colors: initialColors, sizes, categorie
           variants={variants}
           colors={colors}
           sizes={sizes}
+          gender={general.gender}
           basePrice={general.basePrice}
           productName={general.name}
           onChange={setVariants}

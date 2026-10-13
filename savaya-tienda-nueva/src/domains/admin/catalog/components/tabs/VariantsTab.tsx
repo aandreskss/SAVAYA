@@ -60,10 +60,15 @@ function ColorDot({
   )
 }
 
+const KIDS_GENDERS = ['niños', 'niñas']
+const KIDS_SIZE_MAX = 37
+const ADULT_SIZE_MIN = 35
+
 type Props = {
   variants: VariantRow[]
   colors: ColorOption[]
   sizes: SizeOption[]
+  gender: string
   basePrice: string
   productName: string
   onChange: (variants: VariantRow[]) => void
@@ -131,12 +136,17 @@ export function VariantsTab({
   variants,
   colors,
   sizes,
+  gender,
   basePrice,
   productName,
   onChange,
   onDeleteExistingVariant,
   onColorsChange,
 }: Props) {
+  const isKids = KIDS_GENDERS.includes(gender)
+  const visibleSizes = isKids
+    ? sizes.filter((s) => { const n = parseInt(s.name, 10); return !isNaN(n) && n >= 8 && n <= KIDS_SIZE_MAX })
+    : sizes.filter((s) => { const n = parseInt(s.name, 10); return !isNaN(n) && n >= ADULT_SIZE_MIN })
   const [selColors, setSelColors] = useState<Set<string>>(
     () => initSelected(variants).colorIds,
   )
@@ -587,12 +597,14 @@ export function VariantsTab({
 
       {/* Size selector */}
       <div>
-        <p className="font-sans text-sm font-medium text-text-primary mb-2">Tallas</p>
-        {sizes.length === 0 ? (
+        <p className="font-sans text-sm font-medium text-text-primary mb-2">
+          Tallas{isKids ? ' (8–37)' : ''}
+        </p>
+        {visibleSizes.length === 0 ? (
           <p className="text-xs text-text-secondary">No hay tallas configuradas.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {sizes.map((size) => {
+            {visibleSizes.map((size) => {
               const selected = selSizes.has(size.id)
               return (
                 <button
