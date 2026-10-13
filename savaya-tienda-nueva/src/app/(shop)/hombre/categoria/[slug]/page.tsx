@@ -56,7 +56,7 @@ export default async function HombreCategoryPage({ params, searchParams }: Props
   const parsedParams = parsePLPSearchParams(rawParams)
   const filters = {
     ...searchParamsToFilters(parsedParams, slug),
-    gender: 'men' as const,
+    gender: 'hombre' as const,
     limit: LIMIT,
   }
 

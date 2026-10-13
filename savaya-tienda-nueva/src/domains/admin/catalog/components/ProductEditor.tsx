@@ -34,7 +34,7 @@ function initGeneral(product?: AdminProductForEdit): GeneralTabState {
     description: product?.description ?? '',
     categoryId: product?.categoryId ?? '',
     collectionIds: product?.collectionIds ?? [],
-    gender: product?.gender ?? 'women',
+    gender: product?.gender ?? 'mujer',
     productType: product?.productType ?? 'shoes',
     basePrice: product?.basePrice ? String(product.basePrice) : '',
     compareAtPrice: product?.compareAtPrice ? String(product.compareAtPrice) : '',

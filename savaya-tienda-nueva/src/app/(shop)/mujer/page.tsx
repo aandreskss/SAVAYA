@@ -43,7 +43,7 @@ export default async function MujerPage({ searchParams }: Props) {
 
   const filters = {
     ...searchParamsToFilters(parsedParams),
-    gender: 'women' as const,
+    gender: 'mujer' as const,
     limit: LIMIT,
   }
 
