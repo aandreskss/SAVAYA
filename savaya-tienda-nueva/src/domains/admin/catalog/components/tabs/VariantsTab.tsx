@@ -60,7 +60,7 @@ function ColorDot({
   )
 }
 
-const KIDS_GENDERS = ['niños', 'niñas']
+const KIDS_GENDERS = ['ninos', 'ninas']
 const KIDS_SIZE_MAX = 37
 const ADULT_SIZE_MIN = 35
 
