@@ -61,7 +61,7 @@ export default async function MujerCategoryPage({ params, searchParams }: Props)
 
   const [{ items, total }, availableFilters] = await Promise.all([
     getProducts(filters),
-    getAvailableFilters(slug),
+    getAvailableFilters(slug, 'mujer'),
   ])
 
   const totalPages = Math.ceil(total / LIMIT)

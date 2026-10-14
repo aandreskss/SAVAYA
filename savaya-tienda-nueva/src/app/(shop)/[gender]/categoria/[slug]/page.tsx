@@ -63,12 +63,13 @@ export default async function DynamicGenderCategoryPage({ params, searchParams }
   const parsedParams = parsePLPSearchParams(rawParams)
   const filters = {
     ...searchParamsToFilters(parsedParams, slug),
+    gender: genderData.slug,
     limit: LIMIT,
   }
 
   const [{ items, total }, availableFilters] = await Promise.all([
     getProducts(filters),
-    getAvailableFilters(slug),
+    getAvailableFilters(slug, genderData.slug),
   ])
 
   const totalPages = Math.ceil(total / LIMIT)

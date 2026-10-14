@@ -300,7 +300,8 @@ export async function getProducts(
   conditions.push(sql`${products.publishedAt} IS NOT NULL AND ${products.publishedAt} <= NOW()`)
 
   if (filters.gender) {
-    conditions.push(eq(products.gender, filters.gender))
+    // Show products of the requested gender OR unisex products (which belong to every gender context)
+    conditions.push(or(eq(products.gender, filters.gender), eq(products.gender, 'unisex'))!)
   }
 
   if (filters.onlyNew) {
@@ -673,7 +674,7 @@ export async function getCollectionBySlug(slug: string): Promise<CollectionDetai
 // getAvailableFilters
 // ---------------------------------------------------------------------------
 
-export async function getAvailableFilters(categorySlug?: string): Promise<AvailableFilters> {
+export async function getAvailableFilters(categorySlug?: string, gender?: string): Promise<AvailableFilters> {
   if (!process.env.DATABASE_URL) {
     return {
       colors: [
@@ -698,13 +699,17 @@ export async function getAvailableFilters(categorySlug?: string): Promise<Availa
   }
 
   // Build base product condition
-  const productConditions: ReturnType<typeof eq>[] = [eq(products.isActive, true)]
+  const productConditions: import('drizzle-orm').SQL[] = [eq(products.isActive, true)]
 
   if (categorySlug) {
     const cat = await getCategoryBySlug(categorySlug)
     if (cat) {
       productConditions.push(eq(products.categoryId, cat.id))
     }
+  }
+
+  if (gender) {
+    productConditions.push(or(eq(products.gender, gender), eq(products.gender, 'unisex'))!)
   }
 
   // Get product IDs for this category scope
