@@ -515,3 +515,15 @@ delivered / cancelled / refunded → [] (terminal)
 - **`ProductEditor`** pasa `gender={general.gender}` al `VariantsTab` — reactivo: si el usuario cambia el género en el tab General, las tallas disponibles cambian al pasar al tab Variantes.
 - **Constantes en `VariantsTab.tsx`**: `KIDS_GENDERS`, `KIDS_SIZE_MAX = 37`, `ADULT_SIZE_MIN = 35`. Cambiarlas si se agregan más géneros infantiles.
 - **Slugs sin tilde**: los slugs de DB son `'ninos'` y `'ninas'` (sin ñ). Nunca usar `'niños'`/`'niñas'` con ñ en estas constantes.
+
+### 8.43 Categorías unisex — filtro de productos por contexto de género
+
+- **Diseño**: una categoría con `gender = 'unisex'` aparece en los navs de todos los géneros (mujer, hombre, ninos, ninas). Un producto puede pertenecer a una categoría unisex pero tener su propio `gender` específico (ej. `gender = 'mujer'`).
+- **Regla crítica**: al listar productos en una PLP con contexto de género, la condición SQL SIEMPRE debe ser `products.gender = <género_contexto> OR products.gender = 'unisex'`. Nunca igualdad estricta — eso excluiría los productos unisex de la categoría.
+- **`getProducts` en `repository.ts`**: el bloque `if (filters.gender)` aplica `or(eq(products.gender, filters.gender), eq(products.gender, 'unisex'))`.
+- **`getAvailableFilters` en `repository.ts`**: acepta segundo parámetro `gender?: string` y aplica el mismo OR para que el sidebar de filtros solo muestre colores/tallas/precios de los productos visibles en ese contexto.
+- **Pages PLP**:
+  - `src/app/(shop)/mujer/categoria/[slug]/page.tsx` — pasa `gender: 'mujer'` a `getProducts` y `'mujer'` a `getAvailableFilters`.
+  - `src/app/(shop)/hombre/categoria/[slug]/page.tsx` — pasa `gender: 'hombre'` a ambas.
+  - `src/app/(shop)/[gender]/categoria/[slug]/page.tsx` — pasa `genderData.slug` a ambas (cubre géneros dinámicos: ninos, ninas, etc.).
+- **Resultado**: zapato `gender=mujer` en categoría `deportivo-unisex` → aparece solo en `/mujer/categoria/deportivo`; zapato `gender=unisex` en la misma categoría → aparece en todas las secciones de género.
