@@ -527,3 +527,28 @@ delivered / cancelled / refunded → [] (terminal)
   - `src/app/(shop)/hombre/categoria/[slug]/page.tsx` — pasa `gender: 'hombre'` a ambas.
   - `src/app/(shop)/[gender]/categoria/[slug]/page.tsx` — pasa `genderData.slug` a ambas (cubre géneros dinámicos: ninos, ninas, etc.).
 - **Resultado**: zapato `gender=mujer` en categoría `deportivo-unisex` → aparece solo en `/mujer/categoria/deportivo`; zapato `gender=unisex` en la misma categoría → aparece en todas las secciones de género.
+
+### 8.44 Envío — zonas delivery y nacional sin cobro a Savaya
+
+- **Invariante de servidor**: `checkout/service.ts` fuerza `serverShippingCostUsd = 0` para cualquier zona que no sea `pickup`. Nunca confiar en el valor enviado por el cliente para estas zonas.
+- **Tres tipos de zona y su comportamiento**:
+  - `pickup` — el cliente retira; puede tener costo $0 o mayor según tarifas configuradas.
+  - `local_delivery` — el repartidor cobra directamente al cliente al entregar; Savaya no cobra nada. UI muestra "A coordinar".
+  - `national_agency` — la agencia (MRW/Zoom/Tealca) cobra el flete al cliente al recibirlo (cobro a destino); Savaya no cobra nada. UI muestra "Cobro a destino".
+- **`isFreePromo`** — campo `BOOLEAN NOT NULL DEFAULT FALSE` en la tabla `shipping_methods` (migración 019). Solo afecta la UI: cambia "A coordinar"/"Cobro a destino" por "¡Gratis!" en el checkout. No afecta el precio real (que ya es $0). Toggle disponible en admin por método.
+- **Propagación de `isFreePromo`**: se agrega a `ShippingData` (tipo, opcional) pero NO al Zod schema. En `StepShipping.handleSubmit`, después del `safeParse`, se anexa manualmente desde el objeto del método seleccionado. `StepPayment` y `StepConfirmation` lo leen desde el store de Zustand.
+- **Nota en WhatsApp**: `StepConfirmation.buildDeliveryNote()` agrega al mensaje la nota de entrega según `zoneType` e `isFreePromo`.
+- **Sección "Tarifas" en admin**: visible únicamente para zonas `pickup`. Para `local_delivery` y `national_agency` está oculta — esas tarifas nunca se consultan.
+- **Migración 019**: `ALTER TABLE shipping_methods ADD COLUMN IF NOT EXISTS is_free_promo BOOLEAN NOT NULL DEFAULT FALSE`. Script: `scripts/run-migration-019.js`. Ya ejecutada en Neon.
+
+### 8.45 Footer — server component con redes sociales desde DB
+
+- **`Footer.tsx`** es un `async` server component (sin `'use client'`). Lee `store_instagram`, `store_tiktok`, `store_whatsapp` y `store_email` desde la tabla `application_settings` vía `getSettingValue()` con `Promise.all`. Si la clave no existe en DB, usa valores de fallback hardcodeados.
+- **Claves de configuración de redes**:
+  - `store_instagram` — handle sin @. URL construida: `https://instagram.com/{handle}`.
+  - `store_tiktok` — handle sin @. URL construida: `https://www.tiktok.com/@{handle}`.
+  - `store_whatsapp` — número internacional sin + (ej. `584141100100`). URL construida: `https://wa.me/{number}`.
+  - `store_email` — email plano. Aparece en barra inferior como `mailto:`.
+- **Admin**: todos estos campos están en Configuración → "Datos de la tienda". `store_tiktok` fue agregado entre Instagram y WhatsApp (migración 019).
+- **Revalidación**: `updateSettingAction` en `actions.ts` llama `revalidatePath('/', 'layout')` cuando se guarda cualquiera de los 4 campos de redes, actualizando el footer en todo el sitio al instante.
+- **Regla**: nunca hardcodear URLs de redes sociales en `Footer.tsx`. Siempre leer desde DB con fallback.
