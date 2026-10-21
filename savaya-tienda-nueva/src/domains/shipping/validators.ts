@@ -20,6 +20,7 @@ export const MethodFormSchema = z.object({
   provider: z.string().max(100).nullable().optional(),
   estimatedDays: z.number().int().min(0).nullable().optional(),
   isActive: z.boolean().default(true),
+  isFreePromo: z.boolean().default(false),
 })
 
 export const RateFormSchema = z.object({

@@ -46,14 +46,15 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
   const selectedZone = shippingOptions.find((o) => o.zone.id === selectedZoneId)
   const zoneType = selectedZone?.zone.type
 
-  // Calculate shipping cost for the selected method
+  // For local_delivery and national_agency, Savaya never charges for shipping.
+  // The cost is always 0 from Savaya's side:
+  //   local_delivery → customer pays the delivery person directly
+  //   national_agency → cobro a destino by MRW/Zoom/Tealca
+  // Only pickup uses the rate from the DB (which is always 0 anyway).
   function getShippingCost(): number {
     if (!selectedZone || !selectedMethodId) return 0
+    if (selectedZone.zone.type !== 'pickup') return 0
 
-    const method = selectedZone.methods.find((m) => m.id === selectedMethodId)
-    if (!method) return 0
-
-    // Find rate: prefer city-specific, fall back to method-wide
     const methodRates = selectedZone.rates.filter((r) => r.methodId === selectedMethodId)
     const cityRate = methodRates.find((r) => r.cityId === selectedCityId)
     const genericRate = methodRates.find((r) => !r.cityId)
@@ -61,7 +62,6 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
 
     if (!rate) return 0
 
-    // Free shipping threshold
     if (
       rate.freeShippingThresholdUsd !== null &&
       cartSubtotalUsd >= rate.freeShippingThresholdUsd
@@ -75,6 +75,7 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
+    const selectedMethod = selectedZone?.methods.find((m) => m.id === selectedMethodId)
     const data: ShippingData = {
       zoneId: selectedZoneId,
       zoneType: (zoneType ?? 'pickup') as ShippingZoneType,
@@ -87,6 +88,7 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
       parish: parish || undefined,
       address: address || undefined,
       reference: reference || undefined,
+      isFreePromo: selectedMethod?.isFreePromo ?? false,
     }
 
     const result = ShippingDataSchema.safeParse(data)
@@ -209,7 +211,17 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
                       </div>
                     </div>
                     <div className="text-right">
-                      {baseRate ? (
+                      {zoneType === 'local_delivery' && (
+                        method.isFreePromo
+                          ? <span className="text-sm font-semibold text-[var(--color-success)]">¡Gratis!</span>
+                          : <span className="text-sm font-medium text-[var(--color-text-secondary)]">A coordinar</span>
+                      )}
+                      {zoneType === 'national_agency' && (
+                        method.isFreePromo
+                          ? <span className="text-sm font-semibold text-[var(--color-success)]">¡Gratis!</span>
+                          : <span className="text-sm font-medium text-[var(--color-text-secondary)]">Cobro a destino</span>
+                      )}
+                      {zoneType === 'pickup' && baseRate && (
                         freeAt !== null && cartSubtotalUsd >= freeAt ? (
                           <span className="text-sm font-semibold text-[var(--color-success)]">Gratis</span>
                         ) : (
@@ -217,8 +229,8 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
                             {baseRate.rateUsd === 0 ? 'Gratis' : `$${baseRate.rateUsd.toFixed(2)}`}
                           </span>
                         )
-                      ) : null}
-                      {freeAt !== null && cartSubtotalUsd < freeAt && (
+                      )}
+                      {zoneType === 'pickup' && freeAt !== null && cartSubtotalUsd < freeAt && (
                         <p className="text-xs text-[var(--color-text-secondary)]">
                           Gratis desde ${freeAt}
                         </p>
@@ -357,17 +369,53 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
             </div>
           )}
 
-          {/* Shipping cost preview */}
+          {/* Shipping cost / delivery note preview */}
           {selectedMethodId && (
-            <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3 text-sm">
-              <span className="text-[var(--color-text-secondary)]">Costo de envío</span>
-              <span className="font-semibold">
-                {shippingCost === 0 ? (
-                  <span className="text-[var(--color-success)]">Gratis</span>
-                ) : (
-                  `$${shippingCost.toFixed(2)}`
-                )}
-              </span>
+            <div className="border-t border-[var(--color-border)] pt-3 text-sm">
+              {zoneType === 'local_delivery' && (
+                (() => {
+                  const m = selectedZone?.methods.find((x) => x.id === selectedMethodId)
+                  return m?.isFreePromo ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[var(--color-text-secondary)]">Envío</span>
+                      <span className="font-semibold text-[var(--color-success)]">¡Gratis!</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-gold-soft)] px-3 py-2 text-xs leading-relaxed">
+                      <span className="font-semibold">Pago a coordinar con el delivery</span>
+                      <span className="text-[var(--color-text-secondary)] ml-1">— el repartidor te cobrará el envío al momento de la entrega.</span>
+                    </div>
+                  )
+                })()
+              )}
+              {zoneType === 'national_agency' && (
+                (() => {
+                  const m = selectedZone?.methods.find((x) => x.id === selectedMethodId)
+                  return m?.isFreePromo ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[var(--color-text-secondary)]">Envío</span>
+                      <span className="font-semibold text-[var(--color-success)]">¡Gratis!</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-gold-soft)] px-3 py-2 text-xs leading-relaxed">
+                      <span className="font-semibold">Cobro a destino</span>
+                      <span className="text-[var(--color-text-secondary)] ml-1">— la agencia de envío (MRW/Zoom/Tealca) te cobrará el flete al recibirlo.</span>
+                    </div>
+                  )
+                })()
+              )}
+              {zoneType === 'pickup' && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--color-text-secondary)]">Costo de envío</span>
+                  <span className="font-semibold">
+                    {shippingCost === 0 ? (
+                      <span className="text-[var(--color-success)]">Gratis</span>
+                    ) : (
+                      `$${shippingCost.toFixed(2)}`
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

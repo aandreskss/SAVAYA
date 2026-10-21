@@ -86,6 +86,7 @@ export async function getShippingOptions(): Promise<ShippingOption[]> {
         provider: m.provider,
         estimatedDays: m.estimatedDays,
         isActive: m.isActive,
+        isFreePromo: m.isFreePromo,
       })),
     rates: rates
       .filter((r) => methods.some((m) => m.id === r.methodId && m.zoneId === zone.id))
@@ -206,7 +207,7 @@ const MOCK_SHIPPING_OPTIONS: ShippingOption[] = [
       { id: 'city-naguanagua', zoneId: 'zone-local', name: 'Naguanagua', state: 'Carabobo' },
     ],
     methods: [
-      { id: 'method-local', zoneId: 'zone-local', name: 'Delivery local', provider: null, estimatedDays: 1, isActive: true },
+      { id: 'method-local', zoneId: 'zone-local', name: 'Delivery local', provider: null, estimatedDays: 1, isActive: true, isFreePromo: false },
     ],
     rates: [
       { id: 'rate-local', methodId: 'method-local', cityId: null, minOrderUsd: 0, maxOrderUsd: null, rateUsd: 3, freeShippingThresholdUsd: 60 },
@@ -218,7 +219,7 @@ const MOCK_SHIPPING_OPTIONS: ShippingOption[] = [
       { id: 'city-caracas', zoneId: 'zone-national', name: 'Caracas', state: 'Distrito Capital' },
     ],
     methods: [
-      { id: 'method-mrw', zoneId: 'zone-national', name: 'MRW', provider: 'MRW', estimatedDays: 3, isActive: true },
+      { id: 'method-mrw', zoneId: 'zone-national', name: 'MRW', provider: 'MRW', estimatedDays: 3, isActive: true, isFreePromo: false },
     ],
     rates: [
       { id: 'rate-mrw', methodId: 'method-mrw', cityId: null, minOrderUsd: 0, maxOrderUsd: null, rateUsd: 5, freeShippingThresholdUsd: 80 },
@@ -228,7 +229,7 @@ const MOCK_SHIPPING_OPTIONS: ShippingOption[] = [
     zone: { id: 'zone-pickup', name: 'Retiro en tienda', type: 'pickup', isActive: true },
     cities: [],
     methods: [
-      { id: 'method-pickup', zoneId: 'zone-pickup', name: 'Retiro en Valencia', provider: null, estimatedDays: 0, isActive: true },
+      { id: 'method-pickup', zoneId: 'zone-pickup', name: 'Retiro en Valencia', provider: null, estimatedDays: 0, isActive: true, isFreePromo: false },
     ],
     rates: [
       { id: 'rate-pickup', methodId: 'method-pickup', cityId: null, minOrderUsd: 0, maxOrderUsd: null, rateUsd: 0, freeShippingThresholdUsd: null },

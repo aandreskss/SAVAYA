@@ -15,7 +15,7 @@ declare global {
 }
 
 export function StepConfirmation() {
-  const { orderResult, personalData } = useCheckoutStore()
+  const { orderResult, personalData, shippingData } = useCheckoutStore()
 
   useEffect(() => {
     if (!orderResult) return
@@ -40,8 +40,18 @@ export function StepConfirmation() {
   const { orderNumber, totalUsd, totalBs, status } = orderResult
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '584141100100'
 
+  const zoneType = shippingData?.zoneType
+  const isFreePromo = shippingData?.isFreePromo ?? false
+
+  function buildDeliveryNote(): string {
+    if (!zoneType || zoneType === 'pickup') return ''
+    if (isFreePromo) return '\n\n✅ ¡Envío gratis incluido!'
+    if (zoneType === 'local_delivery') return '\n\n🛵 *PAGO A COORDINAR CON DELIVERY* — el repartidor te cobrará el envío al momento de la entrega.'
+    return '\n\n📦 *COBRO A DESTINO* — la agencia de envío (MRW/Zoom/Tealca) te cobrará el flete al recibirlo.'
+  }
+
   const waMessage = encodeURIComponent(
-    `Hola! Acabo de realizar mi pedido *${orderNumber}* por $${totalUsd.toFixed(2)} USD. Quedo pendiente de la confirmación. ¡Gracias!`,
+    `Hola! Acabo de realizar mi pedido *${orderNumber}* por $${totalUsd.toFixed(2)} USD. Quedo pendiente de la confirmación. ¡Gracias!${buildDeliveryNote()}`,
   )
   const waUrl = `https://wa.me/${whatsappNumber}?text=${waMessage}`
 
@@ -111,6 +121,34 @@ export function StepConfirmation() {
           <span>Bs. {totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
+
+      {/* Delivery note */}
+      {zoneType && zoneType !== 'pickup' && (
+        <div className={[
+          'rounded-[var(--radius-md)] border px-4 py-3 text-sm text-left',
+          isFreePromo
+            ? 'border-[var(--color-success)] bg-success/10'
+            : 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold-soft)]',
+        ].join(' ')}>
+          {isFreePromo ? (
+            <p className="font-semibold text-[var(--color-success)]">✅ ¡Envío gratis incluido!</p>
+          ) : zoneType === 'local_delivery' ? (
+            <>
+              <p className="font-semibold">🛵 Pago a coordinar con el delivery</p>
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                El repartidor te cobrará el costo del envío directamente al momento de entregarte tu pedido. No incluido en el pago a SAVAYA.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold">📦 Cobro a destino</p>
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                La agencia de envío (MRW/Zoom/Tealca) te cobrará el flete al momento de entregarte el paquete. No incluido en el pago a SAVAYA.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {/* CTAs */}
       <div className="flex flex-col gap-3 sm:flex-row">

@@ -25,6 +25,7 @@ export type AdminShippingMethod = {
   provider: string | null
   estimatedDays: number | null
   isActive: boolean
+  isFreePromo: boolean
   rates: AdminShippingRate[]
 }
 

@@ -273,16 +273,24 @@ export async function createOrder(
 
   const discountedSubtotal = Math.max(0, subtotalUsd - couponDiscountUsd)
 
-  // Recalculate shipping cost from DB — ignore client-supplied shippingCostUsd
-  const resolvedShipping = await resolveShippingCost(
-    shippingData.methodId,
-    shippingData.cityId,
-    discountedSubtotal,
-  )
-  if (resolvedShipping === null) {
-    return { success: false, error: 'No se encontró una tarifa de envío válida para tu selección.' }
+  // Recalculate shipping cost from DB — ignore client-supplied shippingCostUsd.
+  // For local_delivery and national_agency, Savaya never charges the customer:
+  // local_delivery → customer pays delivery person directly.
+  // national_agency → cobro a destino by the shipping agency.
+  let serverShippingCostUsd: number
+  if (shippingData.zoneType === 'pickup') {
+    const resolvedShipping = await resolveShippingCost(
+      shippingData.methodId,
+      shippingData.cityId,
+      discountedSubtotal,
+    )
+    if (resolvedShipping === null) {
+      return { success: false, error: 'No se encontró una tarifa de envío válida para tu selección.' }
+    }
+    serverShippingCostUsd = resolvedShipping
+  } else {
+    serverShippingCostUsd = 0
   }
-  const serverShippingCostUsd = resolvedShipping
 
   // Recalculate exchange rate from DB — ignore client-supplied exchangeRate
   const rateRecord = await getLatestRate('usd')

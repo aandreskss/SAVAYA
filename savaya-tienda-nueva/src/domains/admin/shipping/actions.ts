@@ -13,6 +13,7 @@ import {
   createMethod,
   updateMethod,
   toggleMethodActive,
+  toggleMethodFreePromo,
   deleteMethod,
   createRate,
   updateRate,
@@ -229,6 +230,23 @@ export async function toggleMethodActiveAction(
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Error al cambiar estado del método' }
+  }
+}
+
+export async function toggleMethodFreePromoAction(
+  id: string,
+  isFreePromo: boolean,
+): Promise<ActionResult> {
+  const actor = await getActor()
+  if (!actor) return noAuth()
+  if (!actor.permissions.includes('shipping:write')) return noPerm()
+
+  try {
+    await toggleMethodFreePromo(id, isFreePromo)
+    revalidatePath(REVALIDATE)
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'Error al cambiar promo de envío' }
   }
 }
 

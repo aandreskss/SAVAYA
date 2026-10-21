@@ -26,6 +26,7 @@ import {
   createMethodAction,
   updateMethodAction,
   toggleMethodActiveAction,
+  toggleMethodFreePromoAction,
   deleteMethodAction,
   createRateAction,
   updateRateAction,
@@ -225,6 +226,7 @@ type MethodFormState = {
   provider: string
   estimatedDays: string
   isActive: boolean
+  isFreePromo: boolean
 }
 
 function defaultMethodForm(m?: AdminShippingMethod): MethodFormState {
@@ -233,16 +235,19 @@ function defaultMethodForm(m?: AdminShippingMethod): MethodFormState {
     provider: m?.provider ?? '',
     estimatedDays: m?.estimatedDays != null ? String(m.estimatedDays) : '',
     isActive: m?.isActive ?? true,
+    isFreePromo: m?.isFreePromo ?? false,
   }
 }
 
 function MethodForm({
   zoneId,
+  zoneType,
   initial,
   onSubmit,
   isPending,
 }: {
   zoneId: string
+  zoneType: ShippingZoneType
   initial?: AdminShippingMethod
   onSubmit: (p: MethodFormPayload) => void
   isPending: boolean
@@ -259,6 +264,7 @@ function MethodForm({
           provider: form.provider.trim() || null,
           estimatedDays: form.estimatedDays ? Number(form.estimatedDays) : null,
           isActive: form.isActive,
+          isFreePromo: form.isFreePromo,
         })
       }}
       className="flex flex-col gap-4"
@@ -305,6 +311,22 @@ function MethodForm({
         />
         Activo
       </label>
+      {zoneType !== 'pickup' && (
+        <label className="flex items-start gap-2.5 cursor-pointer select-none p-3 rounded-lg border border-border bg-surface-2 hover:border-border-hover transition-colors">
+          <input
+            type="checkbox"
+            checked={form.isFreePromo}
+            onChange={(e) => setForm((f) => ({ ...f, isFreePromo: e.target.checked }))}
+            className="mt-0.5 w-4 h-4 accent-[var(--color-accent-gold)]"
+          />
+          <div>
+            <p className="text-sm font-medium text-text-primary">Envío gratis (promoción)</p>
+            <p className="text-xs text-text-secondary">
+              Muestra "¡Gratis!" en el checkout en lugar de "A coordinar" o "Cobro a destino"
+            </p>
+          </div>
+        </label>
+      )}
       <Button type="submit" isLoading={isPending} className="w-full">
         {initial ? 'Guardar cambios' : 'Crear método'}
       </Button>
@@ -665,10 +687,23 @@ export function DeliveryManager({ initialZones }: Props) {
             provider: payload.provider ?? null,
             estimatedDays: payload.estimatedDays ?? null,
             isActive: payload.isActive,
+            isFreePromo: payload.isFreePromo ?? false,
           })),
         )
         setMethodModal('closed')
         toast.success('Método actualizado')
+      } else {
+        toast.error(res.error)
+      }
+    })
+  }
+
+  function handleToggleFreePromo(methodId: string, zoneId: string, isFreePromo: boolean) {
+    startTransition(async () => {
+      const res = await toggleMethodFreePromoAction(methodId, isFreePromo)
+      if (res.success) {
+        setZones((prev) => patchMethod(prev, zoneId, methodId, (m) => ({ ...m, isFreePromo })))
+        toast.success(isFreePromo ? 'Envío marcado como gratis' : 'Promo de envío desactivada')
       } else {
         toast.error(res.error)
       }
@@ -984,13 +1019,16 @@ export function DeliveryManager({ initialZones }: Props) {
                           >
                             {/* Method header */}
                             <div className="bg-surface px-4 py-3 flex items-center justify-between border-b border-border">
-                              <div className="flex items-center gap-2.5">
+                              <div className="flex items-center gap-2.5 flex-wrap">
                                 <Badge
                                   variant={method.isActive ? 'success' : 'default'}
                                   size="sm"
                                 >
                                   {method.isActive ? 'Activo' : 'Inactivo'}
                                 </Badge>
+                                {selectedZone.type !== 'pickup' && method.isFreePromo && (
+                                  <Badge variant="warning" size="sm">Promo gratis</Badge>
+                                )}
                                 <span className="font-medium text-sm text-text-primary">
                                   {method.name}
                                 </span>
@@ -1005,7 +1043,7 @@ export function DeliveryManager({ initialZones }: Props) {
                                   </span>
                                 )}
                               </div>
-                              <div className="flex gap-1">
+                              <div className="flex gap-1 flex-wrap justify-end">
                                 <button
                                   disabled={isPending}
                                   onClick={() =>
@@ -1019,6 +1057,25 @@ export function DeliveryManager({ initialZones }: Props) {
                                 >
                                   {method.isActive ? 'Desactivar' : 'Activar'}
                                 </button>
+                                {selectedZone.type !== 'pickup' && (
+                                  <button
+                                    disabled={isPending}
+                                    onClick={() =>
+                                      handleToggleFreePromo(
+                                        method.id,
+                                        method.zoneId,
+                                        !method.isFreePromo,
+                                      )
+                                    }
+                                    className={`text-xs px-2 py-1 rounded transition-colors ${
+                                      method.isFreePromo
+                                        ? 'text-[var(--color-warning)] hover:bg-[var(--color-warning)]/10'
+                                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
+                                    }`}
+                                  >
+                                    {method.isFreePromo ? 'Quitar promo' : 'Promo gratis'}
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => setMethodModal({ mode: 'edit', method })}
                                   className="text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded hover:bg-surface-2 transition-colors"
@@ -1259,6 +1316,7 @@ export function DeliveryManager({ initialZones }: Props) {
         {selectedZone && (
           <MethodForm
             zoneId={selectedZone.id}
+            zoneType={selectedZone.type}
             onSubmit={handleCreateMethod}
             isPending={isPending}
           />
@@ -1274,6 +1332,7 @@ export function DeliveryManager({ initialZones }: Props) {
         {typeof methodModal === 'object' && methodModal.mode === 'edit' && (
           <MethodForm
             zoneId={methodModal.method.zoneId}
+            zoneType={selectedZone?.type ?? 'pickup'}
             initial={methodModal.method}
             onSubmit={(p) => handleUpdateMethod(methodModal.method.id, methodModal.method.zoneId, p)}
             isPending={isPending}

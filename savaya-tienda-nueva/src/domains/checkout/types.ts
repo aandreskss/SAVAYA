@@ -29,6 +29,7 @@ export type ShippingMethodOption = {
   provider: string | null
   estimatedDays: number | null
   isActive: boolean
+  isFreePromo: boolean
 }
 
 export type ShippingRateOption = {
@@ -94,6 +95,7 @@ export type ShippingData = {
   parish?: string
   address?: string
   reference?: string
+  isFreePromo?: boolean
 }
 
 export type PartialPaymentType = 'full' | 'partial_20' | 'partial_35' | 'partial_50'

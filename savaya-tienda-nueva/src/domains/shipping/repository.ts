@@ -72,6 +72,7 @@ export async function listAdminZones(): Promise<AdminShippingZone[]> {
         provider: m.provider,
         estimatedDays: m.estimatedDays,
         isActive: m.isActive,
+        isFreePromo: m.isFreePromo,
         rates: rates
           .filter((r) => r.methodId === m.id)
           .map((r): AdminShippingRate => ({
@@ -181,6 +182,7 @@ export async function createMethod(payload: MethodFormPayload): Promise<AdminShi
       provider: payload.provider ?? null,
       estimatedDays: payload.estimatedDays ?? null,
       isActive: payload.isActive,
+      isFreePromo: payload.isFreePromo ?? false,
     })
     .returning()
 
@@ -191,6 +193,7 @@ export async function createMethod(payload: MethodFormPayload): Promise<AdminShi
     provider: row.provider,
     estimatedDays: row.estimatedDays,
     isActive: row.isActive,
+    isFreePromo: row.isFreePromo,
     rates: [],
   }
 }
@@ -203,6 +206,7 @@ export async function updateMethod(id: string, payload: MethodFormPayload): Prom
       provider: payload.provider ?? null,
       estimatedDays: payload.estimatedDays ?? null,
       isActive: payload.isActive,
+      isFreePromo: payload.isFreePromo ?? false,
       updatedAt: new Date(),
     })
     .where(eq(shippingMethods.id, id))
@@ -212,6 +216,13 @@ export async function toggleMethodActive(id: string, isActive: boolean): Promise
   await db
     .update(shippingMethods)
     .set({ isActive, updatedAt: new Date() })
+    .where(eq(shippingMethods.id, id))
+}
+
+export async function toggleMethodFreePromo(id: string, isFreePromo: boolean): Promise<void> {
+  await db
+    .update(shippingMethods)
+    .set({ isFreePromo, updatedAt: new Date() })
     .where(eq(shippingMethods.id, id))
 }
 

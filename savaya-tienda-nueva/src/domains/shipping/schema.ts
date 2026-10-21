@@ -73,6 +73,7 @@ export const shippingMethods = pgTable(
     provider: text('provider'),
     estimatedDays: integer('estimated_days'),
     isActive: boolean('is_active').notNull().default(true),
+    isFreePromo: boolean('is_free_promo').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

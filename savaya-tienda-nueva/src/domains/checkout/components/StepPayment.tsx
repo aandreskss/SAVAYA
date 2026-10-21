@@ -38,6 +38,10 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
     idempotencyKey,
     appliedCoupon,
   } = useCheckoutStore()
+
+  const deliveryZoneType = shippingData?.zoneType
+  const isDelivery = deliveryZoneType === 'local_delivery' || deliveryZoneType === 'national_agency'
+  const isFreePromo = shippingData?.isFreePromo ?? false
   const clearCart = useCartStore((s) => s.clearCart)
 
   const [selectedMethodId, setSelectedMethodId] = useState(paymentData?.methodId ?? '')
@@ -229,6 +233,24 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
           <span>Equivalente en Bs.</span>
           <span>Bs. {(totalUsd * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
         </div>
+        {isDelivery && (
+          <div className="mt-2 border-t border-[var(--color-border)] pt-2 text-xs">
+            {isFreePromo ? (
+              <div className="flex justify-between">
+                <span className="text-[var(--color-text-secondary)]">Envío</span>
+                <span className="font-semibold text-[var(--color-success)]">¡Gratis!</span>
+              </div>
+            ) : deliveryZoneType === 'local_delivery' ? (
+              <p className="text-[var(--color-text-secondary)]">
+                🛵 <span className="font-medium text-text-primary">Pago del envío a coordinar con el delivery</span> — no incluido en este pago
+              </p>
+            ) : (
+              <p className="text-[var(--color-text-secondary)]">
+                📦 <span className="font-medium text-text-primary">Cobro a destino</span> — la agencia te cobrará el flete al recibirlo
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Partial payment options */}
