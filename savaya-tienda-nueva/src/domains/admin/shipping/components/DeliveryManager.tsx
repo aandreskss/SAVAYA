@@ -1091,8 +1091,8 @@ export function DeliveryManager({ initialZones }: Props) {
                               </div>
                             </div>
 
-                            {/* Rates */}
-                            <div className="px-4 py-3">
+                            {/* Rates — only shown for pickup zones */}
+                            {selectedZone.type === 'pickup' && <div className="px-4 py-3">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
                                   Tarifas
@@ -1194,7 +1194,7 @@ export function DeliveryManager({ initialZones }: Props) {
                                   </table>
                                 </div>
                               )}
-                            </div>
+                            </div>}
                           </div>
                         ))}
                       </div>
