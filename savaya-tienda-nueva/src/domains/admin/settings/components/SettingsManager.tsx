@@ -52,6 +52,14 @@ const META: Record<string, SettingMeta> = {
     prefix: '@',
     placeholder: 'Savayavzla',
   },
+  store_tiktok: {
+    label: 'TikTok',
+    description: 'Nombre de usuario sin @. Genera el enlace hacia el perfil en el footer.',
+    impact: ['Footer'],
+    type: 'text',
+    prefix: '@',
+    placeholder: 'savayavzla',
+  },
   store_whatsapp: {
     label: 'WhatsApp de atención',
     description: 'Número completo con código de país, sin + ni espacios. Se usa en el botón de soporte.',
@@ -223,7 +231,7 @@ const GROUPS: Group[] = [
     label: 'Datos de la tienda',
     description: 'Información básica de la marca que aparece en el footer, emails y SEO.',
     icon: <IconStore />,
-    keys: ['store_name', 'store_tagline', 'store_email', 'store_instagram', 'store_whatsapp', 'store_address'],
+    keys: ['store_name', 'store_tagline', 'store_email', 'store_instagram', 'store_tiktok', 'store_whatsapp', 'store_address'],
   },
   {
     label: 'Pedidos',

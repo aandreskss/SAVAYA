@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getSettingValue } from '@/domains/admin/settings/repository'
 
 const SHOP_LINKS = [
   { href: '/mujer', label: 'Mujer' },
@@ -25,8 +26,20 @@ const LEGAL_LINKS = [
   { href: '/terminos', label: 'Términos y condiciones' },
 ]
 
-export function Footer() {
+export async function Footer() {
   const year = new Date().getFullYear()
+
+  const [instagram, tiktok, whatsapp, email] = await Promise.all([
+    getSettingValue('store_instagram').catch(() => null),
+    getSettingValue('store_tiktok').catch(() => null),
+    getSettingValue('store_whatsapp').catch(() => null),
+    getSettingValue('store_email').catch(() => null),
+  ])
+
+  const igHandle = instagram ?? 'savayavzla'
+  const ttHandle = tiktok ?? 'savayavzla'
+  const waNumber = whatsapp ?? '584141100100'
+  const contactEmail = email ?? 'Savayarrss@gmail.com'
 
   return (
     <footer className="bg-surface-2 border-t border-border mt-12">
@@ -43,10 +56,10 @@ export function Footer() {
             </p>
             <div className="flex gap-4 mt-5">
               <a
-                href="https://instagram.com/savayavzla"
+                href={`https://instagram.com/${igHandle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Instagram @savayavzla"
+                aria-label={`Instagram @${igHandle}`}
                 className="text-text-secondary hover:text-text-primary transition-colors"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -54,10 +67,10 @@ export function Footer() {
                 </svg>
               </a>
               <a
-                href="https://www.tiktok.com/@savayavzla"
+                href={`https://www.tiktok.com/@${ttHandle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="TikTok @savayavzla"
+                aria-label={`TikTok @${ttHandle}`}
                 className="text-text-secondary hover:text-text-primary transition-colors"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -65,7 +78,7 @@ export function Footer() {
                 </svg>
               </a>
               <a
-                href="https://wa.me/584141100100"
+                href={`https://wa.me/${waNumber}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp SAVAYA"
@@ -156,10 +169,10 @@ export function Footer() {
           <p>© {year} SAVAYA. Valencia, Carabobo, Venezuela.</p>
           <p>
             <a
-              href="mailto:Savayarrss@gmail.com"
+              href={`mailto:${contactEmail}`}
               className="hover:text-text-primary transition-colors"
             >
-              Savayarrss@gmail.com
+              {contactEmail}
             </a>
           </p>
         </div>

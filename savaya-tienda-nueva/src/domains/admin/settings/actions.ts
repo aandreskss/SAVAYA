@@ -36,6 +36,9 @@ export async function updateSettingAction(
   try {
     await upsertSetting(parsed.data.key, parsed.data.value.trim(), session.user.id)
     revalidatePath(REVALIDATE)
+    if (['store_instagram', 'store_tiktok', 'store_whatsapp', 'store_email'].includes(parsed.data.key)) {
+      revalidatePath('/', 'layout')
+    }
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Error al guardar la configuración' }
