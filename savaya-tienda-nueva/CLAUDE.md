@@ -467,6 +467,61 @@ delivered / cancelled / refunded → [] (terminal)
 
 **Dashboard revenue**: solo incluye pedidos en `paid | preparing | shipped | delivered`. Los pedidos de retiro en efectivo solo aparecen en los KPIs una vez que el admin los marca como `paid` — no antes.
 
+### 8.46 Inventario — liquidación de reservas en estados terminales
+
+Al llegar a un estado terminal, `transitionOrderStatus` en `src/domains/admin/orders/service.ts` liquida la reserva activa:
+
+| Estado destino | Efecto en inventario | Movimiento registrado |
+|---|---|---|
+| `delivered` | `quantity -= qty` + `reserved -= qty` | `sale` |
+| `cancelled` | Solo `reserved -= qty` | `reservation_release` |
+| `refunded` | Solo `reserved -= qty` | `reservation_release` |
+
+- **Regla**: el tipo `sale` en `inventoryMovementTypeEnum` **solo** se crea aquí (entrega confirmada). Nunca usarlo para otros propósitos.
+- **Cron `expire-reservations`**: sigue manejando la cancelación automática de pedidos `pending_payment` con `reserved_until` expirado — **no** pasa por `transitionOrderStatus`, hace su propio `reservation_release` directamente.
+- **Pedidos históricos** (antes de este fix): si existen pedidos `delivered` con `reserved > 0`, deben corregirse con un script manual o ajuste de inventario desde el admin.
+
+### 8.47 Revertir estado de pedido
+
+`revertOrderStatus` en `src/domains/admin/orders/service.ts` deshace el último cambio de estado.
+
+**Targets de reversión** (definidos en `REVERT_TARGETS` de `state-machine.ts`):
+```
+payment_under_review → pending_payment
+paid                 → payment_under_review
+preparing            → paid
+shipped              → preparing
+delivered            → shipped
+refunded             → paid
+cancelled            → (consulta orderStatusHistory para el fromStatus real)
+```
+
+`canRevert(status)` devuelve `false` para `pending_payment` y `payment_rejected` — esos no tienen estado anterior válido.
+
+**Rollback de inventario al revertir estados terminales:**
+- Revertir `delivered`: encuentra movimientos `sale` del pedido → `quantity += qty`, `reserved += qty`, inserta `reservation`
+- Revertir `cancelled` / `refunded`: encuentra movimientos `reservation_release` del pedido → `reserved += qty`, inserta `reservation`
+
+**Reset del comprobante al revertir `paid`:** si el pedido tenía un comprobante `approved`, se resetea a `pending` (`reviewedBy` y `reviewedAt` quedan en `null`) para que pueda volver a aprobarse desde `payment_under_review`. Sin este reset, `approvePaymentAction` falla con "Este comprobante ya fue aprobado".
+
+**UI (`OrderDetailView`):** botón "← Revertir a {estado}" visible cuando `canRevert(order.status) === true`. El label muestra el estado destino calculado en el cliente desde `REVERT_TARGETS` o desde `statusHistory` para `cancelled`. Abre un modal de confirmación con campo de motivo opcional.
+
+### 8.48 Emitir reembolso — flujo dedicado
+
+El botón `paid → refunded` en `OrderDetailView` se muestra como **"Emitir reembolso"** (color `warning`) en lugar del genérico "Reembolsado".
+
+Al hacer clic abre un modal con tres campos:
+- **Monto reembolsado (USD)**: pre-llenado con `order.totalUsd`, editable.
+- **Método**: select con Pago Móvil / Zelle / USDT / Binance Pay / Efectivo / Transferencia bancaria.
+- **Notas**: texto libre opcional.
+
+Los tres valores se concatenan en el campo `reason` del historial de estado con el formato:
+```
+"Monto reembolsado: $50.00 · Método: Pago Móvil · Notas: ..."
+```
+
+No se necesita migración — el detalle queda en `order_status_history.reason`. Si en el futuro se requiere consultar reembolsos por monto o método, sería el momento de agregar columnas dedicadas a `orders`.
+
 ### 8.38 URLs de producto con prefijo de género
 
 - **`productHref(gender, slug)`** en `src/shared/lib/product-href.ts` es la única fuente de verdad para construir URLs de producto. Nunca construyas `/producto/${slug}` manualmente en ningún archivo.
