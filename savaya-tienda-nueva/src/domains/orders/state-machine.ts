@@ -42,6 +42,25 @@ export const TERMINAL_STATES: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
 ])
 
 /**
+ * Each status reverts to a fixed previous state, except `cancelled`
+ * which depends on history (use orderStatusHistory.fromStatus at runtime).
+ */
+export const REVERT_TARGETS: Partial<Record<OrderStatus, OrderStatus>> = {
+  payment_under_review: 'pending_payment',
+  paid:                 'payment_under_review',
+  preparing:            'paid',
+  shipped:              'preparing',
+  delivered:            'shipped',
+  refunded:             'paid',
+  // cancelled → determined from orderStatusHistory at runtime
+}
+
+/** Returns true if the given status can be reverted by an admin */
+export function canRevert(status: OrderStatus): boolean {
+  return status !== 'pending_payment' && status !== 'payment_rejected'
+}
+
+/**
  * Returns true if transitioning from `from` to `to` is a valid transition.
  * Both values must be valid OrderStatus values.
  */

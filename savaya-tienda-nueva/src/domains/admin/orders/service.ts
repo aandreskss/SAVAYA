@@ -3,7 +3,7 @@ import { sql, eq, and } from 'drizzle-orm'
 import { orders, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
 import { auditLog } from '@/domains/audit-log/schema'
-import { isValidTransition, getTransitionErrorMessage, TERMINAL_STATES } from '@/domains/orders/state-machine'
+import { isValidTransition, getTransitionErrorMessage, TERMINAL_STATES, canRevert, REVERT_TARGETS } from '@/domains/orders/state-machine'
 import type { OrderStatus } from '@/domains/orders/state-machine'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { sendPaymentApproved, sendPaymentRejected } from '@/domains/notifications/service'
@@ -315,4 +315,113 @@ export async function rejectPayment(
       reason,
     }).catch((e) => console.error('[notifications] payment rejected email failed:', e))
   }).catch(() => {})
+}
+
+export async function revertOrderStatus(
+  orderId: string,
+  actor: ActorContext,
+  reason?: string,
+): Promise<void> {
+  const [current] = await rawQuery<{ status: string }>(
+    sql`SELECT status FROM orders WHERE id = ${orderId} LIMIT 1`,
+  )
+  if (!current) throw new OrderTransitionError('Pedido no encontrado')
+
+  const fromStatus = current.status as OrderStatus
+  if (!canRevert(fromStatus)) {
+    throw new OrderTransitionError(`El pedido en estado "${fromStatus}" no puede revertirse`)
+  }
+
+  // Determine target state
+  let toStatus: OrderStatus
+  if (fromStatus === 'cancelled') {
+    // Find the state from which it was cancelled
+    const [lastEntry] = await rawQuery<{ from_status: string }>(
+      sql`SELECT from_status FROM order_status_history
+          WHERE order_id = ${orderId} AND to_status = 'cancelled'
+          ORDER BY created_at DESC LIMIT 1`,
+    )
+    if (!lastEntry) throw new OrderTransitionError('No se puede determinar el estado previo del pedido cancelado')
+    toStatus = lastEntry.from_status as OrderStatus
+  } else {
+    const target = REVERT_TARGETS[fromStatus]
+    if (!target) throw new OrderTransitionError(`No existe estado anterior para: ${fromStatus}`)
+    toStatus = target
+  }
+
+  await db
+    .update(orders)
+    .set({ status: toStatus, updatedAt: new Date() })
+    .where(eq(orders.id, orderId))
+
+  await db.insert(orderStatusHistory).values({
+    orderId,
+    fromStatus,
+    toStatus,
+    actorId: actor.actorId,
+    reason: reason ? `Revertido: ${reason}` : 'Estado revertido por administrador',
+  })
+
+  await db.insert(auditLog).values({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'order.status_reverted',
+    resourceType: 'order',
+    resourceId: orderId,
+    before: { status: fromStatus },
+    after: { status: toStatus, reason: reason ?? null },
+    ip: actor.ip,
+  })
+
+  // Roll back inventory changes that were applied when entering the current terminal state
+  if (TERMINAL_STATES.has(fromStatus)) {
+    if (fromStatus === 'delivered') {
+      // Undo sale movements: restore quantity and reserved
+      const sales = await db
+        .select({ variantId: inventoryMovements.variantId, quantity: inventoryMovements.quantity })
+        .from(inventoryMovements)
+        .where(and(eq(inventoryMovements.orderId, orderId), eq(inventoryMovements.type, 'sale')))
+
+      for (const sale of sales) {
+        await db.insert(inventoryMovements).values({
+          variantId: sale.variantId,
+          type: 'reservation',
+          quantity: sale.quantity,
+          reason: 'Entrega revertida — reserva restaurada',
+          orderId,
+        })
+        await db
+          .update(inventory)
+          .set({
+            quantity: sql`${inventory.quantity} + ${sale.quantity}`,
+            reserved: sql`${inventory.reserved} + ${sale.quantity}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventory.variantId, sale.variantId))
+      }
+    } else {
+      // cancelled / refunded: undo reservation_release movements → restore reserved
+      const releases = await db
+        .select({ variantId: inventoryMovements.variantId, quantity: inventoryMovements.quantity })
+        .from(inventoryMovements)
+        .where(and(eq(inventoryMovements.orderId, orderId), eq(inventoryMovements.type, 'reservation_release')))
+
+      for (const release of releases) {
+        await db.insert(inventoryMovements).values({
+          variantId: release.variantId,
+          type: 'reservation',
+          quantity: release.quantity,
+          reason: `${fromStatus === 'refunded' ? 'Reembolso' : 'Cancelación'} revertido — reserva restaurada`,
+          orderId,
+        })
+        await db
+          .update(inventory)
+          .set({
+            reserved: sql`${inventory.reserved} + ${release.quantity}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventory.variantId, release.variantId))
+      }
+    }
+  }
 }

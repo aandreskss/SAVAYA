@@ -30,6 +30,13 @@ export const TransitionOrderSchema = z.object({
   orderNumber: z.string().optional(),
 })
 
+export const RevertOrderSchema = z.object({
+  orderId: z.string().uuid('ID de pedido inválido'),
+  reason: z.string().max(500).optional(),
+  orderNumber: z.string().optional(),
+})
+
 export type ApprovePaymentPayload = z.infer<typeof ApprovePaymentSchema>
 export type RejectPaymentPayload = z.infer<typeof RejectPaymentSchema>
 export type TransitionOrderPayload = z.infer<typeof TransitionOrderSchema>
+export type RevertOrderPayload = z.infer<typeof RevertOrderSchema>

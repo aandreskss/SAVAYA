@@ -12,9 +12,10 @@ import {
   deleteOrderAction,
   approvePaymentAction,
   rejectPaymentAction,
+  revertOrderStatusAction,
 } from '../actions'
 import { toast } from '@/shared/ui/toast-store'
-import { VALID_TRANSITIONS } from '@/domains/orders/state-machine'
+import { VALID_TRANSITIONS, canRevert, REVERT_TARGETS } from '@/domains/orders/state-machine'
 import type { AdminOrderDetail } from '../types'
 import type { OrderStatus } from '@/domains/orders/state-machine'
 import { toWaPhone } from '@/shared/lib/phone'
@@ -35,14 +36,47 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [confirmTransition, setConfirmTransition] = useState<OrderStatus | null>(null)
+  const [confirmRevert, setConfirmRevert] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [reason, setReason] = useState('')
+  const [refundAmount, setRefundAmount] = useState(order.totalUsd)
+  const [refundMethod, setRefundMethod] = useState('')
 
   const availableTransitions = VALID_TRANSITIONS[order.status] ?? []
+
+  // Determine where revert would go (mirrors service logic)
+  const revertTarget: OrderStatus | null = (() => {
+    if (!canRevert(order.status)) return null
+    if (order.status === 'cancelled') {
+      const lastCancelEntry = [...order.statusHistory]
+        .reverse()
+        .find((e) => e.toStatus === 'cancelled')
+      return (lastCancelEntry?.fromStatus ?? null) as OrderStatus | null
+    }
+    return REVERT_TARGETS[order.status] ?? null
+  })()
+
+  function handleRevert() {
+    startTransition(async () => {
+      const result = await revertOrderStatusAction({
+        orderId: order.id,
+        reason: reason || undefined,
+        orderNumber: order.orderNumber,
+      })
+      if (result.success) {
+        toast.success(`Pedido revertido a: ${STATUS_LABELS[revertTarget!]}`)
+      } else {
+        toast.error(result.error)
+      }
+      setConfirmRevert(false)
+      setReason('')
+    })
+  }
 
   function handleTransition(toStatus: OrderStatus) {
     // Destructive transitions always require confirmation + reason
     if (toStatus === 'cancelled' || toStatus === 'refunded' || toStatus === 'payment_rejected') {
+      if (toStatus === 'refunded') setRefundAmount(order.totalUsd)
       setConfirmTransition(toStatus)
       return
     }
@@ -96,19 +130,29 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
           toast.error(result.error)
         }
       } else {
+        // Build refund reason string from structured fields
+        const finalReason = ts === 'refunded'
+          ? [
+              `Monto reembolsado: $${refundAmount}`,
+              refundMethod && `Método: ${refundMethod}`,
+              reason && `Notas: ${reason}`,
+            ].filter(Boolean).join(' · ')
+          : reason || undefined
+
         const result = await transitionOrderStatusAction({
           orderId: order.id,
           toStatus: ts,
-          reason: reason || undefined,
+          reason: finalReason,
           orderNumber: order.orderNumber,
         })
         if (result.success) {
-          toast.success(`Estado actualizado a: ${STATUS_LABELS[ts]}`)
+          toast.success(ts === 'refunded' ? 'Reembolso emitido' : `Estado actualizado a: ${STATUS_LABELS[ts]}`)
         } else {
           toast.error(result.error)
         }
       }
       setReason('')
+      setRefundMethod('')
     })
   }
 
@@ -141,10 +185,22 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
               size="sm"
               isLoading={isPending}
               onClick={() => handleTransition(ts)}
+              className={ts === 'refunded' ? 'border-warning/40 text-warning hover:bg-warning/10' : undefined}
             >
-              {STATUS_LABELS[ts]}
+              {ts === 'refunded' ? 'Emitir reembolso' : STATUS_LABELS[ts]}
             </Button>
           ))}
+          {revertTarget && (
+            <Button
+              variant="ghost"
+              size="sm"
+              isLoading={isPending}
+              onClick={() => setConfirmRevert(true)}
+              className="border-border text-text-secondary hover:text-text-primary"
+            >
+              ← Revertir a {STATUS_LABELS[revertTarget]}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -314,37 +370,132 @@ export function OrderDetailView({ order }: { order: AdminOrderDetail }) {
       {/* Confirm destructive transition modal */}
       <Modal
         isOpen={confirmTransition !== null}
-        onClose={() => { setConfirmTransition(null); setReason('') }}
-        title={confirmTransition ? `Confirmar: ${STATUS_LABELS[confirmTransition]}` : ''}
+        onClose={() => { setConfirmTransition(null); setReason(''); setRefundMethod('') }}
+        title={
+          confirmTransition === 'refunded'
+            ? 'Emitir reembolso'
+            : confirmTransition ? `Confirmar: ${STATUS_LABELS[confirmTransition]}` : ''
+        }
+        size="sm"
+      >
+        <div className="space-y-4">
+          {confirmTransition === 'refunded' ? (
+            <>
+              <p className="text-sm text-text-secondary">
+                El pedido se marcará como reembolsado. El reembolso en sí es manual — registra los detalles aquí para el historial.
+              </p>
+              <div>
+                <label className="block text-sm font-medium mb-1">Monto reembolsado (USD)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-gold/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Método de reembolso</label>
+                <select
+                  value={refundMethod}
+                  onChange={(e) => setRefundMethod(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-gold/20 bg-surface"
+                >
+                  <option value="">Sin especificar</option>
+                  <option value="Pago Móvil">Pago Móvil</option>
+                  <option value="Zelle">Zelle</option>
+                  <option value="USDT">USDT</option>
+                  <option value="Binance Pay">Binance Pay</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia bancaria">Transferencia bancaria</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Notas <span className="text-text-secondary font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-gold/20"
+                  placeholder="Ej: cliente solicitó reembolso por talla incorrecta…"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-text-secondary">
+                {confirmTransition === 'cancelled' && 'Esta acción cancelará el pedido. No se puede deshacer.'}
+                {confirmTransition === 'payment_rejected' && 'El comprobante será rechazado y el pedido volverá a pago pendiente.'}
+              </p>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Motivo{' '}
+                  <span className="text-text-secondary font-normal">
+                    {confirmTransition === 'payment_rejected' ? '(obligatorio para el cliente)' : '(opcional)'}
+                  </span>
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-gold/20"
+                  placeholder="Especifica el motivo…"
+                />
+              </div>
+            </>
+          )}
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={() => { setConfirmTransition(null); setReason(''); setRefundMethod('') }}>
+              Cancelar
+            </Button>
+            <Button variant="primary" size="sm" isLoading={isPending} onClick={confirmDestructive}>
+              {confirmTransition === 'refunded' ? 'Emitir reembolso' : 'Confirmar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Confirm revert modal */}
+      <Modal
+        isOpen={confirmRevert}
+        onClose={() => { setConfirmRevert(false); setReason('') }}
+        title={`Revertir a: ${revertTarget ? STATUS_LABELS[revertTarget] : ''}`}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-text-secondary">
-            {confirmTransition === 'cancelled' && 'Esta acción cancelará el pedido. No se puede deshacer.'}
-            {confirmTransition === 'refunded' && 'Esta acción marcará el pedido como reembolsado. No se puede deshacer.'}
-            {confirmTransition === 'payment_rejected' && 'El comprobante será rechazado y el pedido volverá a pago pendiente.'}
+            El pedido volverá al estado{' '}
+            <span className="font-medium text-text-primary">
+              {revertTarget ? STATUS_LABELS[revertTarget] : ''}
+            </span>
+            {order.status === 'delivered' && (
+              <> — el inventario descontado se restaurará como reserva.</>
+            )}
+            {(order.status === 'cancelled' || order.status === 'refunded') && (
+              <> — la reserva de inventario se reactivará.</>
+            )}
           </p>
           <div>
             <label className="block text-sm font-medium mb-1">
-              Motivo{' '}
-              <span className="text-text-secondary font-normal">
-                {confirmTransition === 'payment_rejected' ? '(obligatorio para el cliente)' : '(opcional)'}
-              </span>
+              Motivo <span className="text-text-secondary font-normal">(opcional)</span>
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              rows={3}
+              rows={2}
               className="w-full px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-gold/20"
-              placeholder="Especifica el motivo…"
+              placeholder="Ej: marcado por error…"
             />
           </div>
           <div className="flex gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => { setConfirmTransition(null); setReason('') }}>
+            <Button variant="ghost" size="sm" onClick={() => { setConfirmRevert(false); setReason('') }}>
               Cancelar
             </Button>
-            <Button variant="primary" size="sm" isLoading={isPending} onClick={confirmDestructive}>
-              Confirmar
+            <Button variant="secondary" size="sm" isLoading={isPending} onClick={handleRevert}>
+              Revertir
             </Button>
           </div>
         </div>

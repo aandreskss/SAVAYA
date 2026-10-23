@@ -7,11 +7,13 @@ import {
   ApprovePaymentSchema,
   RejectPaymentSchema,
   TransitionOrderSchema,
+  RevertOrderSchema,
 } from './validators'
 import {
   approvePayment,
   rejectPayment,
   transitionOrderStatus,
+  revertOrderStatus,
   OrderTransitionError,
 } from './service'
 import { deleteOrder } from './repository'
@@ -19,6 +21,7 @@ import type {
   ApprovePaymentPayload,
   RejectPaymentPayload,
   TransitionOrderPayload,
+  RevertOrderPayload,
 } from './validators'
 import type { ActionResult } from './types'
 
@@ -131,6 +134,37 @@ export async function transitionOrderStatusAction(
       err instanceof OrderTransitionError
         ? err.message
         : 'Error al actualizar el estado del pedido'
+    return { success: false, error: message }
+  }
+}
+
+export async function revertOrderStatusAction(
+  payload: RevertOrderPayload,
+): Promise<ActionResult> {
+  const actor = await getActorContext()
+  if (!actor) return { success: false, error: 'No autenticado' }
+  if (!actor.permissions.includes('orders:write')) {
+    return { success: false, error: 'Sin permiso para actualizar pedidos' }
+  }
+
+  const parsed = RevertOrderSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' }
+  }
+
+  try {
+    await revertOrderStatus(parsed.data.orderId, actor, parsed.data.reason)
+    revalidatePath('/admin/pedidos')
+    revalidatePath('/admin/pagos')
+    if (parsed.data.orderNumber) {
+      revalidatePath(`/admin/pedidos/${parsed.data.orderNumber}`)
+    }
+    return { success: true, data: undefined }
+  } catch (err) {
+    const message =
+      err instanceof OrderTransitionError
+        ? err.message
+        : 'Error al revertir el estado del pedido'
     return { success: false, error: message }
   }
 }
