@@ -1,11 +1,11 @@
 import { db, rawQuery } from '@/shared/lib/db'
-import { sql } from 'drizzle-orm'
+import { sql, eq, and } from 'drizzle-orm'
 import { orders, orderStatusHistory } from '@/domains/orders/schema'
 import { paymentProofs } from '@/domains/payment-proofs/schema'
 import { auditLog } from '@/domains/audit-log/schema'
-import { isValidTransition, getTransitionErrorMessage } from '@/domains/orders/state-machine'
+import { isValidTransition, getTransitionErrorMessage, TERMINAL_STATES } from '@/domains/orders/state-machine'
 import type { OrderStatus } from '@/domains/orders/state-machine'
-import { eq } from 'drizzle-orm'
+import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { sendPaymentApproved, sendPaymentRejected } from '@/domains/notifications/service'
 
 type ActorContext = {
@@ -64,6 +64,58 @@ export async function transitionOrderStatus(
     after: { status: toStatus, reason: reason ?? null },
     ip: actor.ip,
   })
+
+  // On terminal states, settle the inventory reservation.
+  // delivered → deduct stock permanently (sale).
+  // cancelled / refunded → just release the reservation (goods return to available).
+  if (TERMINAL_STATES.has(toStatus)) {
+    const reservations = await db
+      .select({ variantId: inventoryMovements.variantId, quantity: inventoryMovements.quantity })
+      .from(inventoryMovements)
+      .where(
+        and(
+          eq(inventoryMovements.orderId, orderId),
+          eq(inventoryMovements.type, 'reservation'),
+        ),
+      )
+
+    const movementType = toStatus === 'delivered' ? 'sale' : 'reservation_release'
+    const movementReason =
+      toStatus === 'delivered'
+        ? 'Pedido entregado — venta confirmada'
+        : toStatus === 'refunded'
+          ? 'Pedido reembolsado — reserva liberada'
+          : 'Pedido cancelado — reserva liberada'
+
+    for (const reservation of reservations) {
+      await db.insert(inventoryMovements).values({
+        variantId: reservation.variantId,
+        type: movementType,
+        quantity: reservation.quantity,
+        reason: movementReason,
+        orderId,
+      })
+
+      if (toStatus === 'delivered') {
+        await db
+          .update(inventory)
+          .set({
+            quantity: sql`GREATEST(0, ${inventory.quantity} - ${reservation.quantity})`,
+            reserved: sql`GREATEST(0, ${inventory.reserved} - ${reservation.quantity})`,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventory.variantId, reservation.variantId))
+      } else {
+        await db
+          .update(inventory)
+          .set({
+            reserved: sql`GREATEST(0, ${inventory.reserved} - ${reservation.quantity})`,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventory.variantId, reservation.variantId))
+      }
+    }
+  }
 }
 
 export async function approvePayment(
