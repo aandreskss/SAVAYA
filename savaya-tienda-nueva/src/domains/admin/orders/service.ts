@@ -373,6 +373,14 @@ export async function revertOrderStatus(
     ip: actor.ip,
   })
 
+  // If reverting from paid, the proof was approved — reset it so it can be approved again
+  if (fromStatus === 'paid') {
+    await db
+      .update(paymentProofs)
+      .set({ status: 'pending', reviewedBy: null, reviewedAt: null, updatedAt: new Date() })
+      .where(and(eq(paymentProofs.orderId, orderId), eq(paymentProofs.status, 'approved')))
+  }
+
   // Roll back inventory changes that were applied when entering the current terminal state
   if (TERMINAL_STATES.has(fromStatus)) {
     if (fromStatus === 'delivered') {
