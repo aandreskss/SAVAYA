@@ -607,3 +607,29 @@ No se necesita migración — el detalle queda en `order_status_history.reason`.
 - **Admin**: todos estos campos están en Configuración → "Datos de la tienda". `store_tiktok` fue agregado entre Instagram y WhatsApp (migración 019).
 - **Revalidación**: `updateSettingAction` en `actions.ts` llama `revalidatePath('/', 'layout')` cuando se guarda cualquiera de los 4 campos de redes, actualizando el footer en todo el sitio al instante.
 - **Regla**: nunca hardcodear URLs de redes sociales en `Footer.tsx`. Siempre leer desde DB con fallback.
+
+### 8.49 Google Tag Manager — instalación y tracking de ecommerce
+
+- **Contenedor GTM**: `GTM-MSG57HFV`. Instalado en `src/app/layout.tsx` (root layout, aplica a toda la app).
+- **Tres partes de la instalación**:
+  1. `<head>` — script inline con nonce: inicializa `window.dataLayer` y la función `gtag()` antes de que cargue el contenedor.
+  2. `<body>` — `<noscript><iframe>` justo al abrir el body: fallback para usuarios sin JS.
+  3. `<Script src="gtm.js" strategy="afterInteractive">` al final del body: carga el contenedor después de hidratación (recomendado por Google para Next.js).
+- **CSP actualizada** en `src/proxy.ts`:
+  - `frame-src`: añadido `https://www.googletagmanager.com` (para el noscript iframe).
+  - `connect-src`: añadidos `https://www.googletagmanager.com`, `https://googleads.g.doubleclick.net`, `https://www.googleadservices.com` (para tags de Google Ads dentro del contenedor).
+  - `script-src`: ya tenía `https://www.googletagmanager.com` — no cambiar.
+- **`AnalyticsService`** (`src/domains/analytics/service.ts`): única fuente de verdad para todos los eventos. Usa `window.gtag()` que, con GTM instalado, empuja al `dataLayer`. GTM recibe los eventos y los reenvía a GA4 / Google Ads según la configuración del contenedor.
+- **Eventos de ecommerce implementados y conectados**:
+
+| Evento GA4 | Función | Dónde se llama |
+|---|---|---|
+| `add_to_cart` | `trackAddToCart` | `ProductInfo.tsx` — tras `onAddToCart` exitoso |
+| `begin_checkout` | `trackBeginCheckout` | `CheckoutClient.tsx` — `useEffect` al montar |
+| `add_shipping_info` | `trackAddShippingInfo` | `StepShipping.tsx` — `handleSubmit` tras validación |
+| `add_payment_info` | `trackAddPaymentInfo` | `StepPayment.tsx` — al avanzar al siguiente paso |
+| `purchase` | `trackPurchaseClient` | `StepConfirmation.tsx` — al montar con `orderResult` |
+
+- **Regla crítica — GTM requiere configuración del dashboard**: el código pushea eventos al `dataLayer`, pero para que Google Ads o GA4 los reciban hay que crear en el dashboard de GTM un **Trigger** de tipo *Custom Event* (con el nombre exacto del evento GA4) y un **Tag** asociado. Sin eso GTM recibe los eventos pero no los reenvía.
+- **No agregar más scripts de analytics directamente** al layout o al shop layout sin pasar por `AnalyticsService` — toda integración nueva debe agregarse ahí para mantener un único punto de control.
+- **`AnalyticsProvider`** en el shop layout carga GA4 directo (`gtag/js?id=...`) si `NEXT_PUBLIC_GA4_ID` está configurado. Si GTM también tiene un tag GA4 interno, habrá doble conteo — evitar tener ambos activos para el mismo stream.
