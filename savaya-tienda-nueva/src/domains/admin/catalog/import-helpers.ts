@@ -7,19 +7,19 @@
 export interface ParsedVariantRow {
   color: string
   hexColor: string | null
-  talla: string
+  size: string
   skuRef: string
-  precio: number | null // null → inherit product basePrice
-  cantidad: number
+  price: number | null // null → inherit product basePrice
+  quantity: number
 }
 
 export interface ParsedProductGroup {
-  nombre: string
-  categoria: string
-  genero: 'women' | 'men' | 'unisex'
-  precioBase: number
-  precioComparacion: number | null
-  descripcion: string | null
+  name: string
+  category: string
+  gender: string
+  basePrice: number
+  compareAtPrice: number | null
+  description: string | null
   variants: ParsedVariantRow[]
   lineNumber: number
 }
@@ -54,17 +54,19 @@ function parseCsvLine(line: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Gender normalization
+// Gender normalization — maps CSV input to DB gender slugs (Spanish)
 // ---------------------------------------------------------------------------
 
-const GENDER_MAP: Record<string, 'women' | 'men' | 'unisex'> = {
-  women: 'women', mujer: 'women', femenino: 'women', damas: 'women',
-  men: 'men', hombre: 'men', masculino: 'men', caballeros: 'men',
+const GENDER_MAP: Record<string, string> = {
+  women: 'mujer', mujer: 'mujer', femenino: 'mujer', damas: 'mujer',
+  men: 'hombre', hombre: 'hombre', masculino: 'hombre', caballeros: 'hombre',
   unisex: 'unisex',
+  ninos: 'ninos', niños: 'ninos', nino: 'ninos', 'niño': 'ninos',
+  ninas: 'ninas', niñas: 'ninas', nina: 'ninas', 'niña': 'ninas',
 }
 
-function parseGender(raw: string): 'women' | 'men' | 'unisex' {
-  return GENDER_MAP[raw.trim().toLowerCase()] ?? 'women'
+function parseGender(raw: string): string {
+  return GENDER_MAP[raw.trim().toLowerCase()] ?? 'mujer'
 }
 
 // ---------------------------------------------------------------------------
@@ -91,34 +93,34 @@ export function parseImportCsv(text: string): ParsedProductGroup[] {
     const tipo = get(row, 'tipo').toLowerCase()
 
     if (tipo === 'producto') {
-      const precioBase = parseFloat(get(row, 'precio_base'))
-      const precioComp = parseFloat(get(row, 'precio_comparacion'))
+      const basePrice = parseFloat(get(row, 'precio_base'))
+      const comparePrice = parseFloat(get(row, 'precio_comparacion'))
       current = {
-        nombre: get(row, 'nombre'),
-        categoria: get(row, 'categoria'),
-        genero: parseGender(get(row, 'genero')),
-        precioBase: isNaN(precioBase) ? 0 : precioBase,
-        precioComparacion: isNaN(precioComp) || precioComp === 0 ? null : precioComp,
-        descripcion: get(row, 'descripcion') || null,
+        name: get(row, 'nombre'),
+        category: get(row, 'categoria'),
+        gender: parseGender(get(row, 'genero')),
+        basePrice: isNaN(basePrice) ? 0 : basePrice,
+        compareAtPrice: isNaN(comparePrice) || comparePrice === 0 ? null : comparePrice,
+        description: get(row, 'descripcion') || null,
         variants: [],
         lineNumber: i + 1,
       }
       groups.push(current)
     } else if (tipo === 'variante' && current) {
-      const precio = parseFloat(get(row, 'precio'))
-      const cantidad = parseInt(get(row, 'cantidad') || '0', 10)
+      const price = parseFloat(get(row, 'precio'))
+      const quantity = parseInt(get(row, 'cantidad') || '0', 10)
       current.variants.push({
         color: get(row, 'color'),
         hexColor: get(row, 'hex_color') || null,
-        talla: get(row, 'talla'),
+        size: get(row, 'talla'),
         skuRef: get(row, 'sku_ref'),
-        precio: isNaN(precio) ? null : precio,
-        cantidad: isNaN(cantidad) ? 0 : cantidad,
+        price: isNaN(price) ? null : price,
+        quantity: isNaN(quantity) ? 0 : quantity,
       })
     }
   }
 
-  return groups.filter((g) => g.nombre && g.variants.length > 0)
+  return groups.filter((g) => g.name && g.variants.length > 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +154,7 @@ export function resolveVariantSkus(
     const ref = (v.skuRef || fallbackPrefix).toUpperCase()
     const colorSet = refColorSets.get(ref)!
     const multiColor = colorSet.size > 1
-    const sizeCode = v.talla.toUpperCase().replace(/\s+/g, '')
+    const sizeCode = v.size.toUpperCase().replace(/\s+/g, '')
 
     let base: string
     if (multiColor) {

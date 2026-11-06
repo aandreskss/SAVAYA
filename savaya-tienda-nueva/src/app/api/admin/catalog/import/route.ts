@@ -20,7 +20,7 @@ import { parseImportCsv, resolveVariantSkus } from '@/domains/admin/catalog/impo
 // ---------------------------------------------------------------------------
 
 export interface ImportProductResult {
-  nombre: string
+  name: string
   status: 'created' | 'skipped' | 'error'
   variantsCreated: number
   message?: string
@@ -96,17 +96,17 @@ export async function POST(request: Request) {
   // ── Process each product group ────────────────────────────────────────────
   for (const group of groups) {
     // Basic validation
-    if (!group.nombre) {
-      results.push({ nombre: '(sin nombre)', status: 'error', variantsCreated: 0, message: 'Falta el nombre del producto' })
+    if (!group.name) {
+      results.push({ name: '(sin nombre)', status: 'error', variantsCreated: 0, message: 'Falta el nombre del producto' })
       continue
     }
-    if (!group.precioBase || group.precioBase <= 0) {
-      results.push({ nombre: group.nombre, status: 'error', variantsCreated: 0, message: 'precio_base inválido o faltante' })
+    if (!group.basePrice || group.basePrice <= 0) {
+      results.push({ name: group.name, status: 'error', variantsCreated: 0, message: 'precio_base inválido o faltante' })
       continue
     }
-    const validVariants = group.variants.filter((v) => v.color && v.talla)
+    const validVariants = group.variants.filter((v) => v.color && v.size)
     if (!validVariants.length) {
-      results.push({ nombre: group.nombre, status: 'error', variantsCreated: 0, message: 'Sin variantes válidas (color y talla son requeridos)' })
+      results.push({ name: group.name, status: 'error', variantsCreated: 0, message: 'Sin variantes válidas (color y talla son requeridos)' })
       continue
     }
 
@@ -116,25 +116,25 @@ export async function POST(request: Request) {
       const existing = await db
         .select({ id: products.id })
         .from(products)
-        .where(ilike(products.name, group.nombre))
+        .where(ilike(products.name, group.name))
         .limit(1)
       if (existing.length > 0) {
-        results.push({ nombre: group.nombre, status: 'skipped', variantsCreated: 0, message: 'Ya existe un producto con ese nombre' })
+        results.push({ name: group.name, status: 'skipped', variantsCreated: 0, message: 'Ya existe un producto con ese nombre' })
         continue
       }
 
       // 2. Category lookup
       let categoryId: string | null = null
-      if (group.categoria) {
+      if (group.category) {
         const cat = allCategories.find(
-          (c) => c.name.toLowerCase() === group.categoria.toLowerCase(),
+          (c) => c.name.toLowerCase() === group.category.toLowerCase(),
         )
         if (!cat) {
           results.push({
-            nombre: group.nombre,
+            name: group.name,
             status: 'error',
             variantsCreated: 0,
-            message: `Categoría "${group.categoria}" no encontrada. Créala primero en el admin.`,
+            message: `Categoría "${group.category}" no encontrada. Créala primero en el admin.`,
           })
           continue
         }
@@ -163,29 +163,29 @@ export async function POST(request: Request) {
           }
         }
 
-        if (!sizeMap.has(v.talla)) {
+        if (!sizeMap.has(v.size)) {
           const rows = await db
             .select({ id: sizes.id })
             .from(sizes)
-            .where(ilike(sizes.name, v.talla))
+            .where(ilike(sizes.name, v.size))
             .limit(1)
           if (rows.length > 0) {
-            sizeMap.set(v.talla, rows[0]!.id)
+            sizeMap.set(v.size, rows[0]!.id)
           } else {
             const [created] = await db
               .insert(sizes)
-              .values({ name: v.talla, sortOrder: 0 })
+              .values({ name: v.size, sortOrder: 0 })
               .returning({ id: sizes.id })
-            sizeMap.set(v.talla, created!.id)
+            sizeMap.set(v.size, created!.id)
           }
         }
       }
 
       // 4. Generate variant SKUs
-      const skuMap = resolveVariantSkus(validVariants, slugify(group.nombre))
+      const skuMap = resolveVariantSkus(validVariants, slugify(group.name))
 
       // 5. Ensure unique slug
-      const baseSlug = slugify(group.nombre)
+      const baseSlug = slugify(group.name)
       let slug = baseSlug
       const slugConflict = await db
         .select({ id: products.id })
@@ -203,14 +203,14 @@ export async function POST(request: Request) {
       const [prod] = await db
         .insert(products)
         .values({
-          name: group.nombre,
+          name: group.name,
           slug,
-          description: group.descripcion,
+          description: group.description,
           categoryId,
-          gender: group.genero,
-          basePrice: String(group.precioBase),
+          gender: group.gender,
+          basePrice: String(group.basePrice),
           compareAtPrice:
-            group.precioComparacion != null ? String(group.precioComparacion) : null,
+            group.compareAtPrice != null ? String(group.compareAtPrice) : null,
           isActive: false,
           isFeatured: false,
           isNew: false,
@@ -222,9 +222,9 @@ export async function POST(request: Request) {
 
       for (const v of validVariants) {
         const colorId = colorMap.get(v.color)!
-        const sizeId = sizeMap.get(v.talla)!
+        const sizeId = sizeMap.get(v.size)!
         const sku = skuMap.get(v)!
-        const price = v.precio ?? group.precioBase
+        const price = v.price ?? group.basePrice
 
         const [variant] = await db
           .insert(productVariants)
@@ -240,15 +240,15 @@ export async function POST(request: Request) {
 
         await db.insert(inventory).values({
           variantId: variant!.id,
-          quantity: v.cantidad,
+          quantity: v.quantity,
           reserved: 0,
         })
 
-        if (v.cantidad > 0) {
+        if (v.quantity > 0) {
           await db.insert(inventoryMovements).values({
             variantId: variant!.id,
             type: 'purchase',
-            quantity: v.cantidad,
+            quantity: v.quantity,
             reason: 'Importación masiva CSV',
             performedBy: actorId,
           })
@@ -263,11 +263,11 @@ export async function POST(request: Request) {
         action: 'product.bulk_import',
         resourceType: 'product',
         resourceId: productId,
-        after: { name: group.nombre, variantsCreated, slug },
+        after: { name: group.name, variantsCreated, slug },
         ip,
       })
 
-      results.push({ nombre: group.nombre, status: 'created', variantsCreated })
+      results.push({ name: group.name, status: 'created', variantsCreated })
     } catch (e) {
       // If product was created before the failure, delete it so we don't leave orphans.
       // FK cascade handles variants/inventory/movements cleanup.
@@ -280,7 +280,7 @@ export async function POST(request: Request) {
         ? `SKU duplicado: ${raw.match(/Key \(sku\)=\(([^)]+)\)/)?.[1] ?? 'uno de los SKUs ya existe'} — cambia el sku_ref en el CSV`
         : raw
       results.push({
-        nombre: group.nombre,
+        name: group.name,
         status: 'error',
         variantsCreated: 0,
         message: friendly,

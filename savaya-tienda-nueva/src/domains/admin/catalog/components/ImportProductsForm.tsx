@@ -234,7 +234,7 @@ export function ImportProductsForm() {
                     key={i}
                     className="border-t border-border"
                   >
-                    <td className="px-3 py-2 font-medium text-text-primary">{r.nombre}</td>
+                    <td className="px-3 py-2 font-medium text-text-primary">{r.name}</td>
                     <td className="px-3 py-2">
                       <span className="flex flex-col gap-0.5">
                         <span className="flex items-center gap-1.5">

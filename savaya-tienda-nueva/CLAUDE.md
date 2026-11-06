@@ -2,6 +2,143 @@
 
 > Este archivo lo lee Claude Code automáticamente al abrir este repo. Contiene las reglas que **aplican siempre**, en toda fase y todo prompt, para no tener que repetirlas cada vez. Los prompts de `/docs/PROJECT-PLAN.md` asumen que este archivo ya existe y solo agregan el alcance específico de cada paso.
 
+## 9. Estándares internacionales — nomenclatura, APIs y seguridad
+
+> Esta sección es no negociable y aplica a todo código nuevo. Se auditó el proyecto en 2026-11-06 y se corrigieron todas las violaciones encontradas.
+
+### 9.1 Regla de idioma — qué va en inglés y qué va en español
+
+| Categoría | Idioma | Ejemplos |
+|---|---|---|
+| Variables, funciones, clases, tipos | **Inglés** | `cartSubtotal`, `parseImportCsv`, `ProductCard` |
+| Propiedades de interfaces / tipos TS | **Inglés** | `name`, `basePrice`, `compareAtPrice`, `size` |
+| Columnas y tablas de DB (Drizzle schema) | **Inglés** | `product_variants`, `is_active`, `base_price` |
+| Rutas de API (`/api/**`) | **Inglés** | `/api/admin/catalog/import`, `/api/webhooks/odoo/inventory` |
+| Variables de entorno | **Inglés SCREAMING_SNAKE_CASE** | `DATABASE_URL`, `NEXT_PUBLIC_GA4_ID` |
+| Nombres de archivos de componentes | **Inglés PascalCase** | `ProductCard.tsx`, `WhatsAppButton.tsx` |
+| Nombres de archivos de páginas/rutas | **Inglés kebab-case** (salvo segmentos de URL de cara al usuario) | `import/route.ts`, `analytics/page.tsx` |
+| Comentarios de código | **Inglés** | `// Resolve SKU collisions with numeric suffix` |
+| Copy de cara al usuario (tienda + admin) | **Español venezolano** | `"Agregar al carrito"`, `"Pedidos"`, `"Iniciar sesión"` |
+| Segmentos de URL de storefront | **Español** (son parte de la UX) | `/mujer`, `/categoria/sandalias`, `/mi-cuenta` |
+| Términos de dominio venezolano sin equivalente | **Excepción documentada** | `pagoMovil`, `bolivares` (usar `ves` como código de moneda) |
+
+**Regla de oro**: si el identificador aparece en el código (`.ts`, `.tsx`, `.sql`, `.json` de config), va en inglés. Si lo ve el usuario en pantalla, va en español venezolano.
+
+### 9.2 Convenciones de nombrado en código
+
+```
+Variables / parámetros    → camelCase       → cartSubtotal, isActive
+Funciones / métodos       → camelCase       → parseImportCsv(), getProductBySlug()
+Componentes React         → PascalCase      → ProductCard, CartDrawer
+Tipos / Interfaces TS     → PascalCase      → ParsedProductGroup, AdminSetting
+Constantes               → SCREAMING_SNAKE  → GENDER_MAP, BLOCK_SCHEMAS
+Columnas DB (Drizzle)     → snake_case      → base_price, is_active, created_at
+Variables de entorno      → SCREAMING_SNAKE  → DATABASE_URL, CRON_SECRET
+Archivos de componentes   → PascalCase.tsx   → WhatsAppButton.tsx
+Archivos de módulos       → kebab-case.ts    → import-helpers.ts, block-schemas.ts
+Rutas de API              → kebab-case       → /api/admin/catalog/import
+CSS custom properties     → kebab-case       → --color-accent-gold, --font-display
+```
+
+### 9.3 Estándares REST para rutas de API
+
+- **GET** — leer un recurso o lista. Nunca modifica estado.
+- **POST** — crear un recurso o ejecutar una acción sin idempotencia.
+- **PUT** — reemplazar un recurso completo (idempotente).
+- **PATCH** — actualizar campos parciales de un recurso (idempotente).
+- **DELETE** — eliminar un recurso (idempotente).
+
+**Estructura de URLs:**
+```
+/api/{domain}/{resource}            → colección
+/api/{domain}/{resource}/{id}       → recurso individual
+/api/{domain}/{resource}/{id}/{sub} → subrecurso
+/api/admin/{resource}               → solo acceso admin
+/api/webhooks/{provider}/{event}    → webhooks externos
+/api/cron/{job-name}                → jobs programados
+/api/track/{event}                  → tracking anónimo
+```
+
+**Códigos HTTP estándar — usar siempre el correcto:**
+
+| Código | Cuándo usarlo |
+|---|---|
+| 200 OK | Éxito, respuesta con body |
+| 201 Created | Recurso creado (POST) |
+| 204 No Content | Éxito sin body (DELETE, PATCH sin retorno) |
+| 400 Bad Request | Input inválido / body malformado |
+| 401 Unauthorized | No autenticado (sin sesión) |
+| 403 Forbidden | Autenticado pero sin permiso |
+| 404 Not Found | Recurso no existe |
+| 409 Conflict | Conflicto de estado (ej. SKU duplicado) |
+| 422 Unprocessable | Validación Zod falló (datos bien formados pero inválidos) |
+| 500 Internal Server Error | Error inesperado del servidor |
+
+**Formato de respuesta estándar:**
+```ts
+// Éxito con datos
+{ data: T }
+
+// Error
+{ error: string }
+
+// Listas paginadas
+{ data: T[], total: number, page: number, limit: number }
+```
+Nunca mezclar `{ error: string }` con campos de datos en la misma respuesta.
+
+### 9.4 HTTPS — siempre
+
+- **HSTS** ya está configurado en `next.config.ts`: `max-age=63072000; includeSubDomains; preload`. No tocar.
+- Nunca hardcodear URLs con `http://`. Usar siempre `https://`.
+- Para URLs internas, usar paths relativos (`/api/...`) o `process.env.NEXT_PUBLIC_APP_URL` (que siempre es `https://`).
+- En webhooks salientes (`Resend`, `Meta CAPI`, `Odoo`), verificar que el endpoint de destino sea `https://` antes de conectar.
+- Tokens y secretos siempre en headers (`Authorization`, `x-cron-secret`, `x-odoo-secret`), nunca en query strings — excepción: Vercel Cron que añade `?secret=` automáticamente.
+
+### 9.5 Variables de entorno — convenciones
+
+```
+NEXT_PUBLIC_*     → expuesto al browser — solo valores no sensibles
+DATABASE_URL      → siempre server-only, nunca NEXT_PUBLIC_
+*_SECRET          → nunca NEXT_PUBLIC_, nunca loggear
+*_TOKEN           → nunca NEXT_PUBLIC_, rotar periódicamente
+*_KEY             → nunca NEXT_PUBLIC_ (excepto public API keys como Meta Pixel ID)
+```
+
+Siempre mantener `.env.example` actualizado con claves pero sin valores reales. Nunca commitear `.env.local`.
+
+### 9.6 Excepciones de dominio venezolano documentadas
+
+Estos términos NO deben traducirse porque son conceptos del sistema financiero venezolano sin equivalente directo:
+
+| Término en código | Por qué es excepción |
+|---|---|
+| `pagoMovil` | Sistema de pago interbancario venezolano, nombre oficial |
+| `ves` | Código ISO 4217 del Bolívar Soberano |
+| `tasa` / `exchangeRate` | Preferir `exchangeRate` en código; `tasa` en UI |
+| `BCV` | Banco Central de Venezuela — sigla oficial |
+
+### 9.7 Auditoría de cumplimiento (2026-11-06)
+
+**Resultado de la auditoría inicial:**
+
+| Área | Estado | Acción |
+|---|---|---|
+| Drizzle schemas (todas las tablas) | ✅ Limpio | — |
+| Rutas de API (`/api/**`) | ✅ Limpio | — |
+| CMS block schemas | ✅ Limpio | — |
+| Server actions y funciones | ✅ Limpio | — |
+| CSS custom properties | ✅ Limpio | — |
+| `import-helpers.ts` — tipos `ParsedVariantRow` y `ParsedProductGroup` | ✅ **Corregido** | Renombradas 19 propiedades en español a inglés |
+| `import/route.ts` — `ImportProductResult.nombre` y refs a grupo | ✅ **Corregido** | Renombrado a `name`, actualizadas todas las referencias |
+| `import/route.ts` — `ImportProductsForm.tsx` | ✅ **Corregido** | `r.nombre` → `r.name` |
+| `GENDER_MAP` en `import-helpers.ts` — valores `'women'` / `'men'` legacy | ✅ **Corregido** | Ahora mapea a `'mujer'` / `'hombre'` (slugs de DB actuales) |
+| `exchange-rates/service.ts` — props `fechaActualizacion` | ✅ Excepción válida | Contrato de API externa (`ve.dolarapi.com`) — no modificar |
+
+**Para cualquier código nuevo:** antes de PR, verificar que no haya identificadores en español fuera de los dominios documentados en 9.6.
+
+---
+
 ## 0. Identidad del proyecto
 
 SAVAYA es una marca venezolana de calzado (Carabobo) migrando de venta mayorista/redes sociales a un canal B2C propio de alto nivel. Este repo (`savaya-tienda-nueva`) es una reconstrucción **desde cero**, en paralelo al repo `savaya-tienda` (versión anterior, en producción). **Nunca borres, sobrescribas ni toques `savaya-tienda`.** Este repo no depende de él para nada; a lo sumo se audita para decidir qué reutilizar (ver Fase 0).
