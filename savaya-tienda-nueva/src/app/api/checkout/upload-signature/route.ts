@@ -40,9 +40,20 @@ export async function GET() {
   const folder = 'savaya/private/payment-proofs'
   const publicId = `proof-${crypto.randomUUID()}`
 
-  // Sign: sorted params joined as key=value&key=value + apiSecret
-  // Required params for a private upload: folder, public_id, timestamp, type
-  const paramsToSign = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}&type=private`
+  // Restrict uploads to safe image/document formats and limit to 10 MB.
+  // Params MUST be sorted alphabetically before signing.
+  const allowedFormats = 'jpg,jpeg,pdf,png,webp'
+  const maxBytes = 10 * 1024 * 1024 // 10 MB
+
+  const paramsToSign = [
+    `allowed_formats=${allowedFormats}`,
+    `folder=${folder}`,
+    `max_bytes=${maxBytes}`,
+    `public_id=${publicId}`,
+    `timestamp=${timestamp}`,
+    `type=private`,
+  ].join('&')
+
   const signature = crypto
     .createHash('sha1')
     .update(paramsToSign + apiSecret)
@@ -55,5 +66,7 @@ export async function GET() {
     apiKey,
     folder,
     publicId,
+    allowedFormats,
+    maxBytes,
   })
 }

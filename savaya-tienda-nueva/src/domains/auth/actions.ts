@@ -23,6 +23,7 @@ import { generateSecret as totpGenerateSecret, generateURI as totpGenerateURI, v
 import QRCode from 'qrcode'
 import { and, eq, gt } from 'drizzle-orm'
 import { headers } from 'next/headers'
+import { auditLog } from '@/domains/audit-log/schema'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -243,6 +244,15 @@ export async function loginAdmin(data: LoginInput): Promise<ActionResult<void>> 
 
     if (err instanceof AuthError) {
       if (err.type === 'CredentialsSignin') {
+        db.insert(auditLog).values({
+          actorId: null,
+          actorEmail: parsed.data.email,
+          action: 'admin.login_failed',
+          resourceType: 'session',
+          resourceId: null,
+          after: null,
+          ip,
+        }).catch(() => {})
         return { success: false, error: 'Correo, contraseña o código 2FA incorrecto.' }
       }
       console.error('[loginAdmin] AuthError:', err.type, err.message)

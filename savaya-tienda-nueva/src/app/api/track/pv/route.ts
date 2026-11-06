@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { db } from '@/shared/lib/db'
 import { pageViews } from '@/domains/analytics/schema'
+import { checkRateLimit } from '@/shared/lib/rate-limit'
 
 function parseDevice(ua: string): 'mobile' | 'tablet' | 'desktop' {
   if (/tablet|ipad|playbook|silk/i.test(ua)) return 'tablet'
@@ -41,6 +42,10 @@ function extractReferrerDomain(referrer: string | null): string | null {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const rl = await checkRateLimit('publicApi', ip)
+  if (!rl.success) return NextResponse.json({ ok: true })
+
   try {
     const ua = req.headers.get('user-agent') ?? ''
     if (isBot(ua)) return NextResponse.json({ ok: true })
