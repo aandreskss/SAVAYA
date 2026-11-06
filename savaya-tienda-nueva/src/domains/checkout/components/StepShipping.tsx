@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useCheckoutStore } from '../checkout-store'
 import { ShippingDataSchema } from '../validators'
+import { trackAddShippingInfo } from '@/domains/analytics/service'
 import type { ShippingOption, ShippingZoneType, ShippingData } from '../types'
 
 const ZONE_LABELS: Record<ShippingZoneType, { title: string; desc: string; icon: string }> = {
@@ -103,6 +104,7 @@ export function StepShipping({ shippingOptions, cartSubtotalUsd }: Props) {
     }
 
     setErrors({})
+    trackAddShippingInfo([], cartSubtotalUsd, result.data.zoneType)
     setShippingData(result.data, getShippingCost())
   }
 

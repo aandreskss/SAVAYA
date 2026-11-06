@@ -4,6 +4,7 @@ import { ThemeSync } from '@/domains/layout/ThemeSync'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { headers } from 'next/headers'
+import Script from 'next/script'
 import './globals.css'
 
 const inter = Inter({
@@ -103,6 +104,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         {/* Anti-flash: applies persisted theme before React renders */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* GTM dataLayer init — must run before gtm.js loads */}
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());`,
+          }}
+        />
         {/* Organization structured data */}
         <script
           nonce={nonce}
@@ -111,6 +119,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        {/* GTM noscript fallback — fires iframe-based tags when JS is disabled */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-MSG57HFV"
+            height="0"
+            width="0"
+            style={{ display: 'none', visibility: 'hidden' }}
+          />
+        </noscript>
         {/* Skip to main content — WCAG 2.4.1 */}
         <a
           href="#main-content"
@@ -122,6 +139,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {children}
         <Analytics />
         <SpeedInsights />
+        {/* Google Tag Manager */}
+        <Script
+          src="https://www.googletagmanager.com/gtm.js?id=GTM-MSG57HFV"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   )
