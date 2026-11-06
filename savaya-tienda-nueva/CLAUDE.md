@@ -118,9 +118,7 @@ Estos términos NO deben traducirse porque son conceptos del sistema financiero 
 | `tasa` / `exchangeRate` | Preferir `exchangeRate` en código; `tasa` en UI |
 | `BCV` | Banco Central de Venezuela — sigla oficial |
 
-### 9.7 Auditoría de cumplimiento (2026-11-06)
-
-**Resultado de la auditoría inicial:**
+### 9.7 Auditoría de cumplimiento — nomenclatura (2026-11-06)
 
 | Área | Estado | Acción |
 |---|---|---|
@@ -136,6 +134,46 @@ Estos términos NO deben traducirse porque son conceptos del sistema financiero 
 | `exchange-rates/service.ts` — props `fechaActualizacion` | ✅ Excepción válida | Contrato de API externa (`ve.dolarapi.com`) — no modificar |
 
 **Para cualquier código nuevo:** antes de PR, verificar que no haya identificadores en español fuera de los dominios documentados en 9.6.
+
+### 9.8 Auditoría de seguridad (2026-11-06)
+
+Auditoría completa realizada. Estado final después de todos los fixes:
+
+**Dependencias:** 0 críticas · 0 altas · 17 moderadas (transitivas, sin fix disponible sin breaking changes)
+
+| # | Área | Estado | Implementación |
+|---|---|---|---|
+| 1 | Contraseñas con bcrypt(12) | ✅ Seguro | `bcryptjs`, `accounts.access_token` |
+| 2 | Sesiones JWT httpOnly/Secure/SameSite | ✅ Seguro | Auth.js v5 |
+| 3 | 2FA TOTP obligatorio para admin | ✅ Seguro | `otplib`, tabla `two_factor_secrets` |
+| 4 | Rate limiting login (5/15min por IP) | ✅ Seguro | `checkRateLimit('login', ip)` |
+| 5 | Rate limiting registro y reset | ✅ Seguro | `checkRateLimit('register'/'resetPassword', ip)` |
+| 6 | Rate limiting upload firma (20/hora) | ✅ Seguro | `checkRateLimit('upload', ip)` |
+| 7 | Rate limiting `/api/track/pv` | ✅ Seguro | `checkRateLimit('publicApi', ip)` — silent drop |
+| 8 | Rate limiting `/api/products/viewers` | ✅ Seguro | `checkRateLimit('publicApi', ip)` |
+| 9 | CSP con nonces por request | ✅ Seguro | `src/proxy.ts` — nonce inyectado en headers |
+| 10 | HSTS max-age=63072000 + preload | ✅ Seguro | `src/proxy.ts` |
+| 11 | X-Frame-Options / frame-ancestors | ✅ Seguro | `src/proxy.ts` |
+| 12 | HTTPS forzado en toda la app | ✅ Seguro | Vercel + HSTS en middleware |
+| 13 | SQL parametrizado (Drizzle ORM) | ✅ Seguro | Sin SQL crudo en ningún archivo |
+| 14 | Validación server-side con Zod | ✅ Seguro | Todos los formularios y route handlers |
+| 15 | XSS — `dangerouslySetInnerHTML` controlado | ✅ Seguro | Solo GTM (con nonce) y HtmlBlock (admin-only) |
+| 16 | Secretos solo en servidor | ✅ Seguro | `DATABASE_URL`, `CLOUDINARY_API_SECRET`, etc. nunca `NEXT_PUBLIC_` |
+| 17 | Restricciones de upload a Cloudinary | ✅ Seguro | `allowed_formats=jpg,jpeg,pdf,png,webp`, `max_bytes=10MB` |
+| 18 | Verificación de precio/stock en servidor | ✅ Seguro | Checkout service siempre recalcula desde DB |
+| 19 | Rutas admin protegidas por sesión + permisos | ✅ Seguro | `requireAdminPermission()` en todos los route handlers admin |
+| 20 | Audit log de acciones admin sensibles | ✅ Seguro | Tabla `audit_log` con actor, acción, IP, antes/después |
+| 21 | Audit log de logins admin fallidos | ✅ Seguro | `loginAdmin()` en `actions.ts` → `auditLog.admin.login_failed` |
+| 22 | Tokens de reset/verificación — expiran en 1h | ✅ Seguro | `verificationTokens.expires`, single-use |
+| 23 | Debug desactivado en producción | ✅ Seguro | `NODE_ENV=production` en Vercel |
+| 24 | `next-cloudinary` eliminado | ✅ Seguro | Paquete nunca se usó; eliminarlo quitó 13 vulnerabilidades |
+| 25 | Next.js 16.4.5 | ✅ Seguro | Parchea 3 CVEs críticos de RCE (actualizado desde 16.3.1) |
+
+**Reglas de seguridad permanentes para código nuevo:**
+- Todo endpoint público con escritura a DB debe tener `checkRateLimit` antes del insert.
+- Uploads a Cloudinary firmados deben incluir `allowed_formats` y `max_bytes` en los params (ordenados alfabéticamente antes del SHA-1).
+- Cualquier login fallido de admin debe loggearse en `audit_log` con `actorEmail` e `ip`.
+- Nunca instalar un paquete sin revisar `npm audit` antes y después.
 
 ---
 
