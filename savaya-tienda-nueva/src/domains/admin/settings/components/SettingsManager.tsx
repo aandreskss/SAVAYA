@@ -10,7 +10,7 @@ import type { AdminSetting } from '../types'
 // Static metadata per setting key
 // ---------------------------------------------------------------------------
 
-type FieldType = 'text' | 'email' | 'tel' | 'number' | 'textarea'
+type FieldType = 'text' | 'email' | 'tel' | 'number' | 'textarea' | 'toggle'
 
 type SettingMeta = {
   label: string
@@ -153,6 +153,19 @@ const META: Record<string, SettingMeta> = {
     type: 'textarea',
     placeholder: 'EAA...',
   },
+  wa_button_enabled: {
+    label: 'Mostrar botón flotante',
+    description: 'Activa o desactiva el botón verde de WhatsApp que aparece en la esquina inferior derecha de la tienda.',
+    impact: ['Botón WA'],
+    type: 'toggle',
+  },
+  wa_button_message: {
+    label: 'Mensaje pre-cargado',
+    description: 'Texto que aparece escrito en el chat de WhatsApp cuando el cliente hace clic en el botón. Déjalo vacío para abrir el chat sin mensaje.',
+    impact: ['Botón WA'],
+    type: 'textarea',
+    placeholder: 'Hola, me gustaría consultar sobre un producto 👟',
+  },
 }
 
 const IMPACT_STYLE: Record<string, string> = {
@@ -165,6 +178,7 @@ const IMPACT_STYLE: Record<string, string> = {
   Inventario:  'bg-green-500/15 text-green-300',
   SEO:         'bg-teal-500/15 text-teal-300',
   Analytics:   'bg-rose-500/15 text-rose-300',
+  'Botón WA':  'bg-green-500/15 text-green-300',
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +240,14 @@ function IconMeta() {
   )
 }
 
+function IconWhatsApp() {
+  return (
+    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  )
+}
+
 const GROUPS: Group[] = [
   {
     label: 'Datos de la tienda',
@@ -262,6 +284,12 @@ const GROUPS: Group[] = [
     description: 'Credenciales para el Pixel de Meta y la API de Conversiones (CAPI). El token CAPI se rota cada ~60 días en el Administrador de Eventos.',
     icon: <IconMeta />,
     keys: ['meta_pixel_id', 'meta_capi_token'],
+  },
+  {
+    label: 'Botón WhatsApp',
+    description: 'Botón flotante verde en la esquina inferior derecha de la tienda. Usa el número de WhatsApp de Atención configurado arriba.',
+    icon: <IconWhatsApp />,
+    keys: ['wa_button_enabled', 'wa_button_message'],
   },
 ]
 
@@ -305,6 +333,9 @@ function SettingRow({
   const meta = META[setting.key]
   const fieldType = meta?.type ?? 'text'
   const isTextarea = fieldType === 'textarea'
+  const isToggle = fieldType === 'toggle'
+
+  const isOn = setting.value !== 'false'
 
   function handleSave() {
     startTransition(async () => {
@@ -322,6 +353,20 @@ function SettingRow({
   function handleCancel() {
     setDraft(setting.value)
     setEditing(false)
+  }
+
+  function handleToggle() {
+    if (!canEdit) return
+    const next = isOn ? 'false' : 'true'
+    startTransition(async () => {
+      const res = await updateSettingAction(setting.key, next)
+      if (res.success) {
+        onSaved(setting.key, next)
+        toast.success(next === 'true' ? 'Botón activado' : 'Botón desactivado')
+      } else {
+        toast.error(res.error)
+      }
+    })
   }
 
   return (
@@ -354,8 +399,31 @@ function SettingRow({
         )}
       </div>
 
-      {/* Bottom: value display or edit input */}
-      {editing ? (
+      {/* Toggle — inline, no edit mode */}
+      {isToggle ? (
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isOn}
+            disabled={!canEdit || isPending}
+            onClick={handleToggle}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-gold focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isOn ? 'bg-green-500' : 'bg-surface-2 border border-border'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg transition-transform duration-200 ${
+                isOn ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span className={`text-sm font-medium ${isOn ? 'text-green-400' : 'text-text-secondary'}`}>
+            {isOn ? 'Activo' : 'Inactivo'}
+          </span>
+        </div>
+      ) : editing ? (
+        /* Edit mode for text/textarea/etc. */
         <div className="mt-2 space-y-2">
           <div className="flex items-start gap-2">
             {meta?.prefix && !isTextarea && (

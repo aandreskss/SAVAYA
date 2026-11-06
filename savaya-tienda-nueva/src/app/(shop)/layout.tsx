@@ -14,6 +14,7 @@ import { AnnouncementBar } from '@/domains/cms/blocks/AnnouncementBar'
 import { PopupBanner } from '@/domains/cms/blocks/PopupBanner'
 import { ToastContainer } from '@/shared/ui/Toast'
 import { ButterflyEffect } from '@/domains/layout/ButterflyEffect'
+import { WhatsAppButton } from '@/domains/layout/WhatsAppButton'
 import type { BlockContent } from '@/domains/cms/block-schemas'
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <ToastContainer />
       {activePopup && <PopupBanner {...activePopup} />}
       <ButterflyEffect />
+      <WhatsAppButton />
     </CartProvider>
   )
 }
