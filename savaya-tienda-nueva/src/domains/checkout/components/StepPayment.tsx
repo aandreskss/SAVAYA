@@ -108,7 +108,7 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
       // Get signed upload params from our API
       const sigRes = await fetch('/api/checkout/upload-signature')
       if (!sigRes.ok) throw new Error('No se pudo obtener la firma de upload.')
-      const { signature, timestamp, cloudName, apiKey, folder, publicId, allowedFormats, maxBytes } = await sigRes.json()
+      const { signature, timestamp, cloudName, apiKey, folder, publicId, allowedFormats } = await sigRes.json()
 
       // Upload directly to Cloudinary.
       // All signed params must be sent — Cloudinary recomputes the signature
@@ -120,7 +120,6 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
       formData.append('api_key', apiKey)
       formData.append('allowed_formats', allowedFormats)
       formData.append('folder', folder)
-      formData.append('max_bytes', String(maxBytes))
       formData.append('public_id', publicId)
       formData.append('type', 'private')
 

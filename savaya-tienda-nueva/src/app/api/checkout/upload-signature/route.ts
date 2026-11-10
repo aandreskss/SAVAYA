@@ -40,15 +40,16 @@ export async function GET() {
   const folder = 'savaya/private/payment-proofs'
   const publicId = `proof-${crypto.randomUUID()}`
 
-  // Restrict uploads to safe image/document formats and limit to 10 MB.
+  // Restrict uploads to safe image/document formats.
   // Params MUST be sorted alphabetically before signing.
+  // max_bytes is NOT a Cloudinary upload API param — Cloudinary ignores it and
+  // excludes it from its signature computation, causing an Invalid Signature error.
+  // File size is enforced client-side before this route is called.
   const allowedFormats = 'jpg,jpeg,pdf,png,webp'
-  const maxBytes = 10 * 1024 * 1024 // 10 MB
 
   const paramsToSign = [
     `allowed_formats=${allowedFormats}`,
     `folder=${folder}`,
-    `max_bytes=${maxBytes}`,
     `public_id=${publicId}`,
     `timestamp=${timestamp}`,
     `type=private`,
@@ -67,6 +68,5 @@ export async function GET() {
     folder,
     publicId,
     allowedFormats,
-    maxBytes,
   })
 }
