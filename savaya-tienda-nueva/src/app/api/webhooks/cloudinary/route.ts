@@ -51,14 +51,22 @@ export async function POST(request: NextRequest) {
     ? payload.resource_type
     : 'image'
 
-  // Extract affected public_ids — structure differs per notification type
+  // Extract affected public_ids — structure differs per notification type.
+  // For resource_deleted, Cloudinary sends `resources` as a plain object
+  // { public_id: resource_type } — NOT as an array.
   let publicIds: string[] = []
   if (notificationType === 'resource_deleted') {
-    const resources = Array.isArray(payload.resources) ? payload.resources : []
-    publicIds = resources
-      .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
-      .map((r) => (typeof r.public_id === 'string' ? r.public_id : ''))
-      .filter(Boolean)
+    const res = payload.resources
+    if (Array.isArray(res)) {
+      // Defensive: handle hypothetical array-of-objects format
+      publicIds = res
+        .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
+        .map((r) => (typeof r.public_id === 'string' ? r.public_id : ''))
+        .filter(Boolean)
+    } else if (res && typeof res === 'object') {
+      // Actual Cloudinary format: { "savaya/products/abc": "image", ... }
+      publicIds = Object.keys(res as Record<string, unknown>).filter(Boolean)
+    }
   } else if (typeof payload.public_id === 'string') {
     publicIds = [payload.public_id]
   }

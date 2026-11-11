@@ -868,17 +868,33 @@ export async function duplicateProduct(
 // Delete product media record + Cloudinary destroy
 // ---------------------------------------------------------------------------
 
-export async function deleteMediaRecord(mediaId: string): Promise<string | null> {
+export async function deleteMediaRecord(
+  mediaId: string,
+  actorId: string,
+  actorEmail: string,
+  ip: string,
+): Promise<string | null> {
   const rows = await db
-    .select({ cloudinaryPublicId: productMedia.cloudinaryPublicId })
+    .select({ cloudinaryPublicId: productMedia.cloudinaryPublicId, productId: productMedia.productId })
     .from(productMedia)
     .where(eq(productMedia.id, mediaId))
     .limit(1)
 
   if (!rows[0]) return null
-  const { cloudinaryPublicId } = rows[0]
+  const { cloudinaryPublicId, productId } = rows[0]
 
   await db.delete(productMedia).where(eq(productMedia.id, mediaId))
+
+  await db.insert(auditLog).values({
+    actorId,
+    actorEmail,
+    action: 'product.media_deleted',
+    resourceType: 'product',
+    resourceId: productId,
+    after: { mediaId, cloudinaryPublicId },
+    ip,
+  })
+
   return cloudinaryPublicId
 }
 

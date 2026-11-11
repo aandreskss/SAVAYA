@@ -282,7 +282,7 @@ export async function deleteProductMediaAction(mediaId: string): Promise<ActionR
   }
 
   try {
-    const cloudinaryPublicId = await deleteMediaRecord(mediaId)
+    const cloudinaryPublicId = await deleteMediaRecord(mediaId, actor.actorId, actor.actorEmail, actor.ip)
 
     // Attempt Cloudinary destroy (non-blocking — don't fail the action if this fails)
     if (cloudinaryPublicId) {
