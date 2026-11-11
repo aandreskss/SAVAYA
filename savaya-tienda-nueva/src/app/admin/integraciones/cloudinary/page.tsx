@@ -13,11 +13,13 @@ function formatDate(date: Date): string {
 
 function NotificationBadge({ type }: { type: string }) {
   const styles: Record<string, string> = {
+    delete:           'bg-error/15 text-error',
     resource_deleted: 'bg-error/15 text-error',
     upload:           'bg-success/15 text-success',
     eager:            'bg-blue-500/15 text-blue-400',
   }
   const labels: Record<string, string> = {
+    delete:           'Eliminado',
     resource_deleted: 'Eliminado',
     upload:           'Upload',
     eager:            'Transform',
@@ -39,7 +41,7 @@ export default async function CloudinaryNotificationsPage() {
     try { notifications = await listCloudinaryNotifications(200) } catch { /* migration pending */ }
   }
 
-  const deletions = notifications.filter((n) => n.notificationType === 'resource_deleted')
+  const deletions = notifications.filter((n) => n.notificationType === 'delete' || n.notificationType === 'resource_deleted')
   const total = notifications.length
 
   return (
@@ -123,7 +125,7 @@ export default async function CloudinaryNotificationsPage() {
                   {notifications.map((n) => (
                     <tr
                       key={n.id}
-                      className={n.notificationType === 'resource_deleted' ? 'bg-error/5' : ''}
+                      className={n.notificationType === 'delete' || n.notificationType === 'resource_deleted' ? 'bg-error/5' : ''}
                     >
                       <td className="px-6 py-3 text-text-secondary font-mono text-xs whitespace-nowrap">
                         {formatDate(n.receivedAt)}

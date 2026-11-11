@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   // For resource_deleted, Cloudinary sends `resources` as a plain object
   // { public_id: resource_type } — NOT as an array.
   let publicIds: string[] = []
-  if (notificationType === 'resource_deleted') {
+  if (notificationType === 'delete' || notificationType === 'resource_deleted') {
     const res = payload.resources
     if (Array.isArray(res)) {
       // Defensive: handle hypothetical array-of-objects format

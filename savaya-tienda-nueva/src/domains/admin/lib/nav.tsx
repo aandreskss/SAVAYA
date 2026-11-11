@@ -128,6 +128,16 @@ function GearIcon() {
   )
 }
 
+function ClipboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M5 2H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1h-2" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M6 2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1H6V2Z" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5 8h8M5 11h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function IntegrationsIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -172,5 +182,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Analytics',     href: '/admin/analytics',    icon: <BarChartIcon />,   permission: 'analytics:read' },
   { label: 'Usuarios',      href: '/admin/usuarios',     icon: <ShieldIcon />,     permission: 'users:read' },
   { label: 'Integraciones', href: '/admin/integraciones', icon: <IntegrationsIcon />, permission: 'integrations:manage' },
+  { label: 'Audit Log',     href: '/admin/audit-log',     icon: <ClipboardIcon />,   permission: 'exchange_rates:override' },
   { label: 'Configuración', href: '/admin/configuracion',icon: <GearIcon />,       permission: 'settings:read' },
 ]
