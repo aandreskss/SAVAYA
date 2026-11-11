@@ -80,10 +80,6 @@ export default async function AuditLogPage({
             id="action-filter"
             name="action"
             defaultValue={filterAction ?? ''}
-            onChange={(e) => {
-              // handled via form submit button
-              void e
-            }}
             className="bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-gold/50"
           >
             <option value="">Todas las acciones</option>
