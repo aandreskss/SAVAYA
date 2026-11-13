@@ -1,5 +1,6 @@
 import { SalesReportWidget } from '@/domains/admin/analytics/SalesReportWidget'
 import { getTrafficSummary } from '@/domains/analytics/repository'
+import { GoogleAnalyticsPanel } from '@/domains/admin/analytics/GoogleAnalyticsPanel'
 
 const COUNTRY_NAMES: Record<string, string> = {
   VE: 'Venezuela', US: 'Estados Unidos', CO: 'Colombia', MX: 'México',
@@ -85,7 +86,7 @@ function HorizontalBars({ data, total }: { data: Array<{ label: string; value: n
 export default async function AnalyticsAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ days?: string }>
+  searchParams: Promise<{ days?: string; from?: string; to?: string }>
 }) {
   const params = await searchParams
   const rawDays = parseInt(params.days ?? '30', 10)
@@ -205,6 +206,7 @@ export default async function AnalyticsAdminPage({
       </div>
 
       {/* Sales report */}
+      <GoogleAnalyticsPanel from={params.from} to={params.to} />
       <SalesReportWidget />
 
       {/* External integrations */}
