@@ -1,6 +1,7 @@
 import { SalesReportWidget } from '@/domains/admin/analytics/SalesReportWidget'
 import { getTrafficSummary } from '@/domains/analytics/repository'
 import { GoogleAnalyticsPanel } from '@/domains/admin/analytics/GoogleAnalyticsPanel'
+import { requireAdminPermission } from '@/domains/admin/lib/require-permission'
 
 const COUNTRY_NAMES: Record<string, string> = {
   VE: 'Venezuela', US: 'Estados Unidos', CO: 'Colombia', MX: 'México',
@@ -88,6 +89,7 @@ export default async function AnalyticsAdminPage({
 }: {
   searchParams: Promise<{ days?: string; from?: string; to?: string }>
 }) {
+  await requireAdminPermission('analytics:read')
   const params = await searchParams
   const rawDays = parseInt(params.days ?? '30', 10)
   const validDays = [7, 30, 90].includes(rawDays) ? rawDays : 30
@@ -110,19 +112,28 @@ export default async function AnalyticsAdminPage({
   const referrerTotal = data.topReferrers.reduce((s, r) => s + r.views, 0)
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl">
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-display text-3xl uppercase tracking-wide mb-1">Analytics</h1>
-          <p className="text-text-secondary text-sm">Tráfico de la tienda · zona horaria Venezuela</p>
+          <p className="text-[10px] text-accent-gold uppercase tracking-[0.25em] mb-2">Savaya · Vista del negocio</p>
+          <h1 className="font-display text-3xl sm:text-4xl tracking-tight mb-2">Analytics</h1>
+          <p className="text-text-secondary text-sm">Conoce tu audiencia. Entiende qué impulsa tus ventas.</p>
         </div>
+      </div>
+
+      <GoogleAnalyticsPanel from={params.from} to={params.to} />
+
+      <details className="rounded-2xl border border-border bg-surface p-4 sm:p-6 mb-6">
+        <summary className="cursor-pointer text-sm font-semibold">Tráfico registrado por Savaya <span className="text-xs text-text-secondary font-normal">· medición interna</span></summary>
+        <div className="flex flex-wrap items-center justify-between gap-4 my-5">
+          <p className="text-xs text-text-secondary">Período independiente del informe de Google · Venezuela</p>
         <div className="flex gap-1 bg-surface-2 rounded-lg p-1">
           {[7, 30, 90].map((d) => (
             <a
               key={d}
-              href={`?days=${d}`}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              href={`?${new URLSearchParams({ days: String(d), ...(params.from ? { from: params.from } : {}), ...(params.to ? { to: params.to } : {}) })}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all motion-safe:active:scale-95 ${
                 validDays === d
                   ? 'bg-surface text-text-primary shadow-sm border border-border'
                   : 'text-text-secondary hover:text-text-primary'
@@ -205,8 +216,9 @@ export default async function AnalyticsAdminPage({
         </div>
       </div>
 
-      {/* Sales report */}
-      <GoogleAnalyticsPanel from={params.from} to={params.to} />
+      </details>
+
+      {/* Existing internal sales report, independent from GA4. */}
       <SalesReportWidget />
 
       {/* External integrations */}

@@ -1,27 +1,31 @@
+import { JWT } from 'google-auth-library'
+
 // Imported only by server-side reporting modules. Never expose credentials to clients.
 export class GoogleReportError extends Error {
   constructor(message: string, public status = 503) { super(message) }
 }
 
 export function googleConfigured(): boolean {
-  return /^\d+$/.test(process.env.GA4_PROPERTY_ID ?? '') && !!process.env.GOOGLE_REPORTS_CLIENT_ID &&
-    !!process.env.GOOGLE_REPORTS_CLIENT_SECRET && !!process.env.GOOGLE_REPORTS_REFRESH_TOKEN
+  return /^\d+$/.test(process.env.GA4_PROPERTY_ID ?? '') &&
+    !!process.env.GA4_SERVICE_ACCOUNT_EMAIL?.trim() && !!process.env.GA4_SERVICE_ACCOUNT_PRIVATE_KEY?.trim()
 }
 
 export async function googleAccessToken(): Promise<string> {
   if (!googleConfigured()) throw new GoogleReportError('La conexión de informes de Google todavía no está configurada.')
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(10_000),
-    body: new URLSearchParams({
-      client_id: process.env.GOOGLE_REPORTS_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_REPORTS_CLIENT_SECRET!,
-      refresh_token: process.env.GOOGLE_REPORTS_REFRESH_TOKEN!, grant_type: 'refresh_token',
-    }),
-  })
-  if (!response.ok) throw new GoogleReportError('No se pudo autorizar Google. Revisa la conexión de la cuenta de informes.')
-  const data = await response.json()
-  if (typeof data.access_token !== 'string') throw new GoogleReportError('Google no devolvió una autorización válida.')
-  return data.access_token
+  try {
+    const client = new JWT({
+      email: process.env.GA4_SERVICE_ACCOUNT_EMAIL!.trim(),
+      key: process.env.GA4_SERVICE_ACCOUNT_PRIVATE_KEY!.trim().replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+      transporterOptions: { timeout: 10_000, retry: false },
+    })
+    const { token } = await client.getAccessToken()
+    if (!token) throw new Error('Missing access token')
+    return token
+  } catch {
+    // Library errors may contain the signed assertion; never log or return them.
+    throw new GoogleReportError('No se pudo autorizar Google. Revisa el correo y la clave privada de la cuenta de servicio.')
+  }
 }
 
 export async function googlePost<T>(url: string, token: string, body: unknown): Promise<T> {

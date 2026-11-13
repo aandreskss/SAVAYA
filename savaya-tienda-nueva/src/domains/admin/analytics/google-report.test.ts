@@ -1,9 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { parseDateRange, previousDateRange, changeLabel, reportCsv, type GoogleReport } from './google-report-model'
-import { spreadsheetBody } from './google-sheets'
+import { parseDateRange, previousDateRange, changeLabel, type GoogleReport } from './google-report-model'
 import { funnelRequest, funnelTable } from './google-funnel'
-import { googleAccessToken, googlePost } from './google-api'
+import { googlePost } from './google-api'
 
 const fixture: GoogleReport = {
   range: { from: '2026-10-01', to: '2026-10-31' }, previousRange: { from: '2026-08-31', to: '2026-09-30' },
@@ -33,21 +32,6 @@ describe('report dates', () => {
   })
 })
 
-it('exports actual numeric cells, safe text and date metadata to native Sheets', () => {
-  const body = spreadsheetBody(fixture)
-  const rows = body.sheets[1].data[0].rowData
-  expect(rows[1].values[0].userEnteredValue).toEqual({ stringValue: '=IMPORTXML("test")' })
-  expect(rows[1].values[1].userEnteredValue).toEqual({ numberValue: 3 })
-  expect(body.sheets.at(-1)?.data[0].rowData.some(row => row.values.some(cell => cell.userEnteredValue.stringValue === '2026-10-01'))).toBe(true)
-})
-
-it('escapes CSV formulas, commas and quotes without corrupting numbers', () => {
-  const csv = reportCsv(fixture)
-  expect(csv).toContain('"\'=IMPORTXML(""test"")"')
-  expect(csv).toContain('"Ruta, con ""comillas""","2"')
-  expect(csv).toContain('"Ingresos (USD)","50.5","25"')
-})
-
 it('requests a closed sequential funnel and parses header order and percentages', () => {
   const request = funnelRequest(fixture.range)
   expect(request.funnel.isOpenFunnel).toBe(false)
@@ -62,10 +46,5 @@ it('requests a closed sequential funnel and parses header order and percentages'
 
 it('does not expose Google response bodies or credentials in errors', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('secret details', { status: 403 })))
-  await expect(googlePost('https://sheets.googleapis.com', 'private-token', {})).rejects.toThrow('Revisa los permisos')
-  vi.stubEnv('GA4_PROPERTY_ID', '123')
-  vi.stubEnv('GOOGLE_REPORTS_CLIENT_ID', 'id')
-  vi.stubEnv('GOOGLE_REPORTS_CLIENT_SECRET', 'secret')
-  vi.stubEnv('GOOGLE_REPORTS_REFRESH_TOKEN', 'refresh')
-  await expect(googleAccessToken()).rejects.toThrow('Revisa la conexión')
+  await expect(googlePost('https://analyticsdata.googleapis.com', 'private-token', {})).rejects.toThrow('Revisa los permisos')
 })

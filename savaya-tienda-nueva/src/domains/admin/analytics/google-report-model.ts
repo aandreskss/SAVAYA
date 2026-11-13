@@ -44,30 +44,3 @@ export function changeLabel(current: number, previous: number): string {
   const change = (current - previous) / previous * 100
   return `${change > 0 ? '+' : ''}${change.toFixed(1)}% vs. período anterior`
 }
-
-export function reportTables(report: GoogleReport): ReportTable[] {
-  return [
-    { title: 'Resumen', headers: ['Métrica', 'Actual', 'Anterior'], rows: SUMMARY_LABELS.map((label, i) => [label, report.summary[i] ?? 0, report.previous[i] ?? 0]) },
-    ...report.tables,
-    { title: 'Información', headers: ['Campo', 'Valor'], rows: [
-      ['Desde', report.range.from], ['Hasta', report.range.to],
-      ['Anterior desde', report.previousRange.from], ['Anterior hasta', report.previousRange.to],
-      ['Zona horaria GA4', report.timeZone], ['Moneda', 'USD'], ['Consultado', report.generatedAt],
-      ['Alcance', 'Desgloses: hasta 50 filas principales. Etapas: eventos independientes, no embudo secuencial.'],
-      ['Embudo', 'Cerrado: visita → producto → carrito → checkout → compra. Usuarios en orden dentro del período, con eventos intermedios y distintas sesiones.'],
-      ...report.warnings.map((warning): (string | number)[] => ['Aviso', warning]),
-    ] },
-  ]
-}
-
-export function reportCsv(report: GoogleReport): string {
-  const cell = (value: string | number) => {
-    let text = String(value)
-    // Traffic dimensions are user controlled; prevent spreadsheet formula injection.
-    if (typeof value === 'string' && /^[\s]*[=+@\-]/.test(text)) text = `'${text}`
-    return `"${text.replace(/"/g, '""')}"`
-  }
-  return '\uFEFF' + reportTables(report).map(table => [
-    [table.title], table.headers, ...table.rows,
-  ].map(row => row.map(cell).join(',')).join('\r\n')).join('\r\n\r\n')
-}

@@ -83,7 +83,7 @@ async function loadReport(property: string, range: DateRange): Promise<GoogleRep
   }
 }
 
-const cachedReport = unstable_cache(loadReport, ['ga4-admin-report-v2'], { revalidate: 300 })
+const cachedReport = unstable_cache(loadReport, ['ga4-admin-service-account-v3'], { revalidate: 300 })
 
 export async function getGoogleReport(range: DateRange): Promise<GoogleReport> {
   if (!googleConfigured()) throw new GoogleReportError('La conexión de informes de Google todavía no está configurada.')
