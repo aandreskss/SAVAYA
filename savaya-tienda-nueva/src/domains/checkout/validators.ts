@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { GoogleContextSchema } from '@/domains/analytics/google-context'
 
 // ── Step 1: Personal data ─────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ export const CreateOrderSchema = z.object({
   exchangeRate: z.number().positive(),
   idempotencyKey: z.string().uuid(),
   couponCode: z.string().max(50).optional(),
+  googleAnalytics: GoogleContextSchema.optional().catch(undefined),
 })
 
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>

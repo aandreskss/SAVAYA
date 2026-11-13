@@ -16,6 +16,7 @@ import { getLatestRate } from '@/domains/exchange-rates/repository'
 import { sendOrderConfirmation } from '@/domains/notifications/service'
 import type { CreateOrderServiceInput } from './validators'
 import type { OrderResult } from './types'
+import { googlePurchaseEvents } from '@/domains/analytics/schema'
 
 // ── Order number generation ───────────────────────────────────────────────────
 // Uses a PostgreSQL sequence (savaya_order_seq) to guarantee uniqueness under
@@ -355,6 +356,16 @@ export async function createOrder(
       .returning({ id: orders.id })
 
     const orderId = newOrder.id
+
+    // Persist before returning success: retries and later payment approval use the
+    // buyer's Google session, never the administrator's browser or personal data.
+    const canMeasureGoogle = !!input.googleAnalytics && process.env.VERCEL_ENV === 'production'
+    await db.insert(googlePurchaseEvents).values({
+      orderId,
+      context: input.googleAnalytics ?? null,
+      state: canMeasureGoogle ? 'pending' : 'skipped',
+      lastError: canMeasureGoogle ? null : input.googleAnalytics ? 'non_production_checkout' : 'missing_google_context',
+    })
 
     // ── 9. Insert order items ─────────────────────────────────────────────
     const productIds = [...new Set(variantRows.map((v) => v.productId))]

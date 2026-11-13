@@ -4,9 +4,26 @@ import {
   timestamp,
   uuid,
   index,
+  jsonb,
+  integer,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { orders } from '@/domains/orders/schema'
+import type { GoogleContext } from './google-context'
+
+// Created only for new checkouts. Older purchases must never be replayed to GA4.
+export const googlePurchaseEvents = pgTable('google_purchase_events', {
+  orderId: uuid('order_id').primaryKey().references(() => orders.id, { onDelete: 'cascade' }),
+  context: jsonb('context').$type<GoogleContext>(),
+  state: text('state').notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }),
+  leaseUntil: timestamp('lease_until', { withTimezone: true }),
+  nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('google_purchase_events_retry_idx').on(t.state, t.nextAttemptAt)])
 
 // ---------------------------------------------------------------------------
 // Tables

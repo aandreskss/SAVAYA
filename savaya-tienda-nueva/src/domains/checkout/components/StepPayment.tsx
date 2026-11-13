@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useCheckoutStore } from '../checkout-store'
 import { useCartStore } from '@/domains/cart/cart-store'
 import { trackAddPaymentInfo } from '@/domains/analytics/service'
+import { getGoogleContext } from '@/domains/analytics/google-context-client'
 import { PaymentDataSchema } from '../validators'
 import { submitOrder } from '../actions'
 import type { PaymentMethodOption, PartialPaymentType, PaymentData } from '../types'
@@ -197,6 +198,7 @@ export function StepPayment({ paymentMethods, partialPaymentOptions, totalUsd, e
       exchangeRate,
       idempotencyKey,
       couponCode: appliedCoupon?.code,
+      googleAnalytics: await getGoogleContext(),
     })
 
     setSubmitting(false)

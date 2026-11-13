@@ -7,6 +7,8 @@ import { isValidTransition, getTransitionErrorMessage, TERMINAL_STATES, canRever
 import type { OrderStatus } from '@/domains/orders/state-machine'
 import { inventory, inventoryMovements } from '@/domains/inventory/schema'
 import { sendPaymentApproved, sendPaymentRejected } from '@/domains/notifications/service'
+import { after } from 'next/server'
+import { deliverGooglePurchase } from '@/domains/analytics/google-purchase'
 
 type ActorContext = {
   actorId: string
@@ -64,6 +66,10 @@ export async function transitionOrderStatus(
     after: { status: toStatus, reason: reason ?? null },
     ip: actor.ip,
   })
+
+  if (toStatus === 'paid') {
+    after(() => deliverGooglePurchase(orderId).then(() => {}))
+  }
 
   // On terminal states, settle the inventory reservation.
   // delivered → deduct stock permanently (sale).
@@ -174,6 +180,8 @@ export async function approvePayment(
     after: { proofStatus: 'approved', orderStatus: 'paid' },
     ip: actor.ip,
   })
+
+  after(() => deliverGooglePurchase(orderId).then(() => {}))
 
   // Fire-and-forget: email notification + Meta CAPI Purchase
   rawQuery<{ order_number: string; total_usd: string; total_bs: string; customer_id: string; first_name: string; last_name: string; email: string }>(

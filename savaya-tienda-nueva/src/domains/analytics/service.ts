@@ -114,15 +114,10 @@ export function trackAddPaymentInfo(items: AnalyticsItem[], value: number, payme
   fbq('track', 'AddPaymentInfo', { value, currency: 'USD' })
 }
 
-// purchase is fired server-side via /api/analytics/purchase when order reaches PAID status
-// The client-side function below is only used as a fallback if CAPI is unavailable
+// Google purchase is sent exclusively by google-purchase.ts after payment approval.
+// Preserve the existing Meta browser event at checkout, independently of Google.
 export function trackPurchaseClient(orderNumber: string, items: AnalyticsItem[], value: number) {
-  gtag('event', 'purchase', {
-    transaction_id: orderNumber,
-    items,
-    value,
-    currency: 'USD',
-  })
+  void orderNumber
   fbq('track', 'Purchase', {
     value,
     currency: 'USD',
