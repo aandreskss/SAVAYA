@@ -808,3 +808,14 @@ No se necesita migración — el detalle queda en `order_status_history.reason`.
 - **Regla crítica — GTM requiere configuración del dashboard**: el código pushea eventos al `dataLayer`, pero para que Google Ads o GA4 los reciban hay que crear en el dashboard de GTM un **Trigger** de tipo *Custom Event* (con el nombre exacto del evento GA4) y un **Tag** asociado. Sin eso GTM recibe los eventos pero no los reenvía.
 - **No agregar más scripts de analytics directamente** al layout o al shop layout sin pasar por `AnalyticsService` — toda integración nueva debe agregarse ahí para mantener un único punto de control.
 - **`AnalyticsProvider`** en el shop layout carga GA4 directo (`gtag/js?id=...`) si `NEXT_PUBLIC_GA4_ID` está configurado. Si GTM también tiene un tag GA4 interno, habrá doble conteo — evitar tener ambos activos para el mismo stream.
+
+### 8.50 Guía de tallas — editable desde admin
+
+- **Datos en DB**: dos claves en `application_settings` — `size_guide_enabled` (`"true"`/`"false"`) y `size_guide_rows` (JSON de `SizeGuideRow[]`).
+- **Tipos**: `SizeGuideRow { ve, eu, cm }` y `SizeGuideConfig { enabled, rows }` en `src/domains/admin/settings/types.ts`.
+- **`getSizeGuideConfig()`** en `src/domains/admin/settings/repository.ts`: trae ambas claves en una sola query (`inArray`). Si no existen en DB, retorna defaults `enabled=true` + 7 filas (35–41). Fallback en `GenericProductPage` via `.catch(() => FALLBACK_SIZE_GUIDE)`.
+- **`updateSizeGuideAction(enabled, rows)`** en `src/domains/admin/settings/actions.ts`: valida con Zod (`min(1)/max(50)` filas), requiere `settings:write`, persiste con `upsertSetting` para ambas claves.
+- **Admin**: `SizeGuideEditor.tsx` en Configuración — toggle activo/inactivo + tabla editable (inputs por celda) + agregar/eliminar filas + botón "Guardar cambios" (habilitado solo cuando hay cambios pendientes).
+- **Catch-all en `SettingsManager`**: las claves `size_guide_enabled` y `size_guide_rows` están en la lista de known keys para que no aparezcan en la sección "Otros".
+- **Cadena de props storefront**: `GenericProductPage` (server) → `ProductClientShell` → `ProductInfo`. El botón "Guía de tallas →" y el `<Modal>` solo se renderizan cuando `sizeGuide.enabled === true`.
+- **`DEFAULT_SIZE_GUIDE_ROWS`** exportado desde el repository — úsalo como fallback en cualquier lugar que necesite datos por defecto sin ir a DB.
