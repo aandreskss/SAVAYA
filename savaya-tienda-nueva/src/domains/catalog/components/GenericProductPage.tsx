@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { getProductBySlug, getRelatedProducts } from '@/domains/catalog/repository'
 import { getDisplayRate } from '@/domains/exchange-rates/service'
+import { getSizeGuideConfig, DEFAULT_SIZE_GUIDE_ROWS } from '@/domains/admin/settings/repository'
 import { ProductClientShell } from './ProductClientShell'
 import { RecentlyViewed } from './RecentlyViewed'
 import { RecentlyViewedTracker } from './RecentlyViewedTracker'
@@ -8,6 +9,9 @@ import { ProductCard, Breadcrumb } from '@/shared/ui'
 import { addToCart } from '@/domains/cart/actions'
 import { getWishlistIds } from '@/domains/customers/wishlist-actions'
 import { productHref } from '@/shared/lib/product-href'
+import type { SizeGuideConfig } from '@/domains/admin/settings/types'
+
+const FALLBACK_SIZE_GUIDE: SizeGuideConfig = { enabled: true, rows: DEFAULT_SIZE_GUIDE_ROWS }
 
 type Props = {
   slug: string
@@ -18,10 +22,11 @@ type Props = {
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
 
 export async function GenericProductPage({ slug, genderContext }: Props) {
-  const [product, exchangeRate, wishlistVariantIds] = await Promise.all([
+  const [product, exchangeRate, wishlistVariantIds, sizeGuide] = await Promise.all([
     getProductBySlug(slug),
     getDisplayRate(),
     getWishlistIds(),
+    getSizeGuideConfig().catch(() => FALLBACK_SIZE_GUIDE),
   ])
 
   if (!product) notFound()
@@ -134,6 +139,7 @@ export async function GenericProductPage({ slug, genderContext }: Props) {
           exchangeRate={exchangeRate}
           onAddToCart={addToCart}
           wishlistVariantIds={wishlistVariantIds}
+          sizeGuide={sizeGuide}
         />
 
         {relatedProducts.length > 0 && (

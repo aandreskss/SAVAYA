@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/shared/ui'
 import { toast } from '@/shared/ui/Toast'
 import { updateSettingAction } from '../actions'
-import type { AdminSetting } from '../types'
+import { SizeGuideEditor } from './SizeGuideEditor'
+import type { AdminSetting, SizeGuideConfig } from '../types'
 
 // ---------------------------------------------------------------------------
 // Static metadata per setting key
@@ -497,9 +498,10 @@ function SettingRow({
 type Props = {
   initialSettings: AdminSetting[]
   canEdit: boolean
+  initialSizeGuide: SizeGuideConfig
 }
 
-export function SettingsManager({ initialSettings, canEdit }: Props) {
+export function SettingsManager({ initialSettings, canEdit, initialSizeGuide }: Props) {
   const [settings, setSettings] = useState(initialSettings)
 
   function handleSaved(key: string, value: string) {
@@ -561,7 +563,11 @@ export function SettingsManager({ initialSettings, canEdit }: Props) {
 
         {/* Catch-all for unknown keys */}
         {(() => {
-          const known = new Set(GROUPS.flatMap((g) => g.keys))
+          const known = new Set([
+            ...GROUPS.flatMap((g) => g.keys),
+            'size_guide_enabled',
+            'size_guide_rows',
+          ])
           const rest = settings.filter((s) => !known.has(s.key))
           if (rest.length === 0) return null
           return (
@@ -577,6 +583,8 @@ export function SettingsManager({ initialSettings, canEdit }: Props) {
             </div>
           )
         })()}
+
+        <SizeGuideEditor initialConfig={initialSizeGuide} canEdit={canEdit} />
       </div>
     </div>
   )

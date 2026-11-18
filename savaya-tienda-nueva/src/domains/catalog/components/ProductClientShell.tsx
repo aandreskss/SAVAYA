@@ -8,6 +8,7 @@ import { trackViewItem, trackAddToWishlist } from '@/domains/analytics/service'
 import type { ProductDetail } from '@/domains/catalog/repository'
 import type { ExchangeRate } from '@/domains/exchange-rates/utils'
 import type { ActionResult } from '@/shared/lib/types'
+import type { SizeGuideConfig } from '@/domains/admin/settings/types'
 
 // ---------------------------------------------------------------------------
 // ProductClientShell
@@ -19,6 +20,7 @@ export type ProductClientShellProps = {
   exchangeRate: ExchangeRate
   onAddToCart: (variantId: string, quantity: number) => Promise<ActionResult<unknown>>
   wishlistVariantIds: string[]
+  sizeGuide: SizeGuideConfig
 }
 
 export function ProductClientShell({
@@ -26,6 +28,7 @@ export function ProductClientShell({
   exchangeRate,
   onAddToCart,
   wishlistVariantIds,
+  sizeGuide,
 }: ProductClientShellProps) {
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined)
   const [selectedColorId, setSelectedColorId] = useState<string | undefined>(
@@ -97,6 +100,7 @@ export function ProductClientShell({
         product={product}
         selectedVariantId={selectedVariantId}
         exchangeRate={exchangeRate}
+        sizeGuide={sizeGuide}
         onVariantChange={(variantId) => {
           setSelectedVariantId(variantId)
           const color = product.variants.find((v) => v.id === variantId)?.color.id

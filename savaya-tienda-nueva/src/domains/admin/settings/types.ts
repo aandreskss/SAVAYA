@@ -8,3 +8,14 @@ export type AdminSetting = {
 export type ActionResult<T = undefined> =
   | { success: true; data: T }
   | { success: false; error: string }
+
+export type SizeGuideRow = {
+  ve: string
+  eu: string
+  cm: string
+}
+
+export type SizeGuideConfig = {
+  enabled: boolean
+  rows: SizeGuideRow[]
+}

@@ -17,6 +17,7 @@ import { LiveViewers } from './LiveViewers'
 import { convertToVes, formatVes, type ExchangeRate } from '@/domains/exchange-rates/utils'
 import type { ProductDetail } from '@/domains/catalog/repository'
 import type { ActionResult } from '@/shared/lib/types'
+import type { SizeGuideConfig } from '@/domains/admin/settings/types'
 import { cn } from '@/shared/lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,7 @@ export type ProductInfoProps = {
   product: ProductDetail
   selectedVariantId: string | undefined
   exchangeRate: ExchangeRate
+  sizeGuide: SizeGuideConfig
   onVariantChange: (variantId: string) => void
   onColorChange: (colorId: string) => void
   onAddToCart: (variantId: string, quantity: number) => Promise<ActionResult<unknown>>
@@ -35,10 +37,10 @@ export type ProductInfoProps = {
 }
 
 // ---------------------------------------------------------------------------
-// Size guide content (static placeholder)
+// Size guide content — renders rows from DB config
 // ---------------------------------------------------------------------------
 
-function SizeGuideContent() {
+function SizeGuideContent({ rows }: { rows: SizeGuideConfig['rows'] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm font-sans border-collapse">
@@ -50,16 +52,8 @@ function SizeGuideContent() {
           </tr>
         </thead>
         <tbody className="text-text-secondary">
-          {[
-            { ve: '35', eu: '35', cm: '22.5' },
-            { ve: '36', eu: '36', cm: '23.0' },
-            { ve: '37', eu: '37', cm: '23.5' },
-            { ve: '38', eu: '38', cm: '24.0' },
-            { ve: '39', eu: '39', cm: '24.5' },
-            { ve: '40', eu: '40', cm: '25.0' },
-            { ve: '41', eu: '41', cm: '25.5' },
-          ].map((row) => (
-            <tr key={row.ve} className="border-b border-border/50 last:border-0">
+          {rows.map((row, i) => (
+            <tr key={i} className="border-b border-border/50 last:border-0">
               <td className="py-2 pr-4">{row.ve}</td>
               <td className="py-2 pr-4">{row.eu}</td>
               <td className="py-2 pr-4">{row.cm}</td>
@@ -174,6 +168,7 @@ export function ProductInfo({
   product,
   selectedVariantId,
   exchangeRate,
+  sizeGuide,
   onVariantChange,
   onColorChange,
   onAddToCart,
@@ -299,18 +294,20 @@ export function ProductInfo({
           onColorChange={onColorChange}
         />
 
-        {/* Size guide link */}
-        <button
-          type="button"
-          onClick={() => setIsSizeGuideOpen(true)}
-          className={cn(
-            'self-start font-sans text-xs text-text-secondary underline underline-offset-2',
-            'hover:text-text-primary transition-colors duration-150',
-            'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded',
-          )}
-        >
-          Guía de tallas →
-        </button>
+        {/* Size guide link — only when enabled from admin */}
+        {sizeGuide.enabled && (
+          <button
+            type="button"
+            onClick={() => setIsSizeGuideOpen(true)}
+            className={cn(
+              'self-start font-sans text-xs text-text-secondary underline underline-offset-2',
+              'hover:text-text-primary transition-colors duration-150',
+              'focus-visible:outline-2 focus-visible:outline-accent-gold focus-visible:outline-offset-2 rounded',
+            )}
+          >
+            Guía de tallas →
+          </button>
+        )}
 
         {/* Quantity + CTA */}
         <div className="flex flex-col gap-4">
@@ -414,14 +411,16 @@ export function ProductInfo({
       </div>
 
       {/* Size guide modal */}
-      <Modal
-        isOpen={isSizeGuideOpen}
-        onClose={() => setIsSizeGuideOpen(false)}
-        title="Guía de tallas"
-        size="md"
-      >
-        <SizeGuideContent />
-      </Modal>
+      {sizeGuide.enabled && (
+        <Modal
+          isOpen={isSizeGuideOpen}
+          onClose={() => setIsSizeGuideOpen(false)}
+          title="Guía de tallas"
+          size="md"
+        >
+          <SizeGuideContent rows={sizeGuide.rows} />
+        </Modal>
+      )}
     </>
   )
 }

@@ -1,13 +1,17 @@
 import { Suspense } from 'react'
 import { auth } from '@/domains/auth/auth'
-import { listSettings } from '@/domains/admin/settings/repository'
+import { listSettings, getSizeGuideConfig } from '@/domains/admin/settings/repository'
 import { SettingsManager } from '@/domains/admin/settings/components/SettingsManager'
 
 async function ConfiguracionContent() {
-  const [settings, session] = await Promise.all([listSettings(), auth()])
+  const [settings, session, sizeGuide] = await Promise.all([
+    listSettings(),
+    auth(),
+    getSizeGuideConfig(),
+  ])
   const permissions = (session?.user?.permissions ?? []) as string[]
   const canEdit = permissions.includes('settings:write')
-  return <SettingsManager initialSettings={settings} canEdit={canEdit} />
+  return <SettingsManager initialSettings={settings} canEdit={canEdit} initialSizeGuide={sizeGuide} />
 }
 
 export default function ConfiguracionAdminPage() {
