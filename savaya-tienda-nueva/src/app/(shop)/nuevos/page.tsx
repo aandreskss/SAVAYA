@@ -11,6 +11,7 @@ import { FilterBottomSheet } from '@/domains/catalog/components/FilterBottomShee
 import { SortSelect } from '@/domains/catalog/components/SortSelect'
 import { ActiveFilterChips } from '@/domains/catalog/components/ActiveFilterChips'
 import { PLPPagination } from '@/domains/catalog/components/PLPPagination'
+import { SITE_URL } from '@/shared/lib/site'
 
 const LIMIT = 24
 
@@ -27,7 +28,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     title: 'Nuevos — SAVAYA',
     description: 'Descubre los últimos lanzamientos de SAVAYA, calzado de autor venezolano',
     alternates: {
-      canonical: 'https://www.savayavzla.com/nuevos',
+      canonical: `${SITE_URL}/nuevos`,
     },
     ...(noindex && { robots: { index: false, follow: true } }),
   }

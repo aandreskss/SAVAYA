@@ -10,6 +10,7 @@ import { addToCart } from '@/domains/cart/actions'
 import { getWishlistIds } from '@/domains/customers/wishlist-actions'
 import { productHref } from '@/shared/lib/product-href'
 import type { SizeGuideConfig } from '@/domains/admin/settings/types'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 const FALLBACK_SIZE_GUIDE: SizeGuideConfig = { enabled: true, rows: DEFAULT_SIZE_GUIDE_ROWS }
 
@@ -18,8 +19,6 @@ type Props = {
   // 'unisex' for /producto/[slug], gender slug for /mujer/producto/, /hombre/producto/, etc.
   genderContext: string
 }
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
 
 export async function GenericProductPage({ slug, genderContext }: Props) {
   const [product, exchangeRate, wishlistVariantIds, sizeGuide] = await Promise.all([

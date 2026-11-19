@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { headers } from 'next/headers'
 import Script from 'next/script'
 import './globals.css'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,9 +19,6 @@ const archivo = Archivo({
   variable: '--font-archivo',
   display: 'swap',
 })
-
-const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
-const BASE_URL = rawBaseUrl.startsWith('http') ? rawBaseUrl : `https://${rawBaseUrl}`
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

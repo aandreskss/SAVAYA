@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { WholesaleForm } from '@/domains/wholesale/components/WholesaleForm'
-
-const BASE_URL = 'https://www.savayavzla.com'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 export const metadata: Metadata = {
   title: 'Ventas al mayor | SAVAYA',

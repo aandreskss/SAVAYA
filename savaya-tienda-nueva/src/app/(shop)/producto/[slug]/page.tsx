@@ -2,10 +2,9 @@ import { getProductBySlug } from '@/domains/catalog/repository'
 import { productHref } from '@/shared/lib/product-href'
 import { GenericProductPage } from '@/domains/catalog/components/GenericProductPage'
 import type { Metadata } from 'next'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 type Props = { params: Promise<{ slug: string }> }
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
 
 export const revalidate = 300
 

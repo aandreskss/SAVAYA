@@ -1,6 +1,5 @@
 import type { MetadataRoute } from 'next'
-
-const BASE_URL = 'https://www.savayavzla.com'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 // Static pages — always indexed, no DB needed
 const STATIC_PAGES: Array<{ url: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'] }> = [

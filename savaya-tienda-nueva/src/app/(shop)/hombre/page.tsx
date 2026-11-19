@@ -14,6 +14,7 @@ import { FilterBottomSheet } from '@/domains/catalog/components/FilterBottomShee
 import { SortSelect } from '@/domains/catalog/components/SortSelect'
 import { ActiveFilterChips } from '@/domains/catalog/components/ActiveFilterChips'
 import { PLPPagination } from '@/domains/catalog/components/PLPPagination'
+import { SITE_URL } from '@/shared/lib/site'
 
 const LIMIT = 24
 
@@ -31,7 +32,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     description:
       'Colección de calzado masculino SVY FOR MEN: sneakers, loafers, botas y más',
     alternates: {
-      canonical: 'https://www.savayavzla.com/hombre',
+      canonical: `${SITE_URL}/hombre`,
     },
     ...(noindex && { robots: { index: false, follow: true } }),
   }

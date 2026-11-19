@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-
-const BASE_URL = 'https://www.savayavzla.com'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 export const metadata: Metadata = {
   title: 'Términos y condiciones | SAVAYA',

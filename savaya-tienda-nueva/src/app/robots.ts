@@ -1,6 +1,5 @@
 import type { MetadataRoute } from 'next'
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 export default function robots(): MetadataRoute.Robots {
   return {

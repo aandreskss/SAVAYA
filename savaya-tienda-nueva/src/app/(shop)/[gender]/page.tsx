@@ -19,9 +19,9 @@ import { ActiveFilterChips } from '@/domains/catalog/components/ActiveFilterChip
 import { PLPPagination } from '@/domains/catalog/components/PLPPagination'
 import Image from 'next/image'
 import Link from 'next/link'
+import { SITE_URL as BASE_URL } from '@/shared/lib/site'
 
 const LIMIT = 24
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.savayavzla.com'
 
 type Props = {
   params: Promise<{ gender: string }>
